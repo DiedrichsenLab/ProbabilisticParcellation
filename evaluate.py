@@ -145,13 +145,13 @@ def calc_test_error(M,tdata,U_hats):
     return pred_err
 
 
-def calc_test_dcbc(parcels, testdata, atlas, trim_nan=False):
+def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     """DCBC: evaluate the resultant parcellation using DCBC
     Args:
         parcels (np.ndarray): the input parcellation: 
             either group parcellation (1-dimensional: P)
             individual parcellation (num_subj x P )
-        atlas (<AtlasVolumetric>): the class object of atlas
+        dist (<AtlasVolumetric>): the class object of atlas
         testdata (np.ndarray): the functional test dataset,
                                 shape (num_sub, N, P)
         trim_nan (boolean): if true, make the nan voxel label will be
@@ -161,10 +161,8 @@ def calc_test_dcbc(parcels, testdata, atlas, trim_nan=False):
     Returns:
         dcbc_values (np.ndarray): the DCBC values of subjects
     """
-
-    # To Da: This is a better usecase
-    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
-
+    
+    # 
     if trim_nan:  # mask the nan voxel pairs distance to nan
         dist[np.where(np.isnan(parcels))[0], :] = np.nan
         dist[:, np.where(np.isnan(parcels))[0]] = np.nan
@@ -182,7 +180,7 @@ def calc_test_dcbc(parcels, testdata, atlas, trim_nan=False):
     return np.asarray(dcbc_values)
 
 
-def run_individual(model_names,test_data,test_sess,
+def run_prederror(model_names,test_data,test_sess,
                     design_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
@@ -314,6 +312,8 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas=space,sess=test_sess)
     atlas = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
+    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
+
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
     if not isinstance(model_names,list):
@@ -331,7 +331,7 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
         # Initialize result arrat
         if i == 0:
             dcbc = np.zeros((len(model_names), tdata.shape[0]))
-        dcbc[i, :] = calc_test_dcbc(par, tdata, atlas)
+        dcbc[i, :] = calc_test_dcbc(par, tdata, dist)
         num_subj = tdata.shape[0]
 
         ev_df = pd.DataFrame({'model_name': [minfo.name[i]] * num_subj,
@@ -346,6 +346,112 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
                             })
         results = pd.concat([results, ev_df], ignore_index=True)    
     return results
+
+def run_dcbc_individual(model_names,test_data,test_sess,
+                    design_ind,part_ind=None,
+                    indivtrain_ind=None,indivtrain_values=[0]):
+    """ Calculates a prediction error using a test_data set 
+    and test_sess. 
+    if indivtrain_ind is given, it splits the test_data set
+    again and uses one half to derive an individual parcellation 
+    (using the model) and the other half to evaluate it. 
+    The Means of the parcels are always estimated on N-1 subjects 
+    and evaluated on the Nth left-out subject   
+
+    Args:
+        model_names (list or str): Name of model fit (tsv/pickle file)
+        test_data (str): Name of test data set 
+        test_sess (list): List or sessions to include into test_data 
+        design_ind (str): Fieldname of the condition vector in test-data info
+        part_ind (str): Fieldname of partition vector in test-data info
+        eval_types (list): Defaults to ['group','floor'].
+        indivtrain_ind (str): If given, data will be split for individual
+             training along this field in test-data info. Defaults to None.
+        indivtrain_values (list): Values of field above to be taken as
+             individual training sets.  
+
+    Returns:
+        data-frame with model evalution
+    """
+    wdir = base_dir + '/Models/'
+    tdata,tinfo,tds = get_dataset(base_dir,test_data,
+                              atlas='MNISymC3',sess=test_sess)
+    atlas = am.get_atlas('MNISymC3',atlas_dir=base_dir + '/Atlases')
+    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
+
+    # For testing: tdata=tdata[0:5,:,:]
+    num_subj = tdata.shape[0]
+    results = pd.DataFrame()
+    if not isinstance(model_names,list):
+        model_names = [model_names]
+    
+    # Get condition and partition vector of test data 
+    cond_vec = tinfo[design_ind].values.reshape(-1,)
+    if part_ind is None:
+        part_vec = np.zeros((tinfo.shape[0],),dtype=int)
+    else:
+        part_vec = tinfo[part_ind].values
+
+    # Decide how many splits we need 
+    if indivtrain_ind is None:
+        n_splits = 1
+    else:
+        n_splits = len(indivtrain_values)
+
+    # Now loop over possible models we want to evaluate 
+    for model_name in model_names:
+        minfo, models, Prop, _ = load_batch_fit(model_name)
+        n_iter = len(models)
+
+
+        for i,m in enumerate(models):
+            # Loop over the splits - if split then train a individual model
+            for n in range(n_splits):
+                # ------------------------------------------
+                # Train an emission model on the individual training data and get a Uhat (individual parcellation) from it.
+                train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
+                test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
+                indivtrain_em = em.MixVMF(K=minfo.K[i], N=40, 
+                            P = m.emissions[0].P,
+                            X = matrix.indicator(cond_vec[train_indx]), 
+                            part_vec=part_vec[train_indx],
+                            uniform_kappa=True)
+                indivtrain_em.initialize(tdata[:,train_indx,:])
+                m.emissions = [indivtrain_em]
+                m.nparams = m.arrange.nparams + indivtrain_em.nparams 
+                # Gets us the individual parcellation 
+                m,ll,theta,U_indiv = m.fit_em(
+                    iter=200, tol=0.1,
+                    fit_emission=True, 
+                    fit_arrangement=False,
+                    first_evidence=False)
+                # ------------------------------------------
+                # Now run the DCBC evaluation fo the group
+                Pgroup = pt.argmax(Prop[i, :, :], dim=0) + 1  # Get winner take all
+                Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take                 
+                dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:])
+                dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:])
+
+                # ------------------------------------------
+                # Collect the information from the evaluation 
+                # in a data frame
+                ev_df = pd.DataFrame({'model_name':[minfo.name[i]]*num_subj,
+                                'atlas':[minfo.atlas[i]]*num_subj,
+                                'K':[minfo.K[i]]*num_subj,
+                                'model_num':[i]*num_subj,
+                                'train_data':[minfo.datasets[i]]*num_subj,
+                                'train_loglik':[minfo.loglik[i]]*num_subj,
+                                'test_data':[test_data]*num_subj,
+                                'indivtrain_ind':[indivtrain_ind]*num_subj,
+                                'indivtrain_val':[indivtrain_values[n]]*num_subj,
+                                'subj_num':np.arange(num_subj)})
+                # Add all the evaluations to the data frame
+                ev_df['dcbc_group']=dcbc_group
+                ev_df['dbcb_indiv']=dcbc_indiv
+                results = pd.concat([results, ev_df], ignore_index=True)
+    return results
+
+
 
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
