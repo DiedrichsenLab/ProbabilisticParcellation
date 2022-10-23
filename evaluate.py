@@ -477,7 +477,8 @@ def eval2():
                    f'asym_MdPoNi_space-{space}_K-10']
 
     allR = pd.DataFrame()
-    for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
+    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
+    for testdata in ['Mdtb']:
         print(f'ev in {testdata}')
         # R = run_dcbc_group(model_name, space,
         #                             testdata)
@@ -492,7 +493,7 @@ def eval2():
         # R.to_csv(base_dir + f'/Models/eval2_{testdata}.tsv', sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
-    allR.to_csv(base_dir + f'/Models/eval_dcbc_group.tsv', sep='\t')
+    allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv.tsv', sep='\t')
 
 
     pass
