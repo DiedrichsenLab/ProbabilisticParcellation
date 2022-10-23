@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
-import DCBC.DCBC_vol as dcbc
+from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -170,10 +170,10 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     dcbc_values = []
     for sub in range(testdata.shape[0]):
         if parcels.ndim==1: 
-            D = dcbc.compute_DCBC(parcellation=parcels,
+            D = compute_DCBC(parcellation=parcels,
                               dist=dist, func=testdata[sub].T)
         else:
-            D = dcbc.compute_DCBC(parcellation=parcels[sub],
+            D = compute_DCBC(parcellation=parcels[sub],
                               dist=dist, func=testdata[sub].T)
         dcbc_values.append(D['DCBC'])
 
@@ -312,7 +312,7 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas=space,sess=test_sess)
     atlas = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
-    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
+    dist = compute_dist(atlas.world.T,resolution=1)
 
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
@@ -377,7 +377,7 @@ def run_dcbc_individual(model_names,test_data,test_sess,
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas='MNISymC3',sess=test_sess)
     atlas = am.get_atlas('MNISymC3',atlas_dir=base_dir + '/Atlases')
-    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
+    dist = compute_dist(atlas.world.T,resolution=1)
 
     # For testing: tdata=tdata[0:5,:,:]
     num_subj = tdata.shape[0]
