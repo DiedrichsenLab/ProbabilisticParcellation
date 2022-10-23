@@ -328,7 +328,7 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
         # Pick only the best parcellation from the file...
         j = np.argmax(minfo.loglik)
         par = pt.argmax(Prop[j, :, :], dim=0) + 1  # Get winner take all
-        # Initialize result arrat
+        # Initialize result array
         if i == 0:
             dcbc = np.zeros((len(model_names), tdata.shape[0]))
         dcbc[i, :] = calc_test_dcbc(par, tdata, dist)
@@ -347,7 +347,8 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
         results = pd.concat([results, ev_df], ignore_index=True)    
     return results
 
-def run_dcbc_individual(model_names,test_data,test_sess,
+
+def run_dcbc_individual(model_names, test_data, test_sess,
                     design_ind,part_ind=None,
                     indivtrain_ind=None,indivtrain_values=[0]):
     """ Calculates a prediction error using a test_data set 
@@ -364,7 +365,6 @@ def run_dcbc_individual(model_names,test_data,test_sess,
         test_sess (list): List or sessions to include into test_data 
         design_ind (str): Fieldname of the condition vector in test-data info
         part_ind (str): Fieldname of partition vector in test-data info
-        eval_types (list): Defaults to ['group','floor'].
         indivtrain_ind (str): If given, data will be split for individual
              training along this field in test-data info. Defaults to None.
         indivtrain_values (list): Values of field above to be taken as
@@ -429,8 +429,8 @@ def run_dcbc_individual(model_names,test_data,test_sess,
                 # Now run the DCBC evaluation fo the group
                 Pgroup = pt.argmax(Prop[i, :, :], dim=0) + 1  # Get winner take all
                 Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take                 
-                dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:])
-                dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:])
+                dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
+                dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:], dist)
 
                 # ------------------------------------------
                 # Collect the information from the evaluation 
@@ -460,7 +460,7 @@ def eval1():
                    'asym_MdPoNi_space-MNISymC3_K-10']
     
     # plot_parcel_flat_best(model_name,[2,2])
-    R = run_individual(model_name,
+    R = run_prederror(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
                          design_ind='cond_num_uni',
@@ -479,8 +479,16 @@ def eval2():
     allR = pd.DataFrame()
     for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
         print(f'ev in {testdata}')
-        R = run_dcbc_group(model_name, space,
-                                    testdata)
+        # R = run_dcbc_group(model_name, space,
+        #                             testdata)
+        # Joern: Should getting the design column for each dataset be part of get_dataset?
+        if testdata == 'Mdtb':
+            design_ind = 'cond_name'
+        else:
+            design_ind = 'task_name'
+        R = run_dcbc_individual(model_name, testdata, test_sess='all',
+                                design_ind=design_ind, part_ind='half',
+                                indivtrain_ind='sess', indivtrain_values=['ses-s1', 'ses-s2'])
         # R.to_csv(base_dir + f'/Models/eval2_{testdata}.tsv', sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
