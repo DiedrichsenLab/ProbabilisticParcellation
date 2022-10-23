@@ -54,7 +54,10 @@ def load_batch_fit(fname):
             V[j][i,:,:]=em.V
     return info,models,Prop,V
 
-def plot_parcel_flat(data,suit_atlas,grid,map_space='SUIT'):
+def plot_parcel_flat(data,suit_atlas,grid,
+                    map_space='SUIT',
+                    color_map='mdtb',
+                    titles=None):
     """Plots a parcellation 
 
     Args:
@@ -62,20 +65,30 @@ def plot_parcel_flat(data,suit_atlas,grid,map_space='SUIT'):
         suit_atlas (_type_): _description_
         grid (_type_): _description_
         map_space (str, optional): _description_. Defaults to 'SUIT'.
+        color_map (str): Defaults to 'mdtb' (10 colors)
+        titles (list): List of titles 
     """
-    color_file = base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'
-    color_info = pd.read_csv(color_file, sep=' ', header=None)
-    MDTBcolors = np.zeros((11, 3))
-    MDTBcolors[1:11, :] = color_info.iloc[:, 1:4].to_numpy()
+    if color_map=='mdtb':
+        color_file = base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'
+        color_info = pd.read_csv(color_file, sep=' ', header=None)
+        color_map = np.zeros((11, 3))
+        color_map = color_info.iloc[:, 1:4].to_numpy()
+
     Nifti = suit_atlas.data_to_nifti(data)
     surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',space=map_space)
 
     plt.figure
     for i in range(surf_data.shape[1]):
         plt.subplot(grid[0],grid[1],i+1)
-        suit.flatmap.plot(surf_data[:,i], render='matplotlib',cmap=MDTBcolors, new_figure=False,overlay_type='label')
+        suit.flatmap.plot(surf_data[:,i], 
+                render='matplotlib',
+                cmap=color_map, 
+                new_figure=False,
+                overlay_type='label')
+        if titles is not None: 
+            plt.title(titles[i])
 
-def plot_parcel_flat_best(model_names,grid):
+def plot_parcel_flat_best(model_names,grid,color_map='tab20b'):
     """Load a bunch of model fits, selects the best from 
     each of them and plots the flatmap of the parcellation
     ToDo: Align colors across different parcellations- 
@@ -86,16 +99,22 @@ def plot_parcel_flat_best(model_names,grid):
     sym_atlas = am.AtlasVolumeSymmetric('MNISymC3',mask_img=mask)
 
     parcel=np.empty((len(model_names),atlas.P))
-
+    titles = [] 
     for i,mn in enumerate(model_names):
         info,models,Prop,V = load_batch_fit(mn)
         j=np.argmax(info.loglik)
-        par = pt.argmax(Prop[j,:,:],dim=0)+1 # Get winner take all 
+        par = pt.argmax(Prop[j,:,:],dim=0)+1 # Get winner take all
+        # Split the name and build titles 
+        split_mn = mn.split('_')
+        titles.append(split_mn[1] + ' ' + split_mn[3])
         # If symmetric - project back to full map: 
-        if mn[0:3]=='sym':
+        if split_mn[0]=='sym':
             par=par[sym_atlas.indx_reduced] # Put back into full space
         parcel[i,:]=par
-    plot_parcel_flat(parcel,atlas,grid=grid,map_space='MNISymC') 
+    plot_parcel_flat(parcel,atlas,grid=grid,
+                     map_space='MNISymC',
+                     color_map=color_map,
+                     titles=titles) 
 
 def calc_test_error(M,tdata,U_hats):
     """Evaluates the predictions from a trained full model on some testdata. 
@@ -452,6 +471,12 @@ def run_dcbc_individual(model_names,test_data,test_sess,
     return results
 
 
+def plotflat():
+    model_name = ['asym_Md_space-MNISymC3_K-10',
+                   'asym_MdPoNi_space-MNISymC3_K-10']
+    
+    plot_parcel_flat_best(model_name,[2,2])
+
 
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
@@ -459,7 +484,6 @@ def eval1():
                    'asym_Ni_space-MNISymC3_K-10',
                    'asym_MdPoNi_space-MNISymC3_K-10']
     
-    # plot_parcel_flat_best(model_name,[2,2])
     R = run_individual(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
@@ -493,5 +517,5 @@ def eval2():
 
 
 if __name__ == "__main__":
-    eval2()
+    plotflat()
     pass
