@@ -1,0 +1,2 @@
+# ProbabilisticParcellation
+Cerebellar Probabilistic Parcellation project using generativeMRF and FunctionalFusion
