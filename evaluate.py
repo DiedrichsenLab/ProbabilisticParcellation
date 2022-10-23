@@ -1,4 +1,4 @@
-# Script for evaluating DCBC on fused parcellation
+# Evaluate cerebellar parcellations
 from time import gmtime
 from pathlib import Path
 import pandas as pd
