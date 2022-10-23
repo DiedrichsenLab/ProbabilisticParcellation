@@ -3,8 +3,9 @@ from time import gmtime
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import atlas_map as am
-from dataset import *
+import Functional_Fusion.atlas_map as am
+from Functional_Fusion.dataset import *
+import Functional_Fusion.matrix as matrix
 from scipy.linalg import block_diag
 import nibabel as nb
 import SUITPy as suit
@@ -14,7 +15,6 @@ import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
 import torch as pt
-import Functional_Fusion.matrix as matrix
 from learn_mdtb import get_mdtb_parcel
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -284,9 +284,9 @@ if __name__ == "__main__":
     # fit_all([0, 2]) # problem with fitting 0 & 2: In "generativeMRF/full_model.py", line 466, 'best_theta' is referenced before assignment
     # fit_all([1, 2])
     fit_all([0,1,2,3],10)
-    fit_all([0],20)
-    fit_all([1],20)
-    fit_all([2],20)
+    # fit_all([0],20)
+    # fit_all([1],20)
+    # fit_all([2],20)
     fit_all([3],20)
     # check_IBC()
     #mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
