@@ -20,7 +20,6 @@ import seaborn as sb
 import sys
 import pickle
 import DCBC.DCBC_vol as dcbc
-from learn_mdtb import get_sess_mdtb
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -31,6 +30,11 @@ if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
 def load_batch_fit(fname):
+    """ Loads a batch of fits and extracts marginal probability maps 
+    and mean vectors
+    Args:
+        fname (str): File name
+    """
     wdir = base_dir + '/Models/'
     info = pd.read_csv(wdir + fname + '.tsv',sep='\t')
     with open(wdir + fname + '.pickle','rb') as file:
@@ -51,6 +55,14 @@ def load_batch_fit(fname):
     return info,models,Prop,V
 
 def plot_parcel_flat(data,suit_atlas,grid,map_space='SUIT'):
+    """Plots a parcellation 
+
+    Args:
+        data (_type_): _description_
+        suit_atlas (_type_): _description_
+        grid (_type_): _description_
+        map_space (str, optional): _description_. Defaults to 'SUIT'.
+    """
     color_file = base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'
     color_info = pd.read_csv(color_file, sep=' ', header=None)
     MDTBcolors = np.zeros((11, 3))
@@ -85,7 +97,7 @@ def plot_parcel_flat_best(model_names,grid):
         parcel[i,:]=par
     plot_parcel_flat(parcel,atlas,grid=grid,map_space='MNISymC') 
 
-def cross_prediction_error(M,tdata,U_hats):
+def calc_test_error(M,tdata,U_hats):
     """Evaluates the predictions from a trained full model on some testdata. 
     The full model consists of a trained arrangement model and is 
     combined with untrained emission model for the test data. 
@@ -132,7 +144,45 @@ def cross_prediction_error(M,tdata,U_hats):
             pred_err[i,s] = a
     return pred_err
 
-def calc_prediction_error(model_names,test_data,test_sess,
+
+def calc_test_dcbc(parcels, testdata, atlas, trim_nan=False):
+    """DCBC: evaluate the resultant parcellation using DCBC
+    Args:
+        parcels (np.ndarray): the input parcellation: 
+            either group parcellation (1-dimensional: P)
+            individual parcellation (num_subj x P )
+        atlas (<AtlasVolumetric>): the class object of atlas
+        testdata (np.ndarray): the functional test dataset,
+                                shape (num_sub, N, P)
+        trim_nan (boolean): if true, make the nan voxel label will be
+                            removed from DCBC calculation. Otherwise,
+                            we treat nan voxels are in the same parcel
+                            which is label 0 by default.
+    Returns:
+        dcbc_values (np.ndarray): the DCBC values of subjects
+    """
+
+    # To Da: This is a better usecase
+    dist = dcbc.compute_dist(atlas.world.T,resolution=1)
+
+    if trim_nan:  # mask the nan voxel pairs distance to nan
+        dist[np.where(np.isnan(parcels))[0], :] = np.nan
+        dist[:, np.where(np.isnan(parcels))[0]] = np.nan
+
+    dcbc_values = []
+    for sub in range(testdata.shape[0]):
+        if parcels.ndim==1: 
+            D = dcbc.compute_DCBC(parcellation=parcels,
+                              dist=dist, func=testdata[sub].T)
+        else:
+            D = dcbc.compute_DCBC(parcellation=parcels[sub],
+                              dist=dist, func=testdata[sub].T)
+        dcbc_values.append(D['DCBC'])
+
+    return np.asarray(dcbc_values)
+
+
+def run_individual(model_names,test_data,test_sess,
                     design_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
@@ -183,12 +233,10 @@ def calc_prediction_error(model_names,test_data,test_sess,
 
     # Now loop over possible models we want to evaluate 
     for model_name in model_names:
-        minfo = pd.read_csv(wdir + model_name + '.tsv',sep='\t')
-        with open(wdir + model_name + '.pickle','rb') as file:
-            models = pickle.load(file)
+        minfo, models, _, _ = load_batch_fit(model_name)
         n_iter = len(models)
 
-        for i,m in enumerate(models[0:2]):
+        for i,m in enumerate(models):
             # Loop over the splits - if split then train a individual model
             for n in range(n_splits):
                 # ------------------------------------------
@@ -226,7 +274,7 @@ def calc_prediction_error(model_names,test_data,test_sess,
                 # recalculate total number parameters
                 m.nparams = m.arrange.nparams + em_model.nparams 
                 # To CARO: You could copy the function and then replace this prediction_error function with the DCBC claculation for group and individual parcellation:  
-                res = cross_prediction_error(m,tdata[:,test_indx,:],all_eval)
+                res = calc_test_error(m,tdata[:,test_indx,:],all_eval)
                 # ------------------------------------------
                 # Collect the information from the evaluation 
                 # in a data frame
@@ -250,48 +298,40 @@ def calc_prediction_error(model_names,test_data,test_sess,
     return results
 
 
+def run_dcbc_group(model_names, space, test_data,test_sess='all'):
+    """ Run DCBC group evaluation 
 
-def calc_dcbc():
-    """ Calculates dcbc using a test_data set 
-    and test_sess. 
+    Args:
+        model_names (_type_): _description_
+        space (_type_): _description_
+        test_data (_type_): _description_
+        test_sess (str, optional): _description_. Defaults to 'all'.
+
+    Returns:
+        _type_: _description_
     """
-    pass
-
-
-def eval_dcbc_group(model_names, space, testdata):
-    s = space.split('C')[0]
-    r = int(space.split('C')[1])
-    mask = base_dir + \
-        f'/Atlases/tpl-MNI152NLIn2000cSymC/tpl-{s}C_res-{r}_gmcmask.nii'
-    atlas = am.AtlasVolumetric(space, mask_img=mask)
-
-    if testdata is None:
-        tdata, _, _ = get_sess_mdtb(atlas=space, ses_id='ses-s2')
-    elif testdata == 'Md':
-        tdata, tinfo, _ = get_dataset(base_dir, 'MDTB',
-                                      atlas=space, type='CondHalf')
-    elif testdata == 'Po':
-        tdata, tinfo, _ = get_dataset(base_dir, 'Pontine',
-                                      atlas=space, type='TaskHalf')
-    elif testdata == 'Ni':
-        tdata, tinfo, _ = get_dataset(base_dir, 'Nishimoto',
-                                      atlas=space, type='CondHalf')
-    
     wdir = base_dir + '/Models/'
+    tdata,tinfo,tds = get_dataset(base_dir,test_data,
+                              atlas=space,sess=test_sess)
+    atlas = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
+    num_subj = tdata.shape[0]
+    results = pd.DataFrame()
+    if not isinstance(model_names,list):
+        model_names = [model_names]
     
-
     # parcel = np.empty((len(model_names), atlas.P))
     results = pd.DataFrame()
     for i, mn in enumerate(model_names):
+        print(f'evaluating {mn}')
+        minfo, models, Prop, _ = load_batch_fit(mn)
         
-        info, models, Prop, V = load_batch_fit(mn)
-        j = np.argmax(info.loglik)
+        # Pick only the best parcellation from the file...
+        j = np.argmax(minfo.loglik)
         par = pt.argmax(Prop[j, :, :], dim=0) + 1  # Get winner take all
-        # parcel[i, :] = par
+        # Initialize result arrat
         if i == 0:
             dcbc = np.zeros((len(model_names), tdata.shape[0]))
-        dcbc[i, :] = eval_dcbc(par, tdata, atlas, r)
-        minfo = pd.read_csv(wdir + mn + '.tsv', sep='\t')
+        dcbc[i, :] = calc_test_dcbc(par, tdata, atlas)
         num_subj = tdata.shape[0]
 
         ev_df = pd.DataFrame({'model_name': [minfo.name[i]] * num_subj,
@@ -300,46 +340,12 @@ def eval_dcbc_group(model_names, space, testdata):
                             'model_num': [i] * num_subj,
                             'train_data': [minfo.datasets[i]] * num_subj,
                             'train_loglik': [minfo.loglik[i]] * num_subj,
-                            'test_data': [testdata] * num_subj,
+                            'test_data': [test_data] * num_subj,
                             'subj_num': np.arange(num_subj),
                             'dcbc': dcbc[i,:]
                             })
-        
-        
-        results = pd.concat([results, ev_df], ignore_index=True)
-    
+        results = pd.concat([results, ev_df], ignore_index=True)    
     return results
-
-
-def eval_dcbc(parcels, testdata, atlas, resolution=3, trim_nan=False):
-    """DCBC: evaluate the resultant parcellation using DCBC
-    Args:
-        parcels (np.ndarray): the input parcellation, shape
-        atlas (<AtlasVolumetric>): the class object of atlas
-        testdata (np.ndarray): the functional test dataset,
-                                shape (num_sub, N, P)
-        resolution (np.float or int): the resolution of atlas in mm
-        trim_nan (boolean): if true, make the nan voxel label will be
-                            removed from DCBC calculation. Otherwise,
-                            we treat nan voxels are in the same parcel
-                            which is label 0 by default.
-    Returns:
-        dcbc_values (np.ndarray): the DCBC values of subjects
-    """
-
-    dist = dcbc.compute_dist(atlas.vox.T, resolution=resolution)
-
-    if trim_nan:  # mask the nan voxel pairs distance to nan
-        dist[np.where(np.isnan(parcels))[0], :] = np.nan
-        dist[:, np.where(np.isnan(parcels))[0]] = np.nan
-
-    dcbc_values = []
-    for sub in range(testdata.shape[0]):
-        D = dcbc.compute_DCBC(parcellation=parcels,
-                              dist=dist, func=testdata[sub].T)
-        dcbc_values.append(D['DCBC'])
-
-    return np.asarray(dcbc_values)
 
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
@@ -348,7 +354,7 @@ def eval1():
                    'asym_MdPoNi_space-MNISymC3_K-10']
     
     # plot_parcel_flat_best(model_name,[2,2])
-    R = calc_prediction_error(model_name,
+    R = run_individual(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
                          design_ind='cond_num_uni',
@@ -365,79 +371,17 @@ def eval2():
                    f'asym_MdPoNi_space-{space}_K-10']
 
     allR = pd.DataFrame()
-    for testdata in ['Md', 'Po', 'Ni']:
-        R = eval_dcbc_group(model_name, space,
+    for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
+        print(f'ev in {testdata}')
+        R = run_dcbc_group(model_name, space,
                                     testdata)
         # R.to_csv(base_dir + f'/Models/eval2_{testdata}.tsv', sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
     allR.to_csv(base_dir + f'/Models/eval_dcbc_group.tsv', sep='\t')
 
-    # test_data = 'Mdtb'
-    # R = calc_dcbc(model_name,
-    #               test_data=test_data,
-    #               test_sess=['ses-s1', 'ses-s2'],
-    #               design_ind='cond_num_uni',
-    #               part_ind='half',
-    #               indivtrain_ind='sess',
-    #               indivtrain_values=['ses-s1', 'ses-s2'])
-    # R.to_csv(base_dir + f'/Models/eval2.tsv', sep='\t')
-    
-    # print(R)
 
     pass
-
-
-
-def eval_generative_SNMF(model_names = ['asym_Md_space-SUIT3_K-10']):
-    """This is the evaluation case of the parcellation comparison
-    between the new fusion model vs. convex semi non-negative matrix
-    factorization (King et. al, 2019).
-
-    Args:
-        model_names (list): the list of model names to be evaluated
-    Returns:
-        the plot
-    Note:
-        I'm just simply curious whether the fusion model fit on mdtb
-        standalone (indepent ar. + VMF em.) can beat NMF algorithm
-        or not. So nothing hurt the script.    -- dzhi
-    """
-    # Use specific mask / atlas.
-    mask = base_dir + '/Atlases/tpl-SUIT/tpl-SUIT_res-3_gmcmask.nii'
-    atlas = am.AtlasVolumetric('SUIT3', mask_img=mask)
-
-    # get original mdtb parcels (nmf)
-    from learn_mdtb import get_mdtb_parcel
-    mdtb_par, _ = get_mdtb_parcel(do_plot=False)
-    mdtb_par = np.where(mdtb_par == 0, np.nan, mdtb_par)
-
-    parcel = np.empty((len(model_names), atlas.P))
-
-    for i, mn in enumerate(model_names):
-        info, models, Prop, V = load_batch_fit(mn)
-        j = np.argmax(info.loglik)
-        # Get winner take all
-        par = pt.argmax(Prop[j, :, :], dim=0) + 1
-        parcel[i, :] = np.where(np.isnan(mdtb_par), np.nan, par.numpy())
-
-    # Evaluate case: use all MDTB data
-    # It kinda of overfitting but still fair comparison
-    data_eval, _, _ = get_all_mdtb(atlas='SUIT3')
-    dcbc_base = eval_dcbc(mdtb_par, atlas, func_data=data_eval,
-                          resolution=3, trim_nan=True)
-
-    dcbc_compare = []
-    for p in range(parcel.shape[0]):
-        this_dcbc = eval_dcbc(parcel[p], atlas, func_data=data_eval,
-                              resolution=3, trim_nan=True)
-        dcbc_compare.append(this_dcbc)
-
-    plt.figure()
-    plt.bar(['NMF', 'ind+vmf'], [dcbc_base.mean(), dcbc_compare[0].mean()],
-            yerr=[dcbc_base.std() / np.sqrt(24),
-                  dcbc_compare[0].std() / np.sqrt(24)])
-    plt.show()
 
 
 
