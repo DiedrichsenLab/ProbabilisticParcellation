@@ -476,24 +476,34 @@ def eval2():
                    f'asym_Ni_space-{space}_K-10',
                    f'asym_MdPoNi_space-{space}_K-10']
 
+
+    # Evalutate group parcellation
     allR = pd.DataFrame()
-    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-    for testdata in ['Mdtb']:
+    for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
         print(f'ev in {testdata}')
-        # R = run_dcbc_group(model_name, space,
-        #                             testdata)
-        # Joern: Should getting the design column for each dataset be part of get_dataset?
-        if testdata == 'Mdtb':
-            design_ind = 'cond_name'
-        else:
-            design_ind = 'task_name'
-        R = run_dcbc_individual(model_name, testdata, test_sess='all',
-                                design_ind=design_ind, part_ind='half',
-                                indivtrain_ind='sess', indivtrain_values=['ses-s1', 'ses-s2'])
-        # R.to_csv(base_dir + f'/Models/eval2_{testdata}.tsv', sep='\t')
+        R = run_dcbc_group(model_name, space,
+                                    testdata)
+        R.to_csv(base_dir + f'/Models/eval_dcbc_group_{testdata}.tsv', sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
-    allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv.tsv', sep='\t')
+    allR.to_csv(base_dir + f'/Models/eval_dcbc_group.tsv', sep='\t')
+
+    # Evalutate individual parcellation
+    # allR = pd.DataFrame()
+    # for testdata in ['Mdtb']:
+    #     print(f'ev in {testdata}')
+    #     # Joern: Should getting the design column for each dataset be part of get_dataset?
+    #     if testdata == 'Mdtb':
+    #         design_ind = 'cond_name'
+    #     else:
+    #         design_ind = 'task_name'
+    #     R = run_dcbc_individual(model_name, testdata, test_sess='all',
+    #                             design_ind=design_ind, part_ind='half',
+    #                             indivtrain_ind='sess', indivtrain_values=['ses-s1', 'ses-s2'])
+    #     R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
+    #     # allR = pd.concat([allR, R], ignore_index=True)
+
+    # allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv.tsv', sep='\t')
 
 
     pass
