@@ -36,11 +36,14 @@ def parcel_similarity(model_name,plot=False):
     n_sets = len(m.emissions)
     cos_sim = np.empty((n_sets,m.K,m.K))
     kappa = np.empty((n_sets,))
+    n_subj = np.empty((n_sets,))
     for i,em in enumerate(m.emissions):
         cos_sim[i,:,:] = em.V.T @ em.V
         kappa[i] = em.kappa
+        n_subj[i] = em.num_subj
     # Integrated parcel similarity with kappa
-    w_cos_sim = (cos_sim * kappa.reshape((-1,1,1))).sum(axis=0)/kappa.sum()
+    weight = kappa * n_subj
+    w_cos_sim = (cos_sim * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum()
     if plot is True:
         for i in range(n_sets):
             plt.subplot(1,n_sets+1,i+1)
