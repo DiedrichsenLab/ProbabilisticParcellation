@@ -181,7 +181,7 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
 
 
 def run_prederror(model_names,test_data,test_sess,
-                    design_ind,part_ind=None,
+                    cond_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
     """ Calculates a prediction error using a test_data set 
@@ -196,7 +196,7 @@ def run_prederror(model_names,test_data,test_sess,
         model_names (list or str): Name of model fit (tsv/pickle file)
         test_data (str): Name of test data set 
         test_sess (list): List or sessions to include into test_data 
-        design_ind (str): Fieldname of the condition vector in test-data info
+        cond_ind (str): Fieldname of the condition vector in test-data info
         part_ind (str): Fieldname of partition vector in test-data info
         eval_types (list): Defaults to ['group','floor'].
         indivtrain_ind (str): If given, data will be split for individual
@@ -217,7 +217,7 @@ def run_prederror(model_names,test_data,test_sess,
         model_names = [model_names]
     
     # Get condition and partition vector of test data 
-    cond_vec = tinfo[design_ind].values.reshape(-1,)
+    cond_vec = tinfo[cond_ind].values.reshape(-1,)
     if part_ind is None:
         part_vec = np.zeros((tinfo.shape[0],),dtype=int)
     else:
@@ -349,7 +349,7 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
 
 
 def run_dcbc_individual(model_names, test_data, test_sess,
-                    design_ind,part_ind=None,
+                    cond_ind=None,part_ind=None,
                     indivtrain_ind=None,indivtrain_values=[0]):
     """ Calculates a prediction error using a test_data set 
     and test_sess. 
@@ -363,7 +363,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         model_names (list or str): Name of model fit (tsv/pickle file)
         test_data (str): Name of test data set 
         test_sess (list): List or sessions to include into test_data 
-        design_ind (str): Fieldname of the condition vector in test-data info
+        cond_ind (str): Fieldname of the condition vector in test-data info
         part_ind (str): Fieldname of partition vector in test-data info
         indivtrain_ind (str): If given, data will be split for individual
              training along this field in test-data info. Defaults to None.
@@ -385,8 +385,14 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     if not isinstance(model_names,list):
         model_names = [model_names]
     
-    # Get condition and partition vector of test data 
-    cond_vec = tinfo[design_ind].values.reshape(-1,)
+    # Get condition vector of test data
+    if cond_ind is None:
+        # get default cond_ind from testdataset
+        cond_vec = tinfo[tds.cond_ind].values.reshape(-1,)
+    else:
+        cond_vec = tinfo[cond_ind].values.reshape(-1,)
+    
+    # Get partition vector of test data 
     if part_ind is None:
         part_vec = np.zeros((tinfo.shape[0],),dtype=int)
     else:
@@ -395,6 +401,8 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     # Decide how many splits we need 
     if indivtrain_ind is None:
         n_splits = 1
+        indivtrain_ind = 'sess'
+        indivtrain_values = tds.sessions
     else:
         n_splits = len(indivtrain_values)
 
@@ -463,7 +471,7 @@ def eval1():
     R = run_prederror(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
-                         design_ind='cond_num_uni',
+                         cond_ind='cond_num_uni',
                          part_ind='half',
                          indivtrain_ind='sess',
                          indivtrain_values=['ses-s1','ses-s2'])
@@ -491,13 +499,9 @@ def eval2():
     # Evalutate individual parcellation
     allR = pd.DataFrame()
     # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-    for testdata in ['IBC', 'Pontine', 'Nishimoto']:
-        print(f'ev in {testdata}')
-        # rely on defaultif you pass none
-        
-        R = run_dcbc_individual(model_name, testdata, test_sess='all',
-                                design_ind=design_ind, part_ind='half',
-                                indivtrain_ind='sess', indivtrain_values=['ses-s1', 'ses-s2'])
+    for testdata in ['Pontine', 'Nishimoto']:
+        print(f'ev in {testdata}')     
+        R = run_dcbc_individual(model_name, testdata, test_sess='all')
         R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
@@ -506,7 +510,10 @@ def eval2():
 
     pass
 
-
+    #     if testdata == 'Mdtb':
+    #         cond_ind = 'cond_name'
+    #     else:
+    #         cond_ind = 'task_name'
 
 
 if __name__ == "__main__":
