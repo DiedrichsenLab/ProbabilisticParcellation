@@ -493,6 +493,7 @@ def eval_all_prederror(prefix,K):
                           'space-MNISymC3'+ '_' + 
                           f'K-{K}')
     for ds in datasets:
+        print(f'Testdata: {ds}\n')
         R = run_prederror(model_name,ds,'all',
                     design_ind=None,
                     part_ind='half',
