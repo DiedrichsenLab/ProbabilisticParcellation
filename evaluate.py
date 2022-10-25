@@ -478,13 +478,35 @@ def plotflat():
     plot_parcel_flat_best(model_name,[2,2])
 
 
+
+def eval_all_prederror(prefix,K):
+    models = ['Md','Po','Ni','Ib','MdPoNiIb']
+    datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
+    
+    model_name = []
+    results = pd.DataFrame()
+    for m in models:
+        model_name.append(prefix + '_' + 
+                          m + '_' + 
+                          'space-MNISymC3'+ '_' + 
+                          f'K-{K}')
+    for ds in datasets:
+        R = run_prederror(model_name,ds,'all',
+                    design_ind=None,
+                    part_ind='half',
+                    eval_types=['group','floor'],
+                    indivtrain_ind='half',indivtrain_values=[1,2])
+        results = pd.concat([results,R],ignore_index=True)
+    R.to_csv(base_dir + f'/Models/eval_{prefix}_{K}.tsv',sep='\t')
+
+
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
                    'asym_Po_space-MNISymC3_K-10',
                    'asym_Ni_space-MNISymC3_K-10',
                    'asym_MdPoNi_space-MNISymC3_K-10']
     
-    R = run_individual(model_name,
+    R = run_prederror(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
                          design_ind='cond_num_uni',
@@ -517,5 +539,5 @@ def eval2():
 
 
 if __name__ == "__main__":
-    plotflat()
+    eval_all_prederror('asym',10)
     pass
