@@ -235,7 +235,9 @@ def run_prederror(model_names,test_data,test_sess,
     if not isinstance(model_names,list):
         model_names = [model_names]
     
-    # Get condition and partition vector of test data 
+    # Get condition and partition vector of test data
+    if design_ind is None:
+        design_ind = tds.design_ind
     cond_vec = tinfo[design_ind].values.reshape(-1,)
     if part_ind is None:
         part_vec = np.zeros((tinfo.shape[0],),dtype=int)
