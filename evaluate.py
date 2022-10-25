@@ -498,8 +498,7 @@ def eval2():
 
     # Evalutate individual parcellation
     allR = pd.DataFrame()
-    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-    for testdata in ['Pontine', 'Nishimoto']:
+    for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
         print(f'ev in {testdata}')     
         R = run_dcbc_individual(model_name, testdata, test_sess='all')
         R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
