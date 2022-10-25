@@ -542,5 +542,5 @@ def eval2():
 
 if __name__ == "__main__":
     # eval_all_prederror('asym',10)
-    M,info,prop,V=load_batch_fit('asym_Ib_space-MNISymC3_K-10')
+    M,info,prop,V=load_batch_fit('asym_MdPoNiIb_space-MNISymC3_K-10')
     pass
