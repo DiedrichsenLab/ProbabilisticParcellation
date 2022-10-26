@@ -490,8 +490,8 @@ def eval2():
     for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
         print(f'ev in {testdata}')
         tsv_file = Path(base_dir + f'/Models/eval_dcbc_group_{testdata}.tsv')
-        if tsv_file.exsists():
-            R = pd.read_csv(tsv_file)
+        if tsv_file.exists():
+            R = pd.read_csv(tsv_file, sep = '\t')
         else:
             R = run_dcbc_group(model_name, space,
                                         testdata)
