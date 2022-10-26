@@ -494,7 +494,7 @@ def eval2():
         tsv_file = Path(
             base_dir + f'/Models/eval_dcbc_group_{testdata}_K-{K}.tsv')
         if tsv_file.exsists():
-            R = pd.read_csv(tsv_file)
+            R = pd.read_csv(tsv_file
         else:
             R = run_dcbc_group(model_name, space,
                                         testdata)
