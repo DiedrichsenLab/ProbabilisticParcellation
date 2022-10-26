@@ -48,17 +48,7 @@ def load_batch_best(fname):
     j = info.loglik.argmax()
     return info.iloc[j],models[j]
 
-def get_parcel(model):
-    Prop = np.array(model.arrange.marginal_prob())
-    if hasattr(model,'P_sym'):
-        Prop_full = np.zeros((model.K,model.P))
-        Prop_full[:model.K_sym,model.indx_full[0]]=Prop
-        Prop_full[model.K_sym:,model.indx_full[1]]=Prop
-        Prop=Prop_full
-    parcel = Prop.argmax(axis=0)+1
-    return parcel
-
-def plot_parcel_flat(parcel,cmap,atlas):
+def plot_parcel_flat(parcel,cmap,atlas,render='matplotlib'):
     # Plot Parcellation 
     suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
@@ -71,23 +61,33 @@ def plot_parcel_flat(parcel,cmap,atlas):
 
     surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
             space=map_space,ignore_zeros=True)
-    suit.flatmap.plot(surf_data, 
-                render='matplotlib',
+    fig = suit.flatmap.plot(surf_data, 
+                render=render,
                 cmap=cmap, 
-                new_figure=False,
+                new_figure=True,
                 overlay_type='label')
+    return fig
 
-
-def parcel_similarity(model,plot=False):
+def parcel_similarity(model,plot=False,sym=False):
     n_sets = len(model.emissions)
-    K = model.emissions[0].K
+    if sym:
+        K = np.int(model.emissions[0].K/2)
+    else:
+        K = model.emissions[0].K
     cos_sim = np.empty((n_sets,K,K))
     kappa = np.empty((n_sets,))
     n_subj = np.empty((n_sets,))
+
     for i,em in enumerate(model.emissions):
-        cos_sim[i,:,:] = em.V.T @ em.V
+        if sym:
+            V = em.V[:,:K]+em.V[:,K:] # Average the two sides for clustering
+            V = V/np.sqrt((V**2).sum(axis=0))
+            cos_sim[i,:,:] = V.T @ V
+        else:
+            cos_sim[i,:,:] = em.V.T @ em.V
         kappa[i] = em.kappa
         n_subj[i] = em.num_subj
+
     # Integrated parcel similarity with kappa
     weight = kappa * n_subj
     w_cos_sim = (cos_sim * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum()
@@ -100,7 +100,16 @@ def parcel_similarity(model,plot=False):
 
     return w_cos_sim,cos_sim,kappa
 
-def agglomative_clustering(similarity,cmap,plot=True):
+
+def get_clusters(Z,K,num_cluster):
+    cluster = np.zeros((K+Z.shape[0]))
+    next_cluster = 1
+    for i in range(Z.shape[0]):
+        indx = Z[i,0:1]
+        if np.all(cluster[indx]==0):
+            
+
+def agglomative_clustering(similarity,cmap,plot=True,sym=False):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
     K = similarity.shape[0]
@@ -110,17 +119,25 @@ def agglomative_clustering(similarity,cmap,plot=True):
     if plot:
         ax=plt.gca()
         R = dendrogram(Z) # truncate_mode="level", p=3)
-        ax.set_ylim((-0.2,1.1))
         leaves = R['leaves']
+        ax.set_ylim((-0.2,1.1))
         for k in range(K):
             rect = Rectangle((k*10, -0.05), 10,0.05,
             facecolor=cmap(leaves[k]+1),
             fill=True,
             edgecolor=(0,0,0,1))
             ax.add_patch(rect)
+        if sym:
+            for k in range(K):
+                # Left: 
+                rect = Rectangle((k*10, -0.1), 10,0.05,
+                facecolor=cmap(leaves[k]+1+K),
+                fill=True,
+                edgecolor=(0,0,0,1))
+                ax.add_patch(rect)
         pass 
 
-def colormap_mds(G,plot=True):
+def colormap_mds(G,plot='2d',type='hsv'):
     N = G.shape[0]
     G = (G + G.T)/2
     Glam, V = eigh(G)
@@ -129,23 +146,38 @@ def colormap_mds(G,plot=True):
 
     # Make a new color maps 
     # Kill eigenvalues smaller than 3 
+    # W=np.zeros((N,3))
+    #ang = np.linspace(0,2*np.pi,N)
+    # W[:,0]=np.cos(ang)
+    # W[:,1]=np.sin(ang)
     W = V[:,:3] * np.sqrt(Glam[:3])
-    sW = (W-W.min())/(W.max()-W.min())
-    colors = np.c_[sW,np.ones((N,))]
+    if type=='rgb':
+        rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
+    elif type=='hsv':
+        # W=W-W.mean(axis=0)
+        Sat=np.sqrt(W[:,0:1]**2)
+        Sat = Sat/Sat.max()
+        Hue=(np.arctan2(W[:,1],W[:,0])+np.pi)/(2*np.pi)
+        Val = (W[:,2]-W[:,2].min())/(W[:,2].max()-W[:,2].min())*0.5+0.4
+        rgb = mpl.colors.hsv_to_rgb(np.c_[Hue,Sat,Val])
+    colors = np.c_[rgb,np.ones((N,))]
     colorsp = np.r_[np.zeros((1,4)),colors] # Add empty for the zero's color
     newcmp = ListedColormap(colorsp)
 
-
-    if plot:
+    if plot=='3d':
         fig = plt.figure()
         ax = fig.add_subplot(projection='3d')
-        ax.scatter(W[:,0],W[:,1], W[:,2], marker='o',
-                   c=colors)
+        ax.scatter(W[:,0],W[:,1], W[:,2], marker='o',s=70,c=colors)
         ax.set_box_aspect((np.ptp(W[:,0]), np.ptp(W[:,1]), np.ptp(W[:,2]))) 
+    if plot=='2d':
+        fig = plt.figure()
+        ax = fig.add_subplot()
+        ax.scatter(W[:,0],W[:,1], marker='o',s=70,c=colors)
+        ax.set_aspect('equal','box') 
     return newcmp 
 
 
-def analyze_parcel(mname):
+def analyze_parcel(mname,sym=True):
     split_mn = mname.split('_')
     info,model = load_batch_best(mname)
 
@@ -153,20 +185,26 @@ def analyze_parcel(mname):
     w_cos_sim,_,_ = parcel_similarity(model,plot=False)
 
     # Make a colormap 
-    cmap = colormap_mds(w_cos_sim)
+    cmap = colormap_mds(w_cos_sim,plot='3d',type='hsv')
 
-    # plt.figure()
-    # parcel = get_parcel(model)
-    # atlas = split_mn[2][6:]
-    # plot_parcel_flat(parcel,cmap,atlas)
+    # Do clustering 
     plt.figure()
-    agglomative_clustering(w_cos_sim,cmap)
+    w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
+    agglomative_clustering(w_cos_sym,cmap,sym=sym)
+
+
+    # Plot the parcellation 
+    Prop = np.array(model.marginal_prob())
+    parcel = Prop.argmax(axis=0)+1
+    atlas = split_mn[2][6:]
+    ax = plot_parcel_flat(parcel,cmap,atlas,render='plotly')
+    
     pass
 
 
 
 if __name__ == "__main__":
-    mname = 'sym_Md_space-MNISymC3_K-34'
+    mname = 'sym_MdPoNiIb_space-MNISymC3_K-34'
     analyze_parcel(mname)
 
     # agglomative_clustering(1-w_cos_sim)
