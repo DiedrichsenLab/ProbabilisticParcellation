@@ -20,31 +20,12 @@ import sys
 import pickle
 from evaluate import *
 from matplotlib import pyplot as plt
-from scipy.cluster.hierarchy import dendrogram
-from sklearn.cluster import AgglomerativeClustering
-
-
-def plot_dendrogram(model, **kwargs):
-    # Create linkage matrix and then plot the dendrogram
-    # create the counts of samples under each node
-    counts = np.zeros(model.children_.shape[0])
-    n_samples = len(model.labels_)
-    for i, merge in enumerate(model.children_):
-        current_count = 0
-        for child_idx in merge:
-            if child_idx < n_samples:
-                current_count += 1  # leaf node
-            else:
-                current_count += counts[child_idx - n_samples]
-        counts[i] = current_count
-
-    linkage_matrix = np.column_stack(
-        [model.children_, model.distances_, counts]
-    ).astype(float)
-
-    # Plot the corresponding dendrogram
-    dendrogram(linkage_matrix, **kwargs)
-
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import squareform
+from numpy.linalg import eigh
+import matplotlib as mpl
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Rectangle
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -55,15 +36,55 @@ if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
 
-def parcel_similarity(model_name,plot=False):
-    info,models,Prop,V = load_batch_fit(model_name)
-    j=np.argmax(info.loglik)
-    m = models[j]
-    n_sets = len(m.emissions)
-    cos_sim = np.empty((n_sets,m.K,m.K))
+def load_batch_best(fname):
+    """ Loads a batch of model fits and selects the best one
+    Args:
+        fname (str): File name
+    """
+    wdir = base_dir + '/Models/'
+    info = pd.read_csv(wdir + fname + '.tsv',sep='\t')
+    with open(wdir + fname + '.pickle','rb') as file:
+        models = pickle.load(file)
+    j = info.loglik.argmax()
+    return info.iloc[j],models[j]
+
+def get_parcel(model):
+    Prop = np.array(model.arrange.marginal_prob())
+    if hasattr(model,'P_sym'):
+        Prop_full = np.zeros((model.K,model.P))
+        Prop_full[:model.K_sym,model.indx_full[0]]=Prop
+        Prop_full[model.K_sym:,model.indx_full[1]]=Prop
+        Prop=Prop_full
+    parcel = Prop.argmax(axis=0)+1
+    return parcel
+
+def plot_parcel_flat(parcel,cmap,atlas):
+    # Plot Parcellation 
+    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    Nifti = suit_atlas.data_to_nifti(parcel)
+    if atlas[0:4]=='SUIT':
+        map_space='SUIT'
+    elif atlas[0:7]=='MNISymC':
+        map_space='MNISymC'
+    else:
+        raise(NameError('Unknown atlas space'))
+
+    surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
+            space=map_space,ignore_zeros=True)
+    suit.flatmap.plot(surf_data, 
+                render='matplotlib',
+                cmap=cmap, 
+                new_figure=False,
+                overlay_type='label')
+
+
+def parcel_similarity(model,plot=False):
+    n_sets = len(model.emissions)
+    K = model.emissions[0].K
+    cos_sim = np.empty((n_sets,K,K))
     kappa = np.empty((n_sets,))
     n_subj = np.empty((n_sets,))
-    for i,em in enumerate(m.emissions):
+    for i,em in enumerate(model.emissions):
         cos_sim[i,:,:] = em.V.T @ em.V
         kappa[i] = em.kappa
         n_subj[i] = em.num_subj
@@ -79,26 +100,73 @@ def parcel_similarity(model_name,plot=False):
 
     return w_cos_sim,cos_sim,kappa
 
-def agglomative_clustering(similarity):
+def agglomative_clustering(similarity,cmap,plot=True):
     # setting distance_threshold=0 ensures we compute the full tree.
-    model = AgglomerativeClustering(distance_threshold=0, 
-                                    n_clusters=None,
-                                    affinity='precomputed')
-
-    model = model.fit(X)
-    plt.title("Hierarchical Clustering Dendrogram")
     # plot the top three levels of the dendrogram
-    plot_dendrogram(model, truncate_mode="level", p=3)
-    plt.xlabel("Number of points in node (or index of point if no parenthesis).")
-    plt.show()
+    K = similarity.shape[0]
+    sym_sim=(similarity+similarity.T)/2
+    dist = squareform(1-sym_sim.round(5))
+    Z = linkage(dist,'average')
+    if plot:
+        ax=plt.gca()
+        R = dendrogram(Z) # truncate_mode="level", p=3)
+        ax.set_ylim((-0.2,1.1))
+        leaves = R['leaves']
+        for k in range(K):
+            rect = Rectangle((k*10, -0.05), 10,0.05,
+            facecolor=cmap(leaves[k]+1),
+            fill=True,
+            edgecolor=(0,0,0,1))
+            ax.add_patch(rect)
+        pass 
+
+def colormap_mds(G,plot=True):
+    N = G.shape[0]
+    G = (G + G.T)/2
+    Glam, V = eigh(G)
+    Glam = np.flip(Glam,axis=0)
+    V = np.flip(V,axis=1)
+
+    # Make a new color maps 
+    # Kill eigenvalues smaller than 3 
+    W = V[:,:3] * np.sqrt(Glam[:3])
+    sW = (W-W.min())/(W.max()-W.min())
+    colors = np.c_[sW,np.ones((N,))]
+    colorsp = np.r_[np.zeros((1,4)),colors] # Add empty for the zero's color
+    newcmp = ListedColormap(colorsp)
 
 
+    if plot:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        ax.scatter(W[:,0],W[:,1], W[:,2], marker='o',
+                   c=colors)
+        ax.set_box_aspect((np.ptp(W[:,0]), np.ptp(W[:,1]), np.ptp(W[:,2]))) 
+    return newcmp 
+
+
+def analyze_parcel(mname):
+    split_mn = mname.split('_')
+    info,model = load_batch_best(mname)
+
+    # get the parcel similarity 
+    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
+
+    # Make a colormap 
+    cmap = colormap_mds(w_cos_sim)
+
+    # plt.figure()
+    # parcel = get_parcel(model)
+    # atlas = split_mn[2][6:]
+    # plot_parcel_flat(parcel,cmap,atlas)
+    plt.figure()
+    agglomative_clustering(w_cos_sim,cmap)
+    pass
 
 
 
 if __name__ == "__main__":
-    mname = 'sym_MdPoNiIb_space-MNISymC3_K-20'
-    parcel_similarity(mname,plot=True)
-    pass
+    mname = 'sym_Md_space-MNISymC3_K-34'
+    analyze_parcel(mname)
 
-
+    # agglomative_clustering(1-w_cos_sim)
