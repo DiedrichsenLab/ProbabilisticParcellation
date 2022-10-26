@@ -485,26 +485,30 @@ def eval2():
                    f'asym_MdPoNi_space-{space}_K-10']
 
 
-    # # Evalutate group parcellation
-    # allR = pd.DataFrame()
-    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-    #     print(f'ev in {testdata}')
-    #     R = run_dcbc_group(model_name, space,
-    #                                 testdata)
-    #     R.to_csv(base_dir + f'/Models/eval_dcbc_group_{testdata}.tsv', sep='\t')
-    #     allR = pd.concat([allR, R], ignore_index=True)
-
-    # allR.to_csv(base_dir + f'/Models/eval_dcbc_group.tsv', sep='\t')
-
-    # Evalutate individual parcellation
+    # Evalutate group parcellation
     allR = pd.DataFrame()
     for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-        print(f'ev in {testdata}')     
-        R = run_dcbc_individual(model_name, testdata, test_sess='all')
-        R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
+        print(f'ev in {testdata}')
+        tsv_file = Path(base_dir + f'/Models/eval_dcbc_group_{testdata}.tsv')
+        if tsv_file.exsists():
+            R = pd.read_csv(tsv_file)
+        else:
+            R = run_dcbc_group(model_name, space,
+                                        testdata)
+            R.to_csv(tsv_file, sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
-    allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv.tsv', sep='\t')
+    allR.to_csv(base_dir + f'/Models/eval_dcbc_group.tsv', sep='\t')
+
+    # # Evalutate individual parcellation
+    # allR = pd.DataFrame()
+    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
+    #     print(f'ev in {testdata}')     
+    #     R = run_dcbc_individual(model_name, testdata, test_sess='all')
+    #     R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
+    #     allR = pd.concat([allR, R], ignore_index=True)
+
+    # allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv.tsv', sep='\t')
 
 
     pass
