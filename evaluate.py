@@ -401,8 +401,8 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     # Decide how many splits we need 
     if indivtrain_ind is None:
         n_splits = 1
-        indivtrain_ind = 'sess'
-        indivtrain_values = tds.sessions
+        indivtrain_ind = 'half'
+        indivtrain_values = [1, 2]
     else:
         n_splits = len(indivtrain_values)
 
