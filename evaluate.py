@@ -475,7 +475,7 @@ def eval1():
                          part_ind='half',
                          indivtrain_ind='sess',
                          indivtrain_values=['ses-s1','ses-s2'])
-    R.to_csv(base_dir + '/Models/eval_Mdtb.tsv',sep='\t')
+    R.to_csv(base_dir + '/Models/Evaluation/eval_Mdtb.tsv',sep='\t')
 
 def eval2():
     space = 'MNISymC3'
@@ -493,7 +493,7 @@ def eval2():
         print(f'ev in {testdata}')
         tsv_file = Path(
             base_dir + f'/Models/eval_dcbc_group_{testdata}_K-{K}.tsv')
-        if tsv_file.exsists():
+        if tsv_file.exists():
             R = pd.read_csv(tsv_file, sep='\t')
         else:
             R = run_dcbc_group(model_name, space,
@@ -501,19 +501,25 @@ def eval2():
             R.to_csv(tsv_file, sep='\t')
         allR = pd.concat([allR, R], ignore_index=True)
 
-    allR.to_csv(base_dir + f'/Models/eval_dcbc_group_K-{K}.tsv', sep='\t')
+    allR.to_csv(
+        base_dir + f'/Models/Evaluation/eval_dcbc_group_K-{K}.tsv', sep='\t')
 
 
 
-    # # Evalutate individual parcellation
-    # allR = pd.DataFrame()
-    # for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-    #     print(f'ev in {testdata}')     
-    #     R = run_dcbc_individual(model_name, testdata, test_sess='all')
-    #     R.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{testdata}.tsv', sep='\t')
-    #     allR = pd.concat([allR, R], ignore_index=True)
+    # Evalutate individual parcellation
+    allR = pd.DataFrame()
+    for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
+        print(f'ev in {testdata}')     
+        tsv_file = Path(
+            base_dir + f'/Models/eval_dcbc_indiv_{testdata}_K-{K}.tsv')
+        if tsv_file.exists():
+            R = pd.read_csv(tsv_file, sep='\t')
+        else:
+            R = run_dcbc_individual(model_name, testdata, test_sess='all')
+            R.to_csv(tsv_file, sep='\t')
+        allR = pd.concat([allR, R], ignore_index=True)
 
-    # allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{K}.tsv', sep='\t')
+    allR.to_csv(base_dir + f'/Models/eval_dcbc_indiv_{K}.tsv', sep='\t')
 
 
     pass
