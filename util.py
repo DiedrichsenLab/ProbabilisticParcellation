@@ -167,8 +167,9 @@ def plot_model_parcel(model_names,grid,cmap='tab20b'):
         Prop = model.marginal_prob()
         parcel.append(np.argmax(Prop,axis=0)+1) # Get winner take all
 
-        # Split the name and build titles 
-        split_mn = mn.split('_')
+        # Split the name and build titles
+        fname = mn.split('/') # Get filename if directory is given 
+        split_mn = fname[-1].split('_') 
         titles.append(split_mn[1] + ' ' + split_mn[3])
 
     atlas = split_mn[2][6:]
@@ -178,9 +179,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b'):
                      titles=titles) 
 
 if __name__ == "__main__":
-    model_name = ['asym_Md_space-MNISymC3_K-10',
-                  'asym_Po_space-MNISymC3_K-10',
-                  'asym_Ni_space-MNISymC3_K-10']
-    fig = plt.figure(figsize=(20,10))
-    plot_model_parcel(model_name,[2,3])
+    model_name = ['ibc_selected_sessions/asym_Ib_space-MNISymC3_K-10_ses-all']
+    fig = plt.figure(figsize=(10,8))
+    plot_model_parcel(model_name,[1,1])
     pass
