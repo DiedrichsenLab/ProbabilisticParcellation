@@ -239,7 +239,7 @@ def fit_all(set_ind=[0,1,2],K=10):
     # Data sets need to numpy arrays to allow indixing by list
     datasets = np.array(['Mdtb','Pontine','Nishimoto','Ibc', 'Hcp'],
                     dtype = object)
-    sess = np.array(['all','all','all','all', 'ses-s1'],
+    sess = np.array(['all','all','all','all', 'all'],
             dtype = object)
     type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf', 'Run'],
             dtype = object)
