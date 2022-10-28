@@ -90,9 +90,10 @@ def align_fits(models,inplace=True):
                 V[j][i,:,:]=em.V[:,indx]
             else:
                 V[j][i,:,:]=em.V[:,np.concatenate([indx,indx+K])]
-
             if inplace:
                 em.V=V[j][j,:,:]
+                if not em.uniform_kappa:
+                    em.kappa = em.kappa[j]
     return Prop, V
 
 
@@ -295,11 +296,12 @@ if __name__ == "__main__":
     # fit_all([0, 2]) 
     # fit_all([1, 2])
     for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-        fit_all([0],k)
-        fit_all([1],k)
-        fit_all([2],k)
-        fit_all([3],k)        
-        fit_all([0,1,2,3],k)
+        fit_all([4],k,model_type='02')
+        fit_all([0],k,model_type='02')
+        fit_all([1],k,model_type='02')
+        fit_all([2],k,model_type='02')
+        fit_all([3],k,model_type='02')
+        fit_all([0,1,2,3,4],k,model_type='02')
     # fit_all([0],20)
     # fit_all([1],20)
     # fit_all([2],20)
