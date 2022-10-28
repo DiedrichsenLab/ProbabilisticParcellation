@@ -115,7 +115,7 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     return np.asarray(dcbc_values)
 
 
-def run_prederror(model_names,test_data,test_sess,
+def run_prederror(model_type,model_names,test_data,test_sess,
                     cond_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
@@ -142,7 +142,7 @@ def run_prederror(model_names,test_data,test_sess,
     Returns:
         data-frame with model evalution
     """
-    wdir = base_dir + '/Models/'
+    wdir = base_dir + '/Models/' + f"Models_{model_type}" + '/'
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas='MNISymC3',sess=test_sess)
     # For testing: tdata=tdata[0:5,:,:]
@@ -393,7 +393,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     return results
 
 
-def eval_all_prederror(prefix,K):
+def eval_all_prederror(model_type,prefix,K):
     models = ['Md','Po','Ni','Ib','MdPoNiIb']
     datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
     
@@ -406,13 +406,13 @@ def eval_all_prederror(prefix,K):
                           f'K-{K}')
     for ds in datasets:
         print(f'Testdata: {ds}\n')
-        R = run_prederror(model_name,ds,'all',
+        R = run_prederror(model_type,model_name,ds,'all',
                     cond_ind=None,
                     part_ind='half',
                     eval_types=['group','floor'],
                     indivtrain_ind='half',indivtrain_values=[1,2])
         results = pd.concat([results,R],ignore_index=True)
-    results.to_csv(base_dir + f'/Models/Evaluation/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
+    results.to_csv(base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
 
 
 def eval1():
@@ -480,8 +480,8 @@ def eval2():
 
 if __name__ == "__main__":
     for K in np.arange(10,35,step=2):
-        eval_all_prederror('sym',K)
-        eval_all_prederror('asym',K)
+        eval_all_prederror('01','sym',K)
+        eval_all_prederror('01','asym',K)
 
 
     pass
