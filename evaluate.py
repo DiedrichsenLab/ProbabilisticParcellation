@@ -1,4 +1,4 @@
-# Script for evaluating DCBC on fused parcellation
+# Evaluate cerebellar parcellations
 from time import gmtime
 from pathlib import Path
 import pandas as pd
@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
+from util import *
 from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
@@ -29,73 +30,6 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
-def load_batch_fit(fname):
-    """ Loads a batch of fits and extracts marginal probability maps 
-    and mean vectors
-    Args:
-        fname (str): File name
-    """
-    wdir = base_dir + '/Models/'
-    info = pd.read_csv(wdir + fname + '.tsv',sep='\t')
-    with open(wdir + fname + '.pickle','rb') as file:
-        models = pickle.load(file)
-    n_iter = len(models)
-        # Intialize data arrays
-    Prop = pt.zeros((n_iter,models[0].arrange.K,models[0].arrange.P))
-    V = []
-
-    for i,M in enumerate(models):
-        Prop[i,:,:] = M.arrange.logpi.softmax(axis=0)
-
-        # Now switch the emission models accordingly:
-        for j,em in enumerate(M.emissions):
-            if i==0:
-                V.append(pt.zeros((n_iter,em.M,info.K[i])))
-            V[j][i,:,:]=em.V
-    return info,models,Prop,V
-
-def plot_parcel_flat(data,suit_atlas,grid,map_space='SUIT'):
-    """Plots a parcellation 
-
-    Args:
-        data (_type_): _description_
-        suit_atlas (_type_): _description_
-        grid (_type_): _description_
-        map_space (str, optional): _description_. Defaults to 'SUIT'.
-    """
-    color_file = base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'
-    color_info = pd.read_csv(color_file, sep=' ', header=None)
-    MDTBcolors = np.zeros((11, 3))
-    MDTBcolors[1:11, :] = color_info.iloc[:, 1:4].to_numpy()
-    Nifti = suit_atlas.data_to_nifti(data)
-    surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',space=map_space)
-
-    plt.figure
-    for i in range(surf_data.shape[1]):
-        plt.subplot(grid[0],grid[1],i+1)
-        suit.flatmap.plot(surf_data[:,i], render='matplotlib',cmap=MDTBcolors, new_figure=False,overlay_type='label')
-
-def plot_parcel_flat_best(model_names,grid):
-    """Load a bunch of model fits, selects the best from 
-    each of them and plots the flatmap of the parcellation
-    ToDo: Align colors across different parcellations- 
-    Pick good color schemes for different K + symmetric parcels  
-    """
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = am.AtlasVolumetric('MNISymC3',mask_img=mask)
-    sym_atlas = am.AtlasVolumeSymmetric('MNISymC3',mask_img=mask)
-
-    parcel=np.empty((len(model_names),atlas.P))
-
-    for i,mn in enumerate(model_names):
-        info,models,Prop,V = load_batch_fit(mn)
-        j=np.argmax(info.loglik)
-        par = pt.argmax(Prop[j,:,:],dim=0)+1 # Get winner take all 
-        # If symmetric - project back to full map: 
-        if mn[0:3]=='sym':
-            par=par[sym_atlas.indx_reduced] # Put back into full space
-        parcel[i,:]=par
-    plot_parcel_flat(parcel,atlas,grid=grid,map_space='MNISymC') 
 
 def calc_test_error(M,tdata,U_hats):
     """Evaluates the predictions from a trained full model on some testdata. 
@@ -117,7 +51,7 @@ def calc_test_error(M,tdata,U_hats):
     """
     num_subj = tdata.shape[0]
     subj = np.arange(num_subj)
-    group_parc = M.arrange.marginal_prob()
+    group_parc = M.marginal_prob()
     pred_err = np.empty((len(U_hats),num_subj))
     for s in range(num_subj):
         print(f'Subject:{s}')
@@ -216,7 +150,9 @@ def run_prederror(model_names,test_data,test_sess,
     if not isinstance(model_names,list):
         model_names = [model_names]
     
-    # Get condition and partition vector of test data 
+    # Get condition and partition vector of test data
+    if cond_ind is None:
+        cond_ind = tds.cond_ind
     cond_vec = tinfo[cond_ind].values.reshape(-1,)
     if part_ind is None:
         part_vec = np.zeros((tinfo.shape[0],),dtype=int)
@@ -231,68 +167,66 @@ def run_prederror(model_names,test_data,test_sess,
 
     # Now loop over possible models we want to evaluate 
     for model_name in model_names:
-        minfo, models, _, _ = load_batch_fit(model_name)
-        n_iter = len(models)
+        print(f"Doing model {model_name}\n")
+        minfo, model = load_batch_best(model_name)
 
-        for i,m in enumerate(models):
-            # Loop over the splits - if split then train a individual model
-            for n in range(n_splits):
-                # ------------------------------------------
-                # Train an emission model on the individual training data and get a Uhat (individual parcellation) from it.
-                if indivtrain_ind is not None:
-                    train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
-                    test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
-                    indivtrain_em = em.MixVMF(K=minfo.K[i], N=40, 
-                             P = m.emissions[0].P,
-                             X = matrix.indicator(cond_vec[train_indx]), 
-                             part_vec=part_vec[train_indx],
-                             uniform_kappa=True)
-                    indivtrain_em.initialize(tdata[:,train_indx,:])
-                    m.emissions = [indivtrain_em]
-                    m.nparams = m.arrange.nparams + indivtrain_em.nparams 
-                    m,ll,theta,U_indiv = m.fit_em(
-                        iter=200, tol=0.1,
-                        fit_emission=True, 
-                        fit_arrangement=False,
-                        first_evidence=False)
-                    all_eval = eval_types + [U_indiv]
+        # Loop over the splits - if split then train a individual model
+        for n in range(n_splits):
+            # ------------------------------------------
+            # Train an emission model on the individual training data and get a Uhat (individual parcellation) from it.
+            if indivtrain_ind is not None:
+                train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
+                test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
+                indivtrain_em = em.MixVMF(K=minfo.K, N=40, 
+                            P = model.emissions[0].P,
+                            X = matrix.indicator(cond_vec[train_indx]), 
+                            part_vec=part_vec[train_indx],
+                            uniform_kappa=True)
+                indivtrain_em.initialize(tdata[:,train_indx,:])
+                model.emissions = [indivtrain_em]
+                model.nparams = model.arrange.nparams + indivtrain_em.nparams 
+                m,ll,theta,U_indiv = model.fit_em(
+                    iter=200, tol=0.1,
+                    fit_emission=True, 
+                    fit_arrangement=False,
+                    first_evidence=False)
+                all_eval = eval_types + [U_indiv]
+            else:
+                test_indx =  np.ones((tinfo.shape[0],),dtype=bool)
+                all_eval = eval_types
+            # ------------------------------------------
+            # Now build the model for the test data and crossvalidate
+            # across subjects
+            em_model = em.MixVMF(K=minfo.K, N=40, 
+                            P=model.emissions[0].P,
+                            X=matrix.indicator(cond_vec[test_indx]), 
+                            part_vec=part_vec[test_indx],
+                            uniform_kappa=True)
+            # Add this single emission model
+            model.emissions = [em_model] 
+            # recalculate total number parameters
+            model.nparams = m.arrange.nparams + em_model.nparams 
+            # To CARO: You could copy the function and then replace this prediction_error function with the DCBC claculation for group and individual parcellation:  
+            res = calc_test_error(m,tdata[:,test_indx,:],all_eval)
+            # ------------------------------------------
+            # Collect the information from the evaluation 
+            # in a data frame
+            ev_df = pd.DataFrame({'model_name':[minfo.name]*num_subj,
+                            'atlas':[minfo.atlas]*num_subj,
+                            'K':[minfo.K]*num_subj,
+                            'train_data':[minfo.datasets]*num_subj,
+                            'train_loglik':[minfo.loglik]*num_subj,
+                            'test_data':[test_data]*num_subj,
+                            'indivtrain_ind':[indivtrain_ind]*num_subj,
+                            'indivtrain_val':[indivtrain_values[n]]*num_subj,
+                            'subj_num':np.arange(num_subj)})
+            # Add all the evaluations to the data frame
+            for e,ev in enumerate(all_eval):
+                if isinstance(ev,str):
+                    ev_df['coserr_' + ev]=res[e,:]
                 else:
-                    test_indx =  np.ones((tinfo.shape[0],),dtype=bool)
-                    all_eval = eval_types
-                # ------------------------------------------
-                # Now build the model for the test data and crossvalidate
-                # across subjects
-                em_model = em.MixVMF(K=minfo.K[i], N=40, 
-                             P=m.emissions[0].P,
-                             X=matrix.indicator(cond_vec[test_indx]), 
-                             part_vec=part_vec[test_indx],
-                             uniform_kappa=True)
-                # Add this single emission model
-                m.emissions = [em_model] 
-                # recalculate total number parameters
-                m.nparams = m.arrange.nparams + em_model.nparams 
-                # To CARO: You could copy the function and then replace this prediction_error function with the DCBC claculation for group and individual parcellation:  
-                res = calc_test_error(m,tdata[:,test_indx,:],all_eval)
-                # ------------------------------------------
-                # Collect the information from the evaluation 
-                # in a data frame
-                ev_df = pd.DataFrame({'model_name':[minfo.name[i]]*num_subj,
-                                'atlas':[minfo.atlas[i]]*num_subj,
-                                'K':[minfo.K[i]]*num_subj,
-                                'model_num':[i]*num_subj,
-                                'train_data':[minfo.datasets[i]]*num_subj,
-                                'train_loglik':[minfo.loglik[i]]*num_subj,
-                                'test_data':[test_data]*num_subj,
-                                'indivtrain_ind':[indivtrain_ind]*num_subj,
-                                'indivtrain_val':[indivtrain_values[n]]*num_subj,
-                                'subj_num':np.arange(num_subj)})
-                # Add all the evaluations to the data frame
-                for e,ev in enumerate(all_eval):
-                    if isinstance(ev,str):
-                        ev_df['coserr_' + ev]=res[e,:]
-                    else:
-                        ev_df[f'coserr_ind{e}']=res[e,:]
-                results = pd.concat([results, ev_df], ignore_index=True)
+                    ev_df[f'coserr_ind{e}']=res[e,:]
+            results = pd.concat([results, ev_df], ignore_index=True)
     return results
 
 
@@ -323,11 +257,8 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
     results = pd.DataFrame()
     for i, mn in enumerate(model_names):
         print(f'evaluating {mn}')
-        minfo, models, Prop, _ = load_batch_fit(mn)
-        
-        # Pick only the best parcellation from the file...
-        j = np.argmax(minfo.loglik)
-        par = pt.argmax(Prop[j, :, :], dim=0) + 1  # Get winner take all
+        minfo, models = load_batch_best(mn)
+        Prop, V = extract_fit([models])
         # Initialize result array
         if i == 0:
             dcbc = np.zeros((len(model_names), tdata.shape[0]))
@@ -408,7 +339,8 @@ def run_dcbc_individual(model_names, test_data, test_sess,
 
     # Now loop over possible models we want to evaluate 
     for model_name in model_names:
-        minfo, models, Prop, _ = load_batch_fit(model_name)
+        minfo, models = load_batch_fit(model_name)
+        Prop, V = extract_fit(models)
         n_iter = len(models)
 
 
@@ -460,6 +392,27 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     return results
 
 
+def eval_all_prederror(prefix,K):
+    models = ['Md','Po','Ni','Ib','MdPoNiIb']
+    datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
+    
+    model_name = []
+    results = pd.DataFrame()
+    for m in models:
+        model_name.append(prefix + '_' + 
+                          m + '_' + 
+                          'space-MNISymC3'+ '_' + 
+                          f'K-{K}')
+    for ds in datasets:
+        print(f'Testdata: {ds}\n')
+        R = run_prederror(model_name,ds,'all',
+                    cond_ind=None,
+                    part_ind='half',
+                    eval_types=['group','floor'],
+                    indivtrain_ind='half',indivtrain_values=[1,2])
+        results = pd.concat([results,R],ignore_index=True)
+    results.to_csv(base_dir + f'/Models/Evaluation/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
+
 
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
@@ -467,7 +420,6 @@ def eval1():
                    'asym_Ni_space-MNISymC3_K-10',
                    'asym_MdPoNi_space-MNISymC3_K-10']
     
-    # plot_parcel_flat_best(model_name,[2,2])
     R = run_prederror(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
@@ -524,12 +476,11 @@ def eval2():
 
     pass
 
-    #     if testdata == 'Mdtb':
-    #         cond_ind = 'cond_name'
-    #     else:
-    #         cond_ind = 'task_name'
-
 
 if __name__ == "__main__":
-    eval2()
+    for K in np.arange(12,35,step=2):
+        eval_all_prederror('asym',K)
+        eval_all_prederror('sym',K)
+
+
     pass
