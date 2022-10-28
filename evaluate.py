@@ -71,6 +71,7 @@ def calc_test_error(M,tdata,U_hats):
                 U = group_parc
             elif crit=='floor':
                 U,ll = M.Estep(Y=pt.tensor(tdata[subj==s,:,:]).unsqueeze(0))
+                U = M.remap_evidence(U)
             else:
                 U = crit[subj==s,:,:]
             a=ev.coserr(dat, M.emissions[0].V, U,
@@ -190,7 +191,7 @@ def run_prederror(model_names,test_data,test_sess,
                     fit_emission=True, 
                     fit_arrangement=False,
                     first_evidence=False)
-                all_eval = eval_types + [U_indiv]
+                all_eval = eval_types + [model.remap_evidence(U_indiv)]
             else:
                 test_indx =  np.ones((tinfo.shape[0],),dtype=bool)
                 all_eval = eval_types
@@ -478,9 +479,9 @@ def eval2():
 
 
 if __name__ == "__main__":
-    for K in np.arange(12,35,step=2):
-        eval_all_prederror('asym',K)
+    for K in np.arange(10,35,step=2):
         eval_all_prederror('sym',K)
+        eval_all_prederror('asym',K)
 
 
     pass
