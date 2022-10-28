@@ -80,7 +80,8 @@ def plot_data_flat(data,atlas,
                     dtype = 'label',
                     cscale = None,
                     labels = None,
-                    render='matplotlib'):
+                    render='matplotlib',
+                    colorbar = False):
     """ Maps data from an atlas space to a full volume and
     from there onto the surface - then plots it. 
 
@@ -116,7 +117,8 @@ def plot_data_flat(data,atlas,
                 cmap=cmap, 
                 new_figure=False,
                 label_names = labels,
-                overlay_type='label')
+                overlay_type='label',
+                colorbar= colorbar)
     # Plotting funtional data 
     elif dtype== 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
@@ -126,7 +128,8 @@ def plot_data_flat(data,atlas,
                 cmap=cmap,
                 cscale = cscale,
                 new_figure=False,
-                overlay_type='func')
+                overlay_type='func',
+                colorbar= colorbar)
     else:
         raise(NameError('Unknown data type'))
     return ax
@@ -135,7 +138,8 @@ def plot_multi_flat(data,atlas,grid,
                     cmap = None,
                     dtype = 'label',
                     cscale = None,
-                    titles=None):
+                    titles=None,
+                    colorbar = False):
     """Plots a grid of flatmaps with some data 
 
     Args:
@@ -153,7 +157,8 @@ def plot_multi_flat(data,atlas,grid,
                     cmap = cmap,
                     dtype = dtype,
                     cscale = cscale,
-                    render='matplotlib') 
+                    render='matplotlib',
+                    colorbar = (i==0) & colorbar) 
         if titles is not None: 
             plt.title(titles[i])
 
