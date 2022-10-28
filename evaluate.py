@@ -51,7 +51,7 @@ def calc_test_error(M,tdata,U_hats):
     """
     num_subj = tdata.shape[0]
     subj = np.arange(num_subj)
-    group_parc = M.arrange.marginal_prob()
+    group_parc = M.marginal_prob()
     pred_err = np.empty((len(U_hats),num_subj))
     for s in range(num_subj):
         print(f'Subject:{s}')
@@ -411,7 +411,7 @@ def eval_all_prederror(prefix,K):
                     eval_types=['group','floor'],
                     indivtrain_ind='half',indivtrain_values=[1,2])
         results = pd.concat([results,R],ignore_index=True)
-    R.to_csv(base_dir + f'/Models/Evaluation/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
+    results.to_csv(base_dir + f'/Models/Evaluation/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
 
 
 def eval1():
