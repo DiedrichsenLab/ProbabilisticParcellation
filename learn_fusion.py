@@ -237,15 +237,15 @@ def batch_fit(datasets,sess,type=None,design_ind=None,part_ind=None,subj=None,
 
 def fit_all(set_ind=[0,1,2],K=10):
     # Data sets need to numpy arrays to allow indixing by list
-    datasets = np.array(['Mdtb','Pontine','Nishimoto','Ibc'],
+    datasets = np.array(['Mdtb','Pontine','Nishimoto','Ibc', 'Hcp'],
                     dtype = object)
-    sess = np.array(['all','all','all','all'],
+    sess = np.array(['all','all','all','all', 'ses-s1'],
             dtype = object)
-    type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf'],
+    type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf', 'Run'],
             dtype = object)
-    design_ind= np.array(['cond_num_uni','task_num','reg_id','reg_num'],
+    design_ind= np.array(['cond_num_uni','task_num','reg_id','reg_num', 'reg_id'],
             dtype = object)
-    part_ind = np.array(['half','half','half','half'],
+    part_ind = np.array(['half','half','half','half', 'half'],
             dtype = object)
 
     # Use specific mask / atlas. 
@@ -281,13 +281,13 @@ if __name__ == "__main__":
     # fit_all([2])
     # fit_all([0,1,2])
     # fit_all([0,1])
-    # fit_all([0, 2]) # problem with fitting 0 & 2: In "generativeMRF/full_model.py", line 466, 'best_theta' is referenced before assignment
+    # fit_all([0, 2]) 
     # fit_all([1, 2])
-    fit_all([0,1,2,3],10)
     # fit_all([0],20)
     # fit_all([1],20)
     # fit_all([2],20)
-    fit_all([3],20)
+    fit_all([4],10)
+    # fit_all([0,1,2,3,4],10)
     # check_IBC()
     #mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
     #atlas = am.AtlasVolumetric('MNISymC3',mask_img=mask)
