@@ -71,6 +71,7 @@ def calc_test_error(M,tdata,U_hats):
                 U = group_parc
             elif crit=='floor':
                 U,ll = M.Estep(Y=pt.tensor(tdata[subj==s,:,:]).unsqueeze(0))
+                U = M.remap_evidence(U)
             else:
                 U = crit[subj==s,:,:]
             a=ev.coserr(dat, M.emissions[0].V, U,
@@ -114,7 +115,7 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     return np.asarray(dcbc_values)
 
 
-def run_prederror(model_names,test_data,test_sess,
+def run_prederror(model_type,model_names,test_data,test_sess,
                     cond_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
@@ -141,7 +142,7 @@ def run_prederror(model_names,test_data,test_sess,
     Returns:
         data-frame with model evalution
     """
-    wdir = base_dir + '/Models/'
+    wdir = base_dir + '/Models/' + f"Models_{model_type}" + '/'
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas='MNISymC3',sess=test_sess)
     # For testing: tdata=tdata[0:5,:,:]
@@ -168,7 +169,7 @@ def run_prederror(model_names,test_data,test_sess,
     # Now loop over possible models we want to evaluate 
     for model_name in model_names:
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(model_name)
+        minfo, model = load_batch_best(f"Models_{model_type}/{model_name}")
 
         # Loop over the splits - if split then train a individual model
         for n in range(n_splits):
@@ -190,7 +191,7 @@ def run_prederror(model_names,test_data,test_sess,
                     fit_emission=True, 
                     fit_arrangement=False,
                     first_evidence=False)
-                all_eval = eval_types + [U_indiv]
+                all_eval = eval_types + [model.remap_evidence(U_indiv)]
             else:
                 test_indx =  np.ones((tinfo.shape[0],),dtype=bool)
                 all_eval = eval_types
@@ -211,7 +212,7 @@ def run_prederror(model_names,test_data,test_sess,
             # ------------------------------------------
             # Collect the information from the evaluation 
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo.name]*num_subj,
+            ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
                             'atlas':[minfo.atlas]*num_subj,
                             'K':[minfo.K]*num_subj,
                             'train_data':[minfo.datasets]*num_subj,
@@ -392,7 +393,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     return results
 
 
-def eval_all_prederror(prefix,K):
+def eval_all_prederror(model_type,prefix,K):
     models = ['Md','Po','Ni','Ib','MdPoNiIb']
     datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
     
@@ -405,13 +406,13 @@ def eval_all_prederror(prefix,K):
                           f'K-{K}')
     for ds in datasets:
         print(f'Testdata: {ds}\n')
-        R = run_prederror(model_name,ds,'all',
+        R = run_prederror(model_type,model_name,ds,'all',
                     cond_ind=None,
                     part_ind='half',
                     eval_types=['group','floor'],
                     indivtrain_ind='half',indivtrain_values=[1,2])
         results = pd.concat([results,R],ignore_index=True)
-    results.to_csv(base_dir + f'/Models/Evaluation/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
+    results.to_csv(base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
 
 
 def eval1():
@@ -478,9 +479,9 @@ def eval2():
 
 
 if __name__ == "__main__":
-    for K in np.arange(12,35,step=2):
-        eval_all_prederror('asym',K)
-        eval_all_prederror('sym',K)
+    for K in np.arange(10,35,step=2):
+        eval_all_prederror('01','sym',K)
+        eval_all_prederror('01','asym',K)
 
 
     pass
