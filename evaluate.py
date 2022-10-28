@@ -212,7 +212,7 @@ def run_prederror(model_names,test_data,test_sess,
             # ------------------------------------------
             # Collect the information from the evaluation 
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo.name]*num_subj,
+            ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
                             'atlas':[minfo.atlas]*num_subj,
                             'K':[minfo.K]*num_subj,
                             'train_data':[minfo.datasets]*num_subj,
