@@ -96,14 +96,17 @@ def align_fits(models,inplace=True):
     return Prop, V
 
 
-def batch_fit(datasets,sess,type=None,design_ind=None,part_ind=None,subj=None,
+def batch_fit(datasets,sess,
+                type=None,design_ind=None,part_ind=None,subj=None,
                 atlas=None,K=10,arrange='independent',emission='VMF',
+                uniform_kappa = True,
                 n_rep=3, n_inits=10, 
-                n_iter=80,first_iter=10,save=True,name=None):
+                n_iter=80,first_iter=10,name=None):
     """ Executes a set of fits starting from random starting values
     selects the best one from a batch and saves them 
 
     Args:
+        model_type (str): String indicating model_type
         datasets (list): List of dataset names to be used as training
         sess (list): List of list of sessions to be used for each
         type (list): List the type  
@@ -197,7 +200,7 @@ def batch_fit(datasets,sess,type=None,design_ind=None,part_ind=None,subj=None,
                                      P=atlas.P,
                                      X=design[j], 
                                      part_vec=part_vec[j],
-                                     uniform_kappa=True)
+                                     uniform_kappa=uniform_kappa)
             else:
                 raise((NameError(f'unknown emission model:{emission}')))
             em_model.initialize(ds)
@@ -226,16 +229,9 @@ def batch_fit(datasets,sess,type=None,design_ind=None,part_ind=None,subj=None,
     models = np.array(models,dtype=object)
     align_fits(models)
 
-    # Save the fits and information
-    if save is True:
-        wdir = base_dir + '/Models'
-        fname = f'/{name}_space-{atlas.name}_K-{K}'
-        info.to_csv(wdir + fname + '.tsv',sep='\t')
-        with open(wdir + fname + '.pickle','wb') as file:
-            pickle.dump(models,file)
     return info,models
 
-def fit_all(set_ind=[0,1,2,3],K=10):
+def fit_all(set_ind=[0,1,2,3],K=10,model_type='01'):
     # Data sets need to numpy arrays to allow indixing by list
     datasets = np.array(['Mdtb','Pontine','Nishimoto','Ibc'],
                     dtype = object)
@@ -255,13 +251,19 @@ def fit_all(set_ind=[0,1,2,3],K=10):
 
     # Give a overall name for the type of model
     mname =['asym','sym']
-    
+
+    # Provide different setttings for the different model types 
+    if model_type=='01':
+        uniform_kappa = True
+    elif model_type=='02':
+        uniform_kappa = False
+        
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
     for i in [0,1]:
         name = mname[i] + '_' + ''.join(dataname) 
-        batch_fit(datasets[set_ind],
+        info,models = batch_fit(datasets[set_ind],
               sess = sess[set_ind],
               type = type[set_ind],
               design_ind = design_ind[set_ind],
@@ -273,7 +275,14 @@ def fit_all(set_ind=[0,1,2,3],K=10):
               n_iter=200,
               n_rep=10,
               first_iter=30,
-              save=True)
+              uniform_kappa = uniform_kappa)
+
+            # Save the fits and information
+        wdir = base_dir + f'/Models/Models_{model_type}'
+        fname = f'/{name}_space-{atlas.name}_K-{K}'
+        info.to_csv(wdir + fname + '.tsv',sep='\t')
+        with open(wdir + fname + '.pickle','wb') as file:
+            pickle.dump(models,file)
 
 if __name__ == "__main__":
     # fit_all([0])
