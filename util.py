@@ -79,6 +79,7 @@ def plot_data_flat(data,atlas,
                     cmap = None,
                     dtype = 'label',
                     cscale = None,
+                    labels = None,
                     render='matplotlib'):
     """ Maps data from an atlas space to a full volume and
     from there onto the surface - then plots it. 
@@ -114,6 +115,7 @@ def plot_data_flat(data,atlas,
                 render=render,
                 cmap=cmap, 
                 new_figure=False,
+                label_names = labels,
                 overlay_type='label')
     # Plotting funtional data 
     elif dtype== 'func':
@@ -124,7 +126,7 @@ def plot_data_flat(data,atlas,
                 cmap=cmap,
                 cscale = cscale,
                 new_figure=False,
-                overlay_type='label')
+                overlay_type='func')
     else:
         raise(NameError('Unknown data type'))
     return ax
@@ -177,9 +179,3 @@ def plot_model_parcel(model_names,grid,cmap='tab20b'):
     plot_multi_flat(data,atlas,grid=grid,
                      cmap=cmap,
                      titles=titles) 
-
-if __name__ == "__main__":
-    model_name = ['ibc_selected_sessions/asym_Ib_space-MNISymC3_K-10_ses-all']
-    fig = plt.figure(figsize=(10,8))
-    plot_model_parcel(model_name,[1,1])
-    pass
