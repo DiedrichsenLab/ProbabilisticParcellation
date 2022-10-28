@@ -169,7 +169,7 @@ def run_prederror(model_type,model_names,test_data,test_sess,
     # Now loop over possible models we want to evaluate 
     for model_name in model_names:
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(model_name)
+        minfo, model = load_batch_best(f"Models_{model_type}/{model_name}")
 
         # Loop over the splits - if split then train a individual model
         for n in range(n_splits):
