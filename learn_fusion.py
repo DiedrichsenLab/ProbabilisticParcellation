@@ -280,9 +280,9 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01'):
               first_iter=30,
               uniform_kappa = uniform_kappa)
 
-            # Save the fits and information
+        # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas.name}_K-{K}'
+        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
