@@ -238,7 +238,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01'):
                     dtype = object)
     sess = np.array(['all','all','all','all', 'all'],
             dtype = object)
-    type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf', 'Run'],
+    type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf', 'NetAll'],
             dtype = object)
 
     design_ind= np.array(['cond_num_uni','task_num','reg_id','cond_num_uni', 'reg_id'],
