@@ -414,6 +414,17 @@ def eval_all_prederror(model_type,prefix,K):
         results = pd.concat([results,R],ignore_index=True)
     results.to_csv(base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv',sep='\t')
 
+def concat_all_prederror(model_type,prefix,K,outfile):
+    D = pd.DataFrame()
+    for p in prefix: 
+        for k in K:
+            fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{p}_K-{k}.tsv'
+            T = pd.read_csv(fname,delimiter='\t')
+            T['prefix'] = [p]*T.shape[0]
+            D = pd.concat([D,T],ignore_index=True)
+    oname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv'
+    D.to_csv(oname,index=False)
+
 
 def eval1():
     model_name = ['asym_Md_space-MNISymC3_K-10',
@@ -479,9 +490,12 @@ def eval2():
 
 
 if __name__ == "__main__":
-    for K in np.arange(10,35,step=2):
-        eval_all_prederror('01','sym',K)
-        eval_all_prederror('01','asym',K)
+    K = np.arange(10,35,step=2)
+    prefix = ['asym','sym']
+    concat_all_prederror('01',prefix,K,'noHCP')
+    # for K in np.arange(10,35,step=2):
+    #     eval_all_prederror('01','sym',K)
+    #     eval_all_prederror('01','asym',K)
 
 
     pass
