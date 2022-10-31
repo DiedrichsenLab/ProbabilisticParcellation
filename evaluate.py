@@ -423,7 +423,7 @@ def concat_all_prederror(model_type,prefix,K,outfile):
             T['prefix'] = [p]*T.shape[0]
             D = pd.concat([D,T],ignore_index=True)
     oname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv'
-    D.to_csv(oname,index=False)
+    D.to_csv(oname,index=False,sep='\t')
 
 
 def eval1():
