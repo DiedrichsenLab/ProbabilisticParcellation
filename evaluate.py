@@ -6,8 +6,8 @@ import numpy as np
 import Functional_Fusion.atlas_map as am
 import Functional_Fusion.matrix as matrix
 from Functional_Fusion.dataset import *
-import generativeMRF.emissions as em 
-import generativeMRF.arrangements as ar 
+import generativeMRF.emissions as em
+import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
 
@@ -32,9 +32,9 @@ if not Path(base_dir).exists():
 
 
 def calc_test_error(M,tdata,U_hats):
-    """Evaluates the predictions from a trained full model on some testdata. 
-    The full model consists of a trained arrangement model and is 
-    combined with untrained emission model for the test data. 
+    """Evaluates the predictions from a trained full model on some testdata.
+    The full model consists of a trained arrangement model and is
+    combined with untrained emission model for the test data.
     The function then trains the emission model based on N-1 subjects
     (arrangement fixed) and evaluates the left-out subjects using different
     parcellations (Uhats)
@@ -43,10 +43,10 @@ def calc_test_error(M,tdata,U_hats):
         M (full model): Full model including emission model for test data
         tdata (ndarray): (numsubj x N x P) array of test data
         U_hats (list): List of strings or tensors, the indi. parcellation
-            'group':   Group-parcellation 
+            'group':   Group-parcellation
             'floor':   Noise-floor (E-step on left-out subject)
             pt.tensor: Any arbitrary Individual parcellation based on outside data
-    Returns: 
+    Returns:
         A num_eval x num_subj matrix of cosine errors
     """
     num_subj = tdata.shape[0]
@@ -55,13 +55,13 @@ def calc_test_error(M,tdata,U_hats):
     pred_err = np.empty((len(U_hats),num_subj))
     for s in range(num_subj):
         print(f'Subject:{s}')
-        # initialize the emssion model using all but one subject 
+        # initialize the emssion model using all but one subject
         M.emissions[0].initialize(tdata[subj != s,:,:])
         # For fitting an emission model witout the arrangement model,
-        # We can not without multiple starting values 
+        # We can not without multiple starting values
         M,ll,theta,Uhat = M.fit_em(
                 iter=200, tol=0.1,
-                fit_emission=True, 
+                fit_emission=True,
                 fit_arrangement=False,
                 first_evidence=False)
         X = M.emissions[0].X
@@ -83,7 +83,7 @@ def calc_test_error(M,tdata,U_hats):
 def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     """DCBC: evaluate the resultant parcellation using DCBC
     Args:
-        parcels (np.ndarray): the input parcellation: 
+        parcels (np.ndarray): the input parcellation:
             either group parcellation (1-dimensional: P)
             individual parcellation (num_subj x P )
         dist (<AtlasVolumetric>): the class object of atlas
@@ -96,15 +96,15 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     Returns:
         dcbc_values (np.ndarray): the DCBC values of subjects
     """
-    
-    # 
+
+    #
     if trim_nan:  # mask the nan voxel pairs distance to nan
         dist[np.where(np.isnan(parcels))[0], :] = np.nan
         dist[:, np.where(np.isnan(parcels))[0]] = np.nan
 
     dcbc_values = []
     for sub in range(testdata.shape[0]):
-        if parcels.ndim==1: 
+        if parcels.ndim==1:
             D = compute_DCBC(parcellation=parcels,
                               dist=dist, func=testdata[sub].T)
         else:
@@ -119,25 +119,25 @@ def run_prederror(model_type,model_names,test_data,test_sess,
                     cond_ind,part_ind=None,
                     eval_types=['group','floor'],
                     indivtrain_ind=None,indivtrain_values=[0]):
-    """ Calculates a prediction error using a test_data set 
-    and test_sess. 
+    """ Calculates a prediction error using a test_data set
+    and test_sess.
     if indivtrain_ind is given, it splits the test_data set
-    again and uses one half to derive an individual parcellation 
-    (using the model) and the other half to evaluate it. 
-    The Means of the parcels are always estimated on N-1 subjects 
-    and evaluated on the Nth left-out subject   
+    again and uses one half to derive an individual parcellation
+    (using the model) and the other half to evaluate it.
+    The Means of the parcels are always estimated on N-1 subjects
+    and evaluated on the Nth left-out subject
 
     Args:
         model_names (list or str): Name of model fit (tsv/pickle file)
-        test_data (str): Name of test data set 
-        test_sess (list): List or sessions to include into test_data 
+        test_data (str): Name of test data set
+        test_sess (list): List or sessions to include into test_data
         cond_ind (str): Fieldname of the condition vector in test-data info
         part_ind (str): Fieldname of partition vector in test-data info
         eval_types (list): Defaults to ['group','floor'].
         indivtrain_ind (str): If given, data will be split for individual
              training along this field in test-data info. Defaults to None.
         indivtrain_values (list): Values of field above to be taken as
-             individual training sets.  
+             individual training sets.
 
     Returns:
         data-frame with model evalution
@@ -150,7 +150,7 @@ def run_prederror(model_type,model_names,test_data,test_sess,
     results = pd.DataFrame()
     if not isinstance(model_names,list):
         model_names = [model_names]
-    
+
     # Get condition and partition vector of test data
     if cond_ind is None:
         cond_ind = tds.cond_ind
@@ -160,13 +160,13 @@ def run_prederror(model_type,model_names,test_data,test_sess,
     else:
         part_vec = tinfo[part_ind].values
 
-    # Decide how many splits we need 
+    # Decide how many splits we need
     if indivtrain_ind is None:
         n_splits = 1
     else:
         n_splits = len(indivtrain_values)
 
-    # Now loop over possible models we want to evaluate 
+    # Now loop over possible models we want to evaluate
     for model_name in model_names:
         print(f"Doing model {model_name}\n")
         minfo, model = load_batch_best(f"Models_{model_type}/{model_name}")
@@ -178,17 +178,17 @@ def run_prederror(model_type,model_names,test_data,test_sess,
             if indivtrain_ind is not None:
                 train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
                 test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
-                indivtrain_em = em.MixVMF(K=minfo.K, N=40, 
+                indivtrain_em = em.MixVMF(K=minfo.K, N=40,
                             P = model.emissions[0].P,
-                            X = matrix.indicator(cond_vec[train_indx]), 
+                            X = matrix.indicator(cond_vec[train_indx]),
                             part_vec=part_vec[train_indx],
                             uniform_kappa=True)
                 indivtrain_em.initialize(tdata[:,train_indx,:])
                 model.emissions = [indivtrain_em]
-                model.nparams = model.arrange.nparams + indivtrain_em.nparams 
+                model.nparams = model.arrange.nparams + indivtrain_em.nparams
                 m,ll,theta,U_indiv = model.fit_em(
                     iter=200, tol=0.1,
-                    fit_emission=True, 
+                    fit_emission=True,
                     fit_arrangement=False,
                     first_evidence=False)
                 all_eval = eval_types + [model.remap_evidence(U_indiv)]
@@ -198,19 +198,19 @@ def run_prederror(model_type,model_names,test_data,test_sess,
             # ------------------------------------------
             # Now build the model for the test data and crossvalidate
             # across subjects
-            em_model = em.MixVMF(K=minfo.K, N=40, 
+            em_model = em.MixVMF(K=minfo.K, N=40,
                             P=model.emissions[0].P,
-                            X=matrix.indicator(cond_vec[test_indx]), 
+                            X=matrix.indicator(cond_vec[test_indx]),
                             part_vec=part_vec[test_indx],
                             uniform_kappa=True)
             # Add this single emission model
-            model.emissions = [em_model] 
+            model.emissions = [em_model]
             # recalculate total number parameters
-            model.nparams = m.arrange.nparams + em_model.nparams 
-            # To CARO: You could copy the function and then replace this prediction_error function with the DCBC claculation for group and individual parcellation:  
+            model.nparams = m.arrange.nparams + em_model.nparams
+            # To CARO: You could copy the function and then replace this prediction_error function with the DCBC claculation for group and individual parcellation:
             res = calc_test_error(m,tdata[:,test_indx,:],all_eval)
             # ------------------------------------------
-            # Collect the information from the evaluation 
+            # Collect the information from the evaluation
             # in a data frame
             ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
                             'atlas':[minfo.atlas]*num_subj,
@@ -232,7 +232,7 @@ def run_prederror(model_type,model_names,test_data,test_sess,
 
 
 def run_dcbc_group(model_names, space, test_data,test_sess='all'):
-    """ Run DCBC group evaluation 
+    """ Run DCBC group evaluation
 
     Args:
         model_names (_type_): _description_
@@ -253,7 +253,7 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
     results = pd.DataFrame()
     if not isinstance(model_names,list):
         model_names = [model_names]
-    
+
     # parcel = np.empty((len(model_names), atlas.P))
     results = pd.DataFrame()
     for i, mn in enumerate(model_names):
@@ -276,31 +276,31 @@ def run_dcbc_group(model_names, space, test_data,test_sess='all'):
                             'subj_num': np.arange(num_subj),
                             'dcbc': dcbc[i,:]
                             })
-        results = pd.concat([results, ev_df], ignore_index=True)    
+        results = pd.concat([results, ev_df], ignore_index=True)
     return results
 
 
 def run_dcbc_individual(model_names, test_data, test_sess,
                     cond_ind=None,part_ind=None,
                     indivtrain_ind=None,indivtrain_values=[0]):
-    """ Calculates a prediction error using a test_data set 
-    and test_sess. 
+    """ Calculates a prediction error using a test_data set
+    and test_sess.
     if indivtrain_ind is given, it splits the test_data set
-    again and uses one half to derive an individual parcellation 
-    (using the model) and the other half to evaluate it. 
-    The Means of the parcels are always estimated on N-1 subjects 
-    and evaluated on the Nth left-out subject   
+    again and uses one half to derive an individual parcellation
+    (using the model) and the other half to evaluate it.
+    The Means of the parcels are always estimated on N-1 subjects
+    and evaluated on the Nth left-out subject
 
     Args:
         model_names (list or str): Name of model fit (tsv/pickle file)
-        test_data (str): Name of test data set 
-        test_sess (list): List or sessions to include into test_data 
+        test_data (str): Name of test data set
+        test_sess (list): List or sessions to include into test_data
         cond_ind (str): Fieldname of the condition vector in test-data info
         part_ind (str): Fieldname of partition vector in test-data info
         indivtrain_ind (str): If given, data will be split for individual
              training along this field in test-data info. Defaults to None.
         indivtrain_values (list): Values of field above to be taken as
-             individual training sets.  
+             individual training sets.
 
     Returns:
         data-frame with model evalution
@@ -316,21 +316,21 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     results = pd.DataFrame()
     if not isinstance(model_names,list):
         model_names = [model_names]
-    
+
     # Get condition vector of test data
     if cond_ind is None:
         # get default cond_ind from testdataset
         cond_vec = tinfo[tds.cond_ind].values.reshape(-1,)
     else:
         cond_vec = tinfo[cond_ind].values.reshape(-1,)
-    
-    # Get partition vector of test data 
+
+    # Get partition vector of test data
     if part_ind is None:
         part_vec = np.zeros((tinfo.shape[0],),dtype=int)
     else:
         part_vec = tinfo[part_ind].values
 
-    # Decide how many splits we need 
+    # Decide how many splits we need
     if indivtrain_ind is None:
         n_splits = 1
         indivtrain_ind = 'half'
@@ -338,7 +338,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     else:
         n_splits = len(indivtrain_values)
 
-    # Now loop over possible models we want to evaluate 
+    # Now loop over possible models we want to evaluate
     for model_name in model_names:
         minfo, models = load_batch_fit(model_name)
         Prop, V = extract_fit(models)
@@ -352,29 +352,29 @@ def run_dcbc_individual(model_names, test_data, test_sess,
                 # Train an emission model on the individual training data and get a Uhat (individual parcellation) from it.
                 train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
                 test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
-                indivtrain_em = em.MixVMF(K=minfo.K[i], N=40, 
+                indivtrain_em = em.MixVMF(K=minfo.K[i], N=40,
                             P = m.emissions[0].P,
-                            X = matrix.indicator(cond_vec[train_indx]), 
+                            X = matrix.indicator(cond_vec[train_indx]),
                             part_vec=part_vec[train_indx],
                             uniform_kappa=True)
                 indivtrain_em.initialize(tdata[:,train_indx,:])
                 m.emissions = [indivtrain_em]
-                m.nparams = m.arrange.nparams + indivtrain_em.nparams 
-                # Gets us the individual parcellation 
+                m.nparams = m.arrange.nparams + indivtrain_em.nparams
+                # Gets us the individual parcellation
                 m,ll,theta,U_indiv = m.fit_em(
                     iter=200, tol=0.1,
-                    fit_emission=True, 
+                    fit_emission=True,
                     fit_arrangement=False,
                     first_evidence=False)
                 # ------------------------------------------
                 # Now run the DCBC evaluation fo the group
                 Pgroup = pt.argmax(Prop[i, :, :], dim=0) + 1  # Get winner take all
-                Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take                 
+                Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take
                 dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
                 dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:], dist)
 
                 # ------------------------------------------
-                # Collect the information from the evaluation 
+                # Collect the information from the evaluation
                 # in a data frame
                 ev_df = pd.DataFrame({'model_name':[minfo.name[i]]*num_subj,
                                 'atlas':[minfo.atlas[i]]*num_subj,
@@ -395,14 +395,14 @@ def run_dcbc_individual(model_names, test_data, test_sess,
 
 def eval_all_prederror(model_type,prefix,K):
     models = ['Md','Po','Ni','Ib','MdPoNiIb']
-    datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
-    
+    datasets = ['Ibc','Mdtb','Pontine','Nishimoto']
+
     model_name = []
     results = pd.DataFrame()
     for m in models:
-        model_name.append(prefix + '_' + 
-                          m + '_' + 
-                          'space-MNISymC3'+ '_' + 
+        model_name.append(prefix + '_' +
+                          m + '_' +
+                          'space-MNISymC3'+ '_' +
                           f'K-{K}')
     for ds in datasets:
         print(f'Testdata: {ds}\n')
@@ -420,7 +420,7 @@ def eval1():
                    'asym_Po_space-MNISymC3_K-10',
                    'asym_Ni_space-MNISymC3_K-10',
                    'asym_MdPoNi_space-MNISymC3_K-10']
-    
+
     R = run_prederror(model_name,
                          test_data='Mdtb',
                          test_sess=['ses-s1','ses-s2'],
@@ -462,7 +462,7 @@ def eval2():
     # Evalutate individual parcellation
     allR = pd.DataFrame()
     for testdata in ['Mdtb', 'Pontine', 'Nishimoto','IBC']:
-        print(f'ev in {testdata}')     
+        print(f'ev in {testdata}')
         tsv_file = Path(
             base_dir + f'/Models/eval_dcbc_indiv_{testdata}_K-{K}.tsv')
         if tsv_file.exists():
