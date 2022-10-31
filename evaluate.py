@@ -59,6 +59,7 @@ def calc_test_error(M,tdata,U_hats):
         M.emissions[0].initialize(tdata[subj != s,:,:])
         # For fitting an emission model witout the arrangement model,
         # We can not without multiple starting values
+        M.intialize()
         M,ll,theta,Uhat = M.fit_em(
                 iter=200, tol=0.1,
                 fit_emission=True,
@@ -185,7 +186,7 @@ def run_prederror(model_type,model_names,test_data,test_sess,
                             uniform_kappa=True)
                 indivtrain_em.initialize(tdata[:,train_indx,:])
                 model.emissions = [indivtrain_em]
-                model.nparams = model.arrange.nparams + indivtrain_em.nparams
+                model.initialize()
                 m,ll,theta,U_indiv = model.fit_em(
                     iter=200, tol=0.1,
                     fit_emission=True,
@@ -359,7 +360,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
                             uniform_kappa=True)
                 indivtrain_em.initialize(tdata[:,train_indx,:])
                 m.emissions = [indivtrain_em]
-                m.nparams = m.arrange.nparams + indivtrain_em.nparams
+                m.initialize()
                 # Gets us the individual parcellation
                 m,ll,theta,U_indiv = m.fit_em(
                     iter=200, tol=0.1,
@@ -423,7 +424,7 @@ def concat_all_prederror(model_type,prefix,K,outfile):
             T['prefix'] = [p]*T.shape[0]
             D = pd.concat([D,T],ignore_index=True)
     oname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv'
-    D.to_csv(oname,index=False)
+    D.to_csv(oname,index=False,sep='\t')
 
 
 def eval1():

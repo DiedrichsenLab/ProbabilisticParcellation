@@ -45,9 +45,9 @@ def fit_fusion(data,design,K=10,intialization='random'):
 
     # Use random prior
     M = fm.FullMultiModel(ar_model, em_models)
-
+    M.intialize(Y)
     # Step 5: Estimate the parameter thetas to fit the new model using EM
-    M, ll, theta, U_hat = M.fit_em(Y=data, iter=20, tol=0.00001, fit_arrangement=True)
+    M, ll, theta, U_hat = M.fit_em(iter=20, tol=0.00001, fit_arrangement=True)
     return M,ll,theta,U_hat
 
 def align_fits(models,inplace=True):
@@ -102,7 +102,8 @@ def batch_fit(datasets,sess,
                 atlas=None,K=10,arrange='independent',emission='VMF',
                 uniform_kappa = True,
                 n_rep=3, n_inits=10, 
-                n_iter=80,first_iter=10,name=None):
+                n_iter=80,first_iter=10,name=None,
+                weighting=None):
     """ Executes a set of fits starting from random starting values
     selects the best one from a batch and saves them 
 
@@ -216,7 +217,10 @@ def batch_fit(datasets,sess,
                 M = fm.FullMultiModel(ar_model, em_models)
 
         # Step 5: Estimate the parameter thetas to fit the new model using EM
-        M, ll, theta, U_hat, ll_init = M.fit_em_ninits(Y=data,
+        M.intialize()
+        if weighting is not None: 
+            M.ds_weight = weighting # Weighting for each dataset
+        M, ll, theta, U_hat, ll_init = M.fit_em_ninits(
                                         iter=n_iter,
                                         tol=0.01, 
                                         fit_arrangement=True,
