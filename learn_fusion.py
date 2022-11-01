@@ -282,7 +282,8 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
               n_iter=200,
               n_rep=10,
               first_iter=30,
-              uniform_kappa = uniform_kappa)
+              uniform_kappa = uniform_kappa,
+              weighting=weighting)
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
