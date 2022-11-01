@@ -455,11 +455,11 @@ if __name__ == "__main__":
     # K = np.arange(10,35,step=2)
     # prefix = ['asym','sym']
     # concat_all_prederror('01',prefix,K,'noHCP')
-    for K in np.arange(10,35,step=2):
+    for K in [10,20,34]: # np.arange(20,35,step=2):
         # eval_all_prederror('01','sym',K)
         # eval_all_prederror('01','asym',K)
-        eval_all_dcbc('01','sym',K)
         eval_all_dcbc('01','asym',K)
+        # eval_all_dcbc('01','sym',K)
 
 
     pass
