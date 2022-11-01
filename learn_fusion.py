@@ -300,11 +300,15 @@ if __name__ == "__main__":
     # fit_all([0, 2]) 
     # fit_all([1, 2])
     for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-        fit_all([4],k,model_type='01')
-        fit_all([0,1,2,3,4],k,model_type='01')
+        fit_all([0,4],k,model_type='01',weighting=[1,0]) # No HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,0.5]) # Half HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,1]) # Full HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,0.3]) # Lesser HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,0.7]) # More HCP contribution
+        # fit_all([0,1,2,3,4],k,model_type='01')
         # 
-        fit_all([4],k,model_type='02')
-        fit_all([0,1,2,3,4],k,model_type='02')
+        # fit_all([4],k,model_type='02')
+        # fit_all([0,1,2,3,4],k,model_type='02')
     # fit_all([0],20)
     # fit_all([1],20)
     # fit_all([2],20)
