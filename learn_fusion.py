@@ -287,7 +287,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+        fname = f'/{name}_space-{atlas[i].name}_K-{K}_HCP-{weighting[1]'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
@@ -302,8 +302,13 @@ if __name__ == "__main__":
     # fit_all([1, 2])
     for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
         fit_all([0,4],k,model_type='01',weighting=[1,0]) # No HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,0.3]) # Half HCP contribution
         fit_all([0,4],k,model_type='01',weighting=[1,0.5]) # Half HCP contribution
-        fit_all([0,4],k,model_type='01',weighting=[1,1]) # Full HCP contribution
+        fit_all([0,4],k,model_type='01',weighting=[1,0.7]) # Half HCP contribution
+        # fit_all([0,1,2,3,4],k,model_type='01')
+        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.3]) # Half HCP contribution
+        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.5]) # Half HCP contribution
+        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.7]) # Half HCP contribution
         # fit_all([0,1,2,3,4],k,model_type='01')
         # 
         # fit_all([4],k,model_type='02')
@@ -334,3 +339,7 @@ if __name__ == "__main__":
 
 
     pass
+
+# for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
+#         fit_all([0,1,2,3,4],k,model_type='01') # Full HCP Contribution
+#         fit_all([0,1,2,3,4],k,model_type='02') # Full HCP Contribution
