@@ -7,6 +7,7 @@ import nibabel as nb
 import SUITPy as suit
 import matplotlib.pyplot as plt
 import seaborn as sb
+from copy import copy,deepcopy
 import Functional_Fusion.atlas_map as am
 from Functional_Fusion.dataset import *
 import Functional_Fusion.matrix as matrix
@@ -15,7 +16,7 @@ import generativeMRF.spatial as sp
 import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
-from ProbabilisticParcellation.util import *  
+from ProbabilisticParcellation.util import *
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -24,27 +25,27 @@ if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
-    
+
 
 def individ_group(model):
-    # Individual training dataset: 
+    # Individual training dataset:
     idata,iinfo,ids = get_dataset(base_dir,'Mdtb',
-                        atlas='MISymC3',
-                        sess='ses-s1',
+                        atlas='MNISymC3',
+                        sess=['ses-s1'],
                         type='CondRun')
-    # Test data set: 
-    tdata,tinfo,tds = get_dataset(base_dir,'Mdtb',
-                        atlas='MISymC3',
-                        sess='ses-s2',
-                        type='CondHalf')
+    # Test data set:
+    # tdata,tinfo,tds = get_dataset(base_dir,'Mdtb',
+    #                     atlas='MNISymC3',
+    #                     sess=['ses-s2'],
+    #                     type='CondHalf')
 
-    # Build the individual training model on session 1: 
-    m1 = model.deepcopy()
+    # Build the individual training model on session 1:
+    m1 = deepcopy(model)
     cond_vec = iinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = iinfo['run'].values.reshape(-1,)
     runs = np.unique(part_vec)
 
-    indivtrain_em = em.MixVMF(K=m1.K,
+    indivtrain_em = em.MixVMF(K=m1.emissions[0].K,
                             P = m1.emissions[0].P,
                             X = matrix.indicator(cond_vec),
                             part_vec=part_vec,
@@ -59,10 +60,10 @@ def individ_group(model):
                     first_evidence=False)
 
     Uhat_em_all = []
-    Uhat_complete_all = [] 
+    Uhat_complete_all = []
     for i in runs:
         ind = part_vec<=i
-        m1.emissions[0].X = matrix.indicator(cond_vec[ind])
+        m1.emissions[0].X = pt.tensor(matrix.indicator(cond_vec[ind]))
         m1.emissions[0].part_vec = pt.tensor(part_vec[ind], dtype=pt.int)
         m1.emissions[0].initialize(idata[:,ind,:])
 
@@ -74,9 +75,9 @@ def individ_group(model):
     Uhat_group = m1.marginal_prob()
     all_eval = [Uhat_group] + Uhat_em_all + Uhat_complete_all
 
-    # Build model for sc2 (testing session): 
+    # Build model for sc2 (testing session):
     #     indivtrain_em = em.MixVMF(K=m1.K,
-    m2 = model.deepcopy()
+    m2 = deepcopy(model)
     cond_vec = tinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = tinfo['half'].values.reshape(-1,)
     test_em = em.MixVMF(K=m2.K,
@@ -111,7 +112,7 @@ def individ_group(model):
         D2['subject'] = [sub + 1]
         T = pd.concat([T, pd.DataFrame(D2)])
 
-    return T, group_baseline, lower_bound, cos_em, cos_complete, uhat_em_all, uhat_complete_all
+    return T
 
 
 def figure_indiv_group():
