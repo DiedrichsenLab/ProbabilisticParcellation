@@ -387,7 +387,7 @@ def run_dcbc_individual(model_type,model_names, test_data, test_sess,
                             'subj_num':np.arange(num_subj)})
             # Add all the evaluations to the data frame
             ev_df['dcbc_group']=dcbc_group
-            ev_df['dbcb_indiv']=dcbc_indiv
+            ev_df['dcbc_indiv']=dcbc_indiv
             results = pd.concat([results, ev_df], ignore_index=True)
     return results
 
