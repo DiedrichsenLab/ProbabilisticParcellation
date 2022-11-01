@@ -287,7 +287,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}_HCP-{weighting[1]'
+        fname = f'/{name}_space-{atlas[i].name}_K-{K}_HCP-{weighting[1]}'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
