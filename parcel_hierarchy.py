@@ -199,7 +199,8 @@ def colormap_mds(G,plot='2d',type='hsv'):
 
 
 def analyze_parcel(mname,sym=True):
-    split_mn = mname.split('_')
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
 
     # get the parcel similarity
@@ -228,6 +229,6 @@ def analyze_parcel(mname,sym=True):
 
 
 if __name__ == "__main__":
-    mname = 'sym_MdPoNiIb_space-MNISymC3_K-20'
+    mname = 'Model_01/sym_MdPoNiIb_space-MNISymC3_K-34'
     analyze_parcel(mname)
 
