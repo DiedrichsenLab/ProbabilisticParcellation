@@ -370,18 +370,17 @@ def run_dcbc_individual(model_type,model_names, test_data, test_sess,
             # Now run the DCBC evaluation fo the group
             Pgroup = pt.argmax(Prop, dim=0) + 1  # Get winner take all
             Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take
-            dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:], dist)
-            dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
+            dcbc_indiv = calc_test_dcbc(Pindiv.numpy(),tdata[:,test_indx,:], dist)
+            dcbc_group = calc_test_dcbc(Pgroup.numpy(),tdata[:,test_indx,:], dist)
 
             # ------------------------------------------
             # Collect the information from the evaluation
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo.name[i]]*num_subj,
-                            'atlas':[minfo.atlas[i]]*num_subj,
-                            'K':[minfo.K[i]]*num_subj,
-                            'model_num':[i]*num_subj,
-                            'train_data':[minfo.datasets[i]]*num_subj,
-                            'train_loglik':[minfo.loglik[i]]*num_subj,
+            ev_df = pd.DataFrame({'model_name':[minfo.name]*num_subj,
+                            'atlas':[minfo.atlas]*num_subj,
+                            'K':[minfo.K]*num_subj,
+                            'train_data':[minfo.datasets]*num_subj,
+                            'train_loglik':[minfo.loglik]*num_subj,
                             'test_data':[test_data]*num_subj,
                             'indivtrain_ind':[indivtrain_ind]*num_subj,
                             'indivtrain_val':[indivtrain_values[n]]*num_subj,
