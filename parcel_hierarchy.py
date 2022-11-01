@@ -35,7 +35,7 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
-def parcel_similarity(model,plot=False,sym=False):
+def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
     if sym:
         K = np.int(model.emissions[0].K/2)
