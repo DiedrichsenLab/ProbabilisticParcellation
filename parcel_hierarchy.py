@@ -137,8 +137,10 @@ def agglomative_clustering(similarity,cmap,
             labels_map[l+K+1] = f"{groups[cleaves[l]]}{num}R"
             num+=1
     else:
-        labels_map = np.r_[['0'],labels]
-
+        labels_map = np.empty((K+1,),dtype=object)
+        labels_map[0] = '0'
+        for i,l in enumerate(leaves):
+            labels_map[l+1]   = labels[i]
 
     ax.set_ylim((-0.2,1.1))
     for k in range(K):
@@ -213,7 +215,7 @@ def analyze_parcel(mname,sym=True):
     w_cos_sim,_,_ = parcel_similarity(model,plot=False)
 
     # Make a colormap
-    cmap = colormap_mds(w_cos_sim,plot='3d',type='hsv2')
+    cmap = colormap_mds(w_cos_sim,plot='3d',type='rgb')
 
     # Do clustering
     plt.figure()
@@ -235,6 +237,6 @@ def analyze_parcel(mname,sym=True):
 
 
 if __name__ == "__main__":
-    mname = 'Model_01/sym_MdPoNiIb_space-MNISymC3_K-34'
-    analyze_parcel(mname)
+    mname = 'Models_01/asym_MdPoNiIb_space-MNISymC3_K-20'
+    analyze_parcel(mname,sym=False)
 
