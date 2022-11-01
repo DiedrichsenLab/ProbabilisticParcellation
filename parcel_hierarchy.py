@@ -57,6 +57,8 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
 
     # Integrated parcel similarity with kappa
     weight = kappa * n_subj
+    if weighting is not None:
+        weight = weight * weighting
     w_cos_sim = (cos_sim * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum()
     if plot is True:
         for i in range(n_sets):
