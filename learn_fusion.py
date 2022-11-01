@@ -217,7 +217,7 @@ def batch_fit(datasets,sess,
                 M = fm.FullMultiModel(ar_model, em_models)
 
         # Step 5: Estimate the parameter thetas to fit the new model using EM
-        M.intialize()
+        M.initialize()
         if weighting is not None: 
             M.ds_weight = weighting # Weighting for each dataset
         M, ll, theta, U_hat, ll_init = M.fit_em_ninits(
@@ -236,7 +236,7 @@ def batch_fit(datasets,sess,
 
     return info,models
 
-def fit_all(set_ind=[0,1,2,3],K=10,model_type='01'):
+def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     # Data sets need to numpy arrays to allow indixing by list
     datasets = np.array(['Mdtb','Pontine','Nishimoto','Ibc', 'Hcp'],
                     dtype = object)
