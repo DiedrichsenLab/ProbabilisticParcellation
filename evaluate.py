@@ -18,6 +18,7 @@ import torch as pt
 import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
+import time
 import pickle
 from util import *
 from DCBC.DCBC_vol import compute_DCBC, compute_dist
@@ -105,7 +106,8 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
 
     dcbc_values = []
     for sub in range(testdata.shape[0]):
-        print(f'Subject {sub}')
+        print(f'Subject {sub}',end=':')
+        tic = time.perf_counter()
         if parcels.ndim==1:
             D = compute_DCBC(parcellation=parcels,
                               dist=dist, func=testdata[sub].T)
@@ -113,7 +115,8 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
             D = compute_DCBC(parcellation=parcels[sub],
                               dist=dist, func=testdata[sub].T)
         dcbc_values.append(D['DCBC'])
-
+        toc = time.perf_counter()
+        print(f"{toc-tic:0.4f}s")
     return np.asarray(dcbc_values)
 
 
