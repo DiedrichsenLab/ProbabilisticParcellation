@@ -62,8 +62,10 @@ def parcel_similarity(model,plot=False,sym=False):
         for i in range(n_sets):
             plt.subplot(1,n_sets+1,i+1)
             plt.imshow(cos_sim[i,:,:],vmin=-1,vmax=1)
+            plt.title(f"Dataset {i+1}")
         plt.subplot(1,n_sets+1,n_sets+1)
         plt.imshow(w_cos_sim,vmin=-1,vmax=1)
+        plt.title(f"Merged")
 
     return w_cos_sim,cos_sim,kappa
 
@@ -83,13 +85,17 @@ def get_clusters(Z,K,num_cluster):
             cluster[indx]=cluster[i+K]
     return cluster[:K],cluster[K:]
 
-def agglomative_clustering(similarity,cmap,plot=True,sym=False,num_clusters=5):
+def agglomative_clustering(similarity,cmap,
+                        plot=True,
+                        sym=False,
+                        num_clusters=5,
+                        method = 'ward'):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
     K = similarity.shape[0]
     sym_sim=(similarity+similarity.T)/2
     dist = squareform(1-sym_sim.round(5))
-    Z = linkage(dist,'average')
+    Z = linkage(dist,method)
     cleaves,clinks = get_clusters(Z,K,num_clusters)
 
     # Determine colors
