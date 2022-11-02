@@ -264,7 +264,14 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
         uniform_kappa = True
     elif model_type=='02':
         uniform_kappa = False
-        
+    elif model_type=='01-HCP05':
+        uniform_kappa = True
+        weighting = np.repeat(0, len(set_ind)-1).tolist()
+        weighting.extend([0.5])
+    elif model_type=='02-HCP05':
+        uniform_kappa = False
+        weighting = np.repeat(0, len(set_ind)-1).tolist()
+        weighting.extend([0.5])
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
@@ -287,59 +294,15 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}_HCP-{weighting[1]}'
+        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
 
 if __name__ == "__main__":
-    # fit_all([0])
-    # fit_all([1])
-    # fit_all([2])
-    # fit_all([0,1,2])
-    # fit_all([0,1])
-    # fit_all([0, 2]) 
-    # fit_all([1, 2])
     for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-        fit_all([0,4],k,model_type='01',weighting=[1,0]) # No HCP contribution
-        fit_all([0,4],k,model_type='01',weighting=[1,0.3]) # Half HCP contribution
-        fit_all([0,4],k,model_type='01',weighting=[1,0.5]) # Half HCP contribution
-        fit_all([0,4],k,model_type='01',weighting=[1,0.7]) # Half HCP contribution
-        # fit_all([0,1,2,3,4],k,model_type='01')
-        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.3]) # Half HCP contribution
-        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.5]) # Half HCP contribution
-        fit_all([0,1,2,3,4],k,model_type='01',weighting=[1,0.7]) # Half HCP contribution
-        # fit_all([0,1,2,3,4],k,model_type='01')
-        # 
-        # fit_all([4],k,model_type='02')
-        # fit_all([0,1,2,3,4],k,model_type='02')
-    # fit_all([0],20)
-    # fit_all([1],20)
-    # fit_all([2],20)
-    # fit_all([3],20)
-    # check_IBC()
-    #mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    #atlas = am.AtlasVolumetric('MNISymC3',mask_img=mask)
+        fit_all([0,1,2,3,4],k,model_type='01-HCP05') # Half HCP contribution
 
-    #sess = [['ses-s1'],['ses-01'],['ses-01','ses-02']]
-    #design_ind= ['cond_num_uni','task_id',',..']
-    #info,models,Prop,V = load_batch_fit('asym_Md','MNISymC3',10)
-    # parcel = pt.argmax(Prop,dim=1) # Get winner take all 
-    # parcel=parcel[:,sym_atlas.indx_reduced] # Put back into full space
-    # plot_parcel_flat(parcel[0:3,:],atlas,grid=[1,3],map_space='MNISymC') 
-    # pass
-    # pass
-    # Prop, V = fit_niter(data,design,K,n_iter)
-    # r1 = ev.calc_consistency(Prop,dim_rem=0)
-    # r2 = ev.calc_consistency(V[0],dim_rem=2)
-
-
-    # parcel = pt.argmax(Prop,dim=1)
-    # plot_parcel_flat(parcel,suit_atlas,(1,4))
 
 
     pass
-
-# for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-#         fit_all([0,1,2,3,4],k,model_type='01') # Full HCP Contribution
-#         fit_all([0,1,2,3,4],k,model_type='02') # Full HCP Contribution
