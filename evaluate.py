@@ -60,7 +60,7 @@ def calc_test_error(M,tdata,U_hats):
         M.emissions[0].initialize(tdata[subj != s,:,:])
         # For fitting an emission model witout the arrangement model,
         # We can not without multiple starting values
-        M.intialize()
+        M.initialize()
         M,ll,theta,Uhat = M.fit_em(
                 iter=200, tol=0.1,
                 fit_emission=True,
@@ -74,8 +74,12 @@ def calc_test_error(M,tdata,U_hats):
             elif crit=='floor':
                 U,ll = M.Estep(Y=pt.tensor(tdata[subj==s,:,:]).unsqueeze(0))
                 U = M.remap_evidence(U)
-            else:
+            elif crit.ndim == 2:
+                U = crit
+            elif crit.ndim == 3: 
                 U = crit[subj==s,:,:]
+            else: 
+                raise(NameError("U_hats needs to be 'group','floor',a 2-d or 3d-tensor"))
             a=ev.coserr(dat, M.emissions[0].V, U,
                         adjusted=True, soft_assign=True)
             pred_err[i,s] = a
