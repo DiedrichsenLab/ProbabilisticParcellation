@@ -262,16 +262,35 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     # Provide different setttings for the different model types 
     if model_type=='01':
         uniform_kappa = True
+
     elif model_type=='02':
         uniform_kappa = False
+
+    elif model_type=='01-HCP02':
+        uniform_kappa = True
+        weighting = np.repeat(0, len(set_ind)-1).tolist()
+        weighting.extend([0.2])
+
+    elif model_type=='01-HCP03':
+        uniform_kappa = True
+        weighting = np.repeat(0, len(set_ind)-1).tolist()
+        weighting.extend([0.3])
+
+    elif model_type=='01-HCP04':
+        uniform_kappa = True
+        weighting = np.repeat(0, len(set_ind)-1).tolist()
+        weighting.extend([0.4])
+
     elif model_type=='01-HCP05':
         uniform_kappa = True
         weighting = np.repeat(0, len(set_ind)-1).tolist()
         weighting.extend([0.5])
-    elif model_type=='02-HCP05':
-        uniform_kappa = False
+
+    elif model_type=='01-HCP07':
+        uniform_kappa = True
         weighting = np.repeat(0, len(set_ind)-1).tolist()
-        weighting.extend([0.5])
+        weighting.extend([0.7])
+
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
@@ -300,8 +319,14 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
             pickle.dump(models,file)
 
 if __name__ == "__main__":
-    for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-        fit_all([0,1,2,3,4],k,model_type='01-HCP05') # Half HCP contribution
+    for k in [10,20,34]:
+        fit_all([0,1,2,3,4],k,model_type='01-HCP03')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP05')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP07')
+
+        fit_all([0,1,2,3,4],k,model_type='01-HCP02')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP04')
+
 
 
 
