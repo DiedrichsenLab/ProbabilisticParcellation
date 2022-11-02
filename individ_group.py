@@ -17,6 +17,7 @@ import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
 from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.evaluate as ppev
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -34,10 +35,10 @@ def individ_group(model):
                         sess=['ses-s1'],
                         type='CondRun')
     # Test data set:
-    # tdata,tinfo,tds = get_dataset(base_dir,'Mdtb',
-    #                     atlas='MNISymC3',
-    #                     sess=['ses-s2'],
-    #                     type='CondHalf')
+    tdata,tinfo,tds = get_dataset(base_dir,'Mdtb',
+                         atlas='MNISymC3',
+                         sess=['ses-s2'],
+                         type='CondHalf')
 
     # Build the individual training model on session 1:
     m1 = deepcopy(model)
@@ -67,9 +68,9 @@ def individ_group(model):
         m1.emissions[0].part_vec = pt.tensor(part_vec[ind], dtype=pt.int)
         m1.emissions[0].initialize(idata[:,ind,:])
 
-        Uhat_em = m1.collect_evidence([m1.emissions[0].Estep()])
-        Uhat_complete, _ = m1.arrange.Estep(Uhat_em)
-        Uhat_em_all.append(m1.remap_evidence(Uhat_em))
+        LL_em = m1.collect_evidence([m1.emissions[0].Estep()])
+        Uhat_complete, _ = m1.arrange.Estep(LL_em)
+        Uhat_em_all.append(m1.remap_evidence(pt.softmax(LL_em,dim=1)))
         Uhat_complete_all.append(m1.remap_evidence(Uhat_complete))
 
     Uhat_group = m1.marginal_prob()
@@ -80,7 +81,7 @@ def individ_group(model):
     m2 = deepcopy(model)
     cond_vec = tinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = tinfo['half'].values.reshape(-1,)
-    test_em = em.MixVMF(K=m2.K,
+    test_em = em.MixVMF(K=m2.emissions[0].K,
                             P = m2.emissions[0].P,
                             X = matrix.indicator(cond_vec),
                             part_vec=part_vec,
@@ -88,69 +89,50 @@ def individ_group(model):
     test_em.initialize(tdata)
     m2.emissions = [test_em]
     m2.initialize()
-    m2,ll,_,_ = m2.fit_em(
-                    iter=200, tol=0.1,
-                    fit_emission=True,
-                    fit_arrangement=False,
-                    first_evidence=False)
 
-    A = ev.calc_test_error(m2,tdata,all_eval)
+    coserr = ppev.calc_test_error(m2,tdata,all_eval)
 
-    for sub, a in enumerate(coserr_Uem):
+    T = pd.DataFrame()
+    for sub in range(coserr.shape[1]):
+        for r in range(16):
+            D1 = {}
+            D1['type'] = ['emissionOnly']
+            D1['runs'] = [r+1]
+            D1['coserr'] = [coserr[r+1,sub]]
+            D1['subject'] = [sub+1]
+            T = pd.concat([T, pd.DataFrame(D1)])
+            D1 = {}
+            D1['type'] = ['emissionAndPrior']
+            D1['runs'] = [r+1]
+            D1['coserr'] = [coserr[r+17,sub]]
+            D1['subject'] = [sub+1]
+            T = pd.concat([T, pd.DataFrame(D1)])
         D1 = {}
-        D1['type'] = ['emissionOnly']
-        D1['runs'] = [i]
-        D1['coserr'] = [a.item()]
+        D1['type'] = ['group']
+        D1['runs'] = [0]
+        D1['coserr'] = [coserr[0,sub]]
         D1['subject'] = [sub+1]
         T = pd.concat([T, pd.DataFrame(D1)])
-
-    for sub, b in enumerate(coserr_Uall):
-        D2 = {}
-        D2['type'] = ['emissionAndPrior']
-        D2['runs'] = [i]
-        D2['coserr'] = [b.item()]
-        D2['subject'] = [sub + 1]
-        T = pd.concat([T, pd.DataFrame(D2)])
-
+        
     return T
 
 
-def figure_indiv_group():
-    D = pd.read_csv('scripts/indiv_group_err.csv')
-    nf = D['noise_floor'].mean()
-    gm = D['group map'].mean()
-    T=pd.DataFrame()
-    co = ['emission','emisssion+arrangement']
-    for i,c in enumerate(['dataOnly_run_','data+prior_run_']):
-        for r in range(16):
-            dict = {'subj':np.arange(24)+1,
-                'cond':[co[i]]*24,
-                'run':np.ones((24,))*(r+1),
-                'data':(D[f'{c}{r+1:02d}']-D['noise_floor'])+nf}
-            T=pd.concat([T,pd.DataFrame(dict)],ignore_index = True)
-    fig=plt.figure(figsize=(3.5,5))
-    sb.lineplot(data=T,y='data',x='run',hue='cond',markers=True, dashes=False)
+def figure_indiv_group(D):
+    gm = D.coserr[D.type=='group'].mean()
+    sb.lineplot(data=D[D.type!='group'],
+                y='coserr',x='runs',hue='type',markers=True, dashes=False)
     plt.xticks(ticks=np.arange(16)+1)
-    plt.axhline(nf,color='k',ls=':')
     plt.axhline(gm,color='b',ls=':')
-    plt.ylim([0.21,0.3])
-    fig.savefig('indiv_group_err.pdf',format='pdf')
+    # t.ylim([0.21,0.3])
     pass
 
 if __name__ == "__main__":
-    info,model = load_batch_best('Models_01/asym_Md_space-MNISymC3_K-20')
-    D = individ_group(model)
-    # A = pt.load('D:/data/nips_2022_supp/uhat_complete_all.pt')[15]
-    # parcel = pt.argmax(A, dim=1) + 1
-    # for i in range(parcel.shape[0]):
-    #     outname = f'MDTB10_16runs_sub-{i}.nii'
-    #     _make_maps(parcel, sub=i, save=True, fname=outname)
-    #
-    # T, gbase, lb, cos_em, cos_complete, uhat_em_all, uhat_complete_all = learn_runs(K=10, e='VMF',
-    #                                                                       runs=np.arange(1, 17))
-    # df1 = pt.cat((gbase.reshape(1,-1),lb.reshape(1,-1)), dim=0)
-    # df1 = pd.DataFrame(df1).to_csv('coserrs_gb_lb_VMF.csv')
-    # T.to_csv('coserrs_VMF.csv')
-    #
-    # figure_indiv_group()
+    # info,model = load_batch_best('Models_01/asym_Md_space-MNISymC3_K-20')
+    # D = individ_group(model)
+    # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
+    # D.to_csv(fname,sep='\t',index=False)
+    # pass
+    fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
+    D = pd.read_csv(fname,sep='\t')
+    figure_indiv_group(D)
     pass
