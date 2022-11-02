@@ -72,6 +72,52 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
     return w_cos_sim,cos_sim,kappa
 
 
+def parcel_profile(model, weighting=None):
+    """Returns the weighted and unweighted functional profile for each parcel
+    Args:
+        model: Loaded model
+        weighting: List of weights for down-weighting individual datasets
+    Returns:
+        w_profile: weighted V for each emission model (weighted by kappa, number of subjects and optionally by weighting input argument)
+        profile: V for each emission model
+    """
+    n_sets = len(model.emissions)
+
+    profiles = []
+    kappa = np.empty((n_sets,))
+    n_subj = np.empty((n_sets,))
+
+    for i,em in enumerate(model.emissions):
+        profiles.append(em.V)
+        kappa[i] = em.kappa
+        n_subj[i] = em.num_subj
+
+    # Weigh parcel profile
+    weight = kappa * n_subj
+    if weighting is not None:
+        weight = weight * weighting
+    w_profile = [(profile * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum() for profile in profiles]
+
+    return w_profile, profiles
+
+
+def load_conditions(minfo):
+    """Loads the conditions for a given dataset
+    """
+    pass
+    datasets = minfo.datasets.strip("'[").strip("]'").split("' '")
+    types = minfo.type.strip("'[").strip("]'").split("' '")
+    sessions = minfo.sess.strip("'[").strip("]'").split("' '")
+    conditions = []
+    for i,dname in enumerate(datasets):
+        _,dinfo,dataset = get_dataset(base_dir,dname,atlas=minfo.atlas,sess=sessions[i],type=types[i])
+        # dinfo[dataset.cond_ind].unique()
+        conditions.append(dinfo[dataset.cond_name].to_list())
+        # dinfo.cond_name
+    
+    return conditions
+
+
 def get_clusters(Z,K,num_cluster):
     cluster = np.zeros((K+Z.shape[0]),dtype=int)
     next_cluster = 1
