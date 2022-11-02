@@ -111,12 +111,62 @@ def load_conditions(minfo):
     conditions = []
     for i,dname in enumerate(datasets):
         _,dinfo,dataset = get_dataset(base_dir,dname,atlas=minfo.atlas,sess=sessions[i],type=types[i])
-        # dinfo[dataset.cond_ind].unique()
-        conditions.append(dinfo[dataset.cond_name].to_list())
-        # dinfo.cond_name
+        condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
+        condition_names = condition_names[dataset.cond_name].to_list()
+        conditions.append(condition_names)
     
     return conditions
 
+def get_profiles(model,info,weighting=[1,1,1,1,0]):
+    """Returns the weighted and unweighted functional profile for each parcel
+    Args:
+        model: Loaded model
+        info: Model info
+        weighting: Weighting index for weighting condition scores across datasets
+    Returns:
+        w_profile: weighted V for each emission model (weighted by kappa, number of subjects and optionally by weighting input argument)
+        profile: V for each emission model
+        conditions: list of condition lists for each dataset
+        allconditions: list of conditions across all datasets with dataset name prepended.
+    """
+    _,profile = parcel_profile(model,weighting=weighting)
+    # load the condition for each dataset
+    conditions = load_conditions(info)
+    # (sanity check: profile length for each dataset should match length of condition list)
+    # for i,cond in enumerate(conditions):
+    #     print('Profile length matching n conditions {} :{}'.format(datasets[i],len(cond)==profile[i].shape[0]))
+    datasets = info.datasets.strip("'[").strip("]'").split("' '")
+    
+    allconditions = []
+    for d,dataset in enumerate(datasets):
+        allconditions.extend([dataset + ': ' + n.split('  ')[0] for n in conditions[d]])
+
+    return profile, conditions, allconditions
+
+def show_parcel_profile(p, profile, conditions, dataset=None):
+    if dataset is None:
+        # sort conditions by condition score
+        allscores = []
+        for d,dataset in enumerate(len(allscores.shape[0])):
+            cond_score = profile[d][:,p].tolist()
+            allscores.extend(profile[d][:,p].tolist())
+        
+        overall_profile = [name for _,name in sorted(zip(allscores,conditions))]
+        print(overall_profile[:20])
+    
+    else:
+        # sort conditions by condition score
+        allscores = []
+        for d,dataset in enumerate(datasets):
+            cond_name = conditions[d]
+            cond_score = profile[d][:,p].tolist()
+            dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
+            print('{} :{}'.format(dataset, dataset_profile[:4]))
+            # 
+            allscores.extend(w_profile[d][:,p].tolist())
+        
+        overall_profile = [name for _,name in sorted(zip(allscores,allconditions))]
+        print(overall_profile[:20])
 
 def get_clusters(Z,K,num_cluster):
     cluster = np.zeros((K+Z.shape[0]),dtype=int)
