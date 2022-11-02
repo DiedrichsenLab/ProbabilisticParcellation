@@ -302,10 +302,10 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
 if __name__ == "__main__":
     for k in [10,20,34]:
-        fit_all([0,1,2,3,4],k,model_type='01-HCP03')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP05')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP07')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP05') # rerun
 
+    for k in [10]:
+        fit_all([0,1,2,3,4],k,model_type='01-HCP01')
         fit_all([0,1,2,3,4],k,model_type='01-HCP02')
         fit_all([0,1,2,3,4],k,model_type='01-HCP04')
 
