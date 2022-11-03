@@ -71,7 +71,7 @@ def align_fits(models,inplace=True):
             else:
                 V[j][i,:,:]=em.V[:,np.concatenate([indx,indx+K])]
             if inplace:
-                em.V=V[j][j,:,:]
+                em.V=V[j][i,:,:]
                 if not em.uniform_kappa:
                     em.kappa = em.kappa[j]
     return Prop, V
