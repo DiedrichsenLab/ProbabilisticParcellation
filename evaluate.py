@@ -488,7 +488,7 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 
 if __name__ == "__main__":
-    for K in [10,20,34]:
+    for K in [20,34]:
         for model_type in ['01-HCP05','01-HCP02','01-HCP03','01-HCP07']:
             eval_all_dcbc(model_type,prefix='asym',K=K,space = 'MNISymC3', models=['MdPoNiIbHc'])
 

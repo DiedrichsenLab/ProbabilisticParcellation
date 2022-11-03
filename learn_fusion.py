@@ -305,45 +305,16 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
             pickle.dump(models,file)
 
 if __name__ == "__main__":
-    # fit_all([0])
-    # fit_all([1])
-    # fit_all([2])
-    # fit_all([0,1,2])
-    # fit_all([0,1])
-    # fit_all([0, 2]) 
-    # fit_all([1, 2])
     for k in [10,20,34]:
-        fit_all([3],k,model_type='03')
-        fit_all([3],k,model_type='04')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP05') # rerun
+        fit_all([0,1,2,3,4],k,model_type='01-HCP02')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP03')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP07')
+    
     for k in [10,20,34]:
-        fit_all([0,1,2,3],k,model_type='03')
-        fit_all([0,1,2,3],k,model_type='04')
-        # 
-        # fit_all([4],k,model_type='02')
-        # fit_all([0,1,2,3,4],k,model_type='02')
-    # fit_all([0],20)
-    # fit_all([1],20)
-    # fit_all([2],20)
-    # fit_all([3],20)
-    # check_IBC()
-    #mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    #atlas = am.AtlasVolumetric('MNISymC3',mask_img=mask)
-
-    #sess = [['ses-s1'],['ses-01'],['ses-01','ses-02']]
-    #design_ind= ['cond_num_uni','task_id',',..']
-    #info,models,Prop,V = load_batch_fit('asym_Md','MNISymC3',10)
-    # parcel = pt.argmax(Prop,dim=1) # Get winner take all 
-    # parcel=parcel[:,sym_atlas.indx_reduced] # Put back into full space
-    # plot_parcel_flat(parcel[0:3,:],atlas,grid=[1,3],map_space='MNISymC') 
-    # pass
-    # pass
-    # Prop, V = fit_niter(data,design,K,n_iter)
-    # r1 = ev.calc_consistency(Prop,dim_rem=0)
-    # r2 = ev.calc_consistency(V[0],dim_rem=2)
-
-
-    # parcel = pt.argmax(Prop,dim=1)
-    # plot_parcel_flat(parcel,suit_atlas,(1,4))
+        fit_all([0,1,2,3,4],k,model_type='01-HCP01')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP02')
+        fit_all([0,1,2,3,4],k,model_type='01-HCP04')
 
 
     pass
