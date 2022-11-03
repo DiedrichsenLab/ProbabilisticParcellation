@@ -208,6 +208,7 @@ def batch_fit(datasets,sess,
                             'loglik':[np.nan]*n_fits,
                             'weighting': [weighting]*n_fits});
 
+
     # Iterate over the number of fits
     ll = np.empty((n_fits,n_iter))
     for i in range(n_fits):

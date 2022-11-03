@@ -425,8 +425,9 @@ def eval_all_prederror(model_type,prefix,K):
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv'
     results.to_csv(fname,sep='\t',index=False)
 
-def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3'):
-    models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
+def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None):
+    if models is None:
+        models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
     datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
 
 
