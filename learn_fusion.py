@@ -93,7 +93,7 @@ def build_data_list(datasets,
             data.append(dat)
             cond_vec.append(info[cond_ind[i]].values.reshape(-1,))
             part_vec.append(info[part_ind[i]].values.reshape(-1,))
-            subj_ind.append(np.arange(s,s+n_subj))
+            subj_ind.append(np.arange(sub,sub+n_subj))
         else: 
             for s in ds.sessions:
                 indx = info.sess == s
