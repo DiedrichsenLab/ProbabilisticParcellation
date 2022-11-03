@@ -263,25 +263,22 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     elif model_type=='02':
         uniform_kappa = False
         join_sess = True
-    elif model_type[:6]=='01-HCP':
-        uniform_kappa = True
-        weighting = np.repeat(1, len(set_ind)-1).tolist()
-        hcp_weight = model_type.split('HCP')[1]
-        weighting.extend([float(f'{hcp_weight[0]}.{hcp_weight[1]}')])
-        join_sess = True
     elif model_type == '03':
         uniform_kappa = True
         join_sess = False
     elif model_type == '04':
         uniform_kappa = False
         join_sess = False
-
+    
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
+
+    if weighting is not None:
+        windex = '_' + ''.join(str(weighting[-1]).split('.'))
     
     print(f'Fitting {model_type} with K={K}')
     for i in [0,1]:
-        name = mname[i] + '_' + ''.join(dataname) 
+        name = mname[i] + '_' + ''.join(dataname) + windex
         print(f'{name}')
         info,models = batch_fit(datasets[set_ind],
               sess = sess[set_ind],
@@ -309,15 +306,14 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
 if __name__ == "__main__":
     for k in [10,20,34]:
-        fit_all([0,1,2,3,4],k,model_type='01-HCP05') # rerun
-        fit_all([0,1,2,3,4],k,model_type='01-HCP02')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP03')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP07')
-    
-    for k in [10,20,34]:
-        fit_all([0,1,2,3,4],k,model_type='01-HCP01')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP02')
-        fit_all([0,1,2,3,4],k,model_type='01-HCP04')
+        for hcp_weight in [0.1,0.5,0.1]:
+            
+            set_ind=[0,1,2,3,4]
+            weighting = np.repeat(1, len(set_ind)-1)
+
+            weighting = np.append(weighting, hcp_weight)
+            
+            fit_all(set_ind,k,model_type='04', weighting=weighting)
 
 
     pass
