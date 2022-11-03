@@ -113,7 +113,7 @@ def show_parcel_profile(p, profile, conditions, datasets, show_ds='all', ncond=5
             cond_name = conditions[d]
             cond_score = profile[d][:,p].tolist()
             # sort conditions by condition score
-            dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
+            dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name),reverse=True)]
             print('{} :\t{}'.format(dataset, dataset_profile[:ncond]))
         
 
