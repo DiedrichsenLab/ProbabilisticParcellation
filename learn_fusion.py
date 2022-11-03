@@ -299,6 +299,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
+        Path(wdir).mkdir(exist_ok=True)
         fname = f'/{name}_space-{atlas[i].name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
