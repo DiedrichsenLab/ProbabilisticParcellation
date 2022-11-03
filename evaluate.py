@@ -421,8 +421,9 @@ def eval_all_prederror(model_type,prefix,K):
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv'
     results.to_csv(fname,sep='\t',index=False)
 
-def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3'):
-    models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
+def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None):
+    if models is None:
+        models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
     datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
 
 
@@ -462,10 +463,12 @@ if __name__ == "__main__":
     # K = np.arange(10,35,step=2)
     # prefix = ['asym','sym']
     # concat_all_prederror('01',prefix,K,'noHCP')
-    for K in [10,20,34]: # np.arange(20,35,step=2):
+    for K in [10]: # np.arange(20,35,step=2):
         # eval_all_prederror('01','sym',K)
         # eval_all_prederror('01','asym',K)
-        eval_all_dcbc('01','asym',K)
+        eval_all_dcbc('01-HCP05','asym',K,models = ['MdPoNiIbHc'])
+        eval_all_dcbc('01-HCP03','asym',K,models = ['MdPoNiIbHc'])
+        eval_all_dcbc('01-HCP07','asym',K,models = ['MdPoNiIbHc'])
         # eval_all_dcbc('01','sym',K)
 
 
