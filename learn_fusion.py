@@ -243,15 +243,16 @@ def batch_fit(datasets,sess,
     models=[]
     n_fits = n_rep
     info = pd.DataFrame({'name':[name]*n_fits,
-                         'atlas':[atlas.name]*n_fits,
-                         'K':[K]*n_fits,
-                         'datasets':[datasets]*n_fits,
-                         'sess':[sess]*n_fits,
-                         'type':[type]*n_fits,
-                         'subj':[subj]*n_fits,
-                         'arrange':[arrange]*n_fits,
-                         'emission':[emission]*n_fits,
-                         'loglik':[np.nan]*n_fits});
+                            'atlas':[atlas.name]*n_fits,
+                            'K':[K]*n_fits,
+                            'datasets':[datasets]*n_fits,
+                            'sess':[sess]*n_fits,
+                            'type':[type]*n_fits,
+                            'subj':[subj]*n_fits,
+                            'arrange':[arrange]*n_fits,
+                            'emission':[emission]*n_fits,
+                            'loglik':[np.nan]*n_fits,
+                            'weighting': [weighting]*n_fits});
 
     # Iterate over the number of fits
     ll = np.empty((n_fits,n_iter))
@@ -306,6 +307,11 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
         join_sess = True
     elif model_type=='02':
         uniform_kappa = False
+    elif model_type[:6]=='01-HCP':
+        uniform_kappa = True
+        weighting = np.repeat(1, len(set_ind)-1).tolist()
+        hcp_weight = model_type.split('HCP')[1]
+        weighting.extend([float(f'{hcp_weight[0]}.{hcp_weight[1]}')])
         join_sess = True
     elif model_type == '03':
         uniform_kappa = True
