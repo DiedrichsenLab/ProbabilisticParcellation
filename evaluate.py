@@ -240,19 +240,21 @@ def run_prederror(model_type,model_names,test_data,test_sess,
     return results
 
 
-def run_dcbc_group(model_type, model_names, space, test_data,test_sess='all'):
+def run_dcbc_group(par_names, space, test_data,test_sess='all'):
     """ Run DCBC group evaluation
 
     Args:
-        model_names (_type_): _description_
-        space (_type_): _description_
-        test_data (_type_): _description_
-        test_sess (str, optional): _description_. Defaults to 'all'.
+        par_names (list): List of names for the parcellations to evaluate    
+                Can be either 
+                    nifti files (*_dseg.nii) or 
+                    models (*.npy)
+        space (str): Atlas space (SUIT3, MNISym3C)... 
+        test_data (str): Data set string 
+        test_sess (str, optional): Data set test. Defaults to 'all'.
 
     Returns:
-        _type_: _description_
+        DataFrame: Results
     """
-    wdir = base_dir + '/Models/' + f"Models_{model_type}" + '/'
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas=space,sess=test_sess)
     atlas = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
@@ -260,28 +262,30 @@ def run_dcbc_group(model_type, model_names, space, test_data,test_sess='all'):
 
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
-    if not isinstance(model_names,list):
-        model_names = [model_names]
+    if not isinstance(par_names,list):
+        par_names = [par_names]
 
     # parcel = np.empty((len(model_names), atlas.P))
     results = pd.DataFrame()
-    for i, mn in enumerate(model_names):
-        print(f'evaluating {mn}')
-        minfo, model = load_batch_best(f"Models_{model_type}/{mn}")
-        Prop = model.marginal_prob()
+    for i, pn in enumerate(par_names):
+        fileparts = pn.split('/')
+        pname = fileparts[-1]
+        pname_parts = pname.split('.')
+        print(f'evaluating {pname}')
+        if pname_parts[-1]=='pickle':
+            minfo, model = load_batch_best(f"{fileparts[-2]}/{pname_parts[-2]}")
+            Prop = model.marginal_prob()
+            par = pt.argmax(Prop,dim=0)+1
+        elif pname_parts[-1]=='nii':
+            par = atlas.sample_nifti(pn,0)
         # Initialize result array
         if i == 0:
-            dcbc = np.zeros((len(model_names), tdata.shape[0]))
-        par = pt.argmax(Prop,dim=1)
+            dcbc = np.zeros((len(par_names), tdata.shape[0]))
+        print(f"Number zeros {(par==0).sum()}")
         dcbc[i, :] = calc_test_dcbc(par, tdata, dist)
         num_subj = tdata.shape[0]
 
-        ev_df = pd.DataFrame({'model_name': [minfo.name[i]] * num_subj,
-                            'atlas': [minfo.atlas[i]] * num_subj,
-                            'K': [minfo.K[i]] * num_subj,
-                            'model_num': [i] * num_subj,
-                            'train_data': [minfo.datasets[i]] * num_subj,
-                            'train_loglik': [minfo.loglik[i]] * num_subj,
+        ev_df = pd.DataFrame({'model_name': [pname_parts[-2]] * num_subj,
                             'test_data': [test_data] * num_subj,
                             'subj_num': np.arange(num_subj),
                             'dcbc': dcbc[i,:]
@@ -444,6 +448,30 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None):
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv'
     results.to_csv(fname,sep='\t',index=False)
 
+def eval_old_dcbc():
+    """ Evaluates old and new parcellations using new DCBC
+    """
+    parcels = ['Anatom','MDTB10','Buckner7','Buckner17','Ji10']
+    models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
+    datasets = ['Mdtb']
+
+    par_name = []
+    for p in parcels:
+        par_name.append(base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/' + 
+                f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
+    par_name = models + par_name
+    results = pd.DataFrame()
+    for ds in datasets:
+        print(f'Testdata: {ds}\n')
+        R = run_dcbc_group(par_name,
+                         space='MNISymC3',
+                         test_data = ds,
+                         test_sess = 'all')
+        results = pd.concat([results,R],ignore_index=True)
+    fname = base_dir + f'/Models/eval_dcbc_group.tsv'
+    results.to_csv(fname,sep='\t',index=False)
+
+
 
 def concat_all_prederror(model_type,prefix,K,outfile):
     D = pd.DataFrame()
@@ -463,13 +491,11 @@ if __name__ == "__main__":
     # K = np.arange(10,35,step=2)
     # prefix = ['asym','sym']
     # concat_all_prederror('01',prefix,K,'noHCP')
-    for K in [10]: # np.arange(20,35,step=2):
+    # for K in [10,20,34]: # np.arange(20,35,step=2):
         # eval_all_prederror('01','sym',K)
         # eval_all_prederror('01','asym',K)
-        eval_all_dcbc('01-HCP05','asym',K,models = ['MdPoNiIbHc'])
-        eval_all_dcbc('01-HCP03','asym',K,models = ['MdPoNiIbHc'])
-        eval_all_dcbc('01-HCP07','asym',K,models = ['MdPoNiIbHc'])
+        # eval_all_dcbc('01','asym',K)
         # eval_all_dcbc('01','sym',K)
-
+    eval_old_dcbc()
 
     pass
