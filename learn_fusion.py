@@ -29,27 +29,6 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
     
-def fit_fusion(data,design,K=10,intialization='random'):
-
-    P = data[0].shape[2]
-    ar_model = ar.ArrangeIndependent(K=K, P=P, spatial_specific=True,
-                                         remove_redundancy=False)
-    pt.normal(0.0,1.0,ar_model.logpi.shape,out=ar_model.logpi)
-
-    # Initialize emission models
-    em_models=[]
-    for i,ds in enumerate(data):
-        em_model = em.MixVMF(K=K, N=40, P=P, X=design[i], uniform_kappa=True)
-        em_model.initialize(ds)
-        em_models.append(em_model)
-
-    # Use random prior
-    M = fm.FullMultiModel(ar_model, em_models)
-    M.intialize(Y)
-    # Step 5: Estimate the parameter thetas to fit the new model using EM
-    M, ll, theta, U_hat = M.fit_em(iter=20, tol=0.00001, fit_arrangement=True)
-    return M,ll,theta,U_hat
-
 def align_fits(models,inplace=True):
     """Aligns the prior probabilities and emission models
     across different model fits, returns parameters in aligned form
@@ -97,12 +76,89 @@ def align_fits(models,inplace=True):
     return Prop, V
 
 
+def build_data_list(datasets,
+                atlas = 'MNISymC3',
+                sess = None,
+                cond_ind = None,
+                type = None,
+                part_ind=None,
+                subj = None,
+                join_sess = True):
+    """Builds list of datasets, cond_vec, part_vec, subj_ind
+    from different data sets 
+    Args:
+        datasets (list): Names of datasets to include
+        atlas (str): Atlas indicator
+        sess (list): list of 'all' or list of sessions 
+        design_ind (list, optional): _description_. Defaults to None.
+        part_ind (list, optional): _description_. Defaults to None.
+        subj (list, optional): _description_. Defaults to None.
+        join_sess (bool, optional): Model the sessions with a single model . Defaults to True.
+    Returns: 
+        data,
+        cond_vec,
+        part_vec,
+        subj_ind
+    """
+    n_sets = len(datasets)
+    data = []
+    cond_vec = []
+    part_vec = [] 
+    subj_ind = []
+
+    # Set defaults for data sets:
+    if sess is None:
+        sess = ['all'] * n_sets
+    if part_ind is None: 
+        part_ind = [None] * n_sets
+    if cond_ind is None: 
+        cond_ind = [None] * n_sets
+    if type is None: 
+        type = [None] * n_sets
+
+    sub = 0 
+    # Run over datasets get data + design 
+    for i in range(n_sets):
+        dat,info,ds = get_dataset(base_dir,datasets[i],
+                atlas=atlas,
+                sess=sess[i],
+                type=type[i])
+        # Sub-index the subjects: 
+        if subj is not None:
+            dat = dat[subj[i],:,:]
+        n_subj = dat.shape[0]
+
+        # Find correct indices 
+        if cond_ind[i] is None:
+            cond_ind[i] = ds.cond_ind
+        if part_ind[i] is None:
+            part_ind[i] = ds.part_ind
+        # Make different sessions either the same or different
+        if join_sess:
+            data.append(dat)
+            cond_vec.append(info[cond_ind[i]].values.reshape(-1,))
+            part_vec.append(info[part_ind[i]].values.reshape(-1,))
+            subj_ind.append(np.arange(s,s+n_subj))
+        else: 
+            for s in ds.sessions:
+                indx = info.sess == s
+                data.append(dat[:,indx,:])
+                cond_vec.append(info[cond_ind[i]].values[indx].reshape(-1,))
+                part_vec.append(info[part_ind[i]].values[indx].reshape(-1,))
+                subj_ind.append(np.arange(sub,sub+n_subj))
+        sub+=n_subj
+    return data,cond_vec,part_vec,subj_ind 
+
 def batch_fit(datasets,sess,
-                type=None,design_ind=None,part_ind=None,subj=None,
-                atlas=None,K=10,arrange='independent',emission='VMF',
+                type=None,cond_ind=None,part_ind=None,subj=None,
+                atlas=None,
+                K=10,
+                arrange='independent',
+                emission='VMF',
+                n_rep=3, n_inits=10, n_iter=80,first_iter=10,
+                name=None,
                 uniform_kappa = True,
-                n_rep=3, n_inits=10, 
-                n_iter=80,first_iter=10,name=None,
+                join_sess = True,
                 weighting=None):
     """ Executes a set of fits starting from random starting values
     selects the best one from a batch and saves them 
@@ -112,7 +168,7 @@ def batch_fit(datasets,sess,
         datasets (list): List of dataset names to be used as training
         sess (list): List of list of sessions to be used for each
         type (list): List the type  
-        design_ind (list): Name of the info-field that indicates the condition
+        cond_ind (list): Name of the info-field that indicates the condition
         part_ind (list): Name of the field indicating independent partitions of the data
         subj (list, optional): _description_. Defaults to None
         atlas (Atlas): Atlas to be used. Defaults to None.
@@ -127,34 +183,62 @@ def batch_fit(datasets,sess,
     Returns:
         info (pd.DataFrame):
     """
+    data,cond_vec,part_vec,subj_ind = build_data_list(datasets,
+                atlas = atlas.name,
+                sess = sess,
+                cond_ind = cond_ind,
+                type = type,
+                part_ind=part_ind,
+                subj = subj,
+                join_sess = subj)
     # Load all necessary data and designs
-    n_sets = len(datasets)
-    data = []
-    design = []
-    part_vec = [] 
+    n_sets = len(data)
 
-    # Set defaults for data sets:
-    if sess is None:
-        sess = ['all'] * n_sets
-    if part_ind is None: 
-        part_ind = [None] * n_sets
-    if type is None: 
-        type = [None] * n_sets
+    # Build the model 
+    # Check for size of Atlas + whether symmetric
+    if isinstance(atlas,am.AtlasVolumeSymmetric):
+        P_arrange = atlas.Psym
+        K_arrange = np.ceil(K/2).astype(int)
+    else:
+        P_arrange = atlas.P
+        K_arrange = K
 
-    
-    # Run over datasets get data + design 
-    for i in range(n_sets):
-        dat,info,ds = get_dataset(base_dir,datasets[i],atlas=atlas.name,sess=sess[i],type=type[i])
-        if subj is None:
-            data.append(dat)
+    # Initialize arrangement model
+    if arrange=='independent':
+        ar_model = ar.ArrangeIndependent(K=K_arrange, P=P_arrange,
+                                            spatial_specific=True,
+                                            remove_redundancy=False)
+    else:
+        raise(NameError(f'unknown arrangement model:{arrange}'))
+
+    # Initialize emission models
+    em_models=[]
+    for j,ds in enumerate(data):
+        if emission=='VMF':
+            em_model = em.MixVMF(K=K, 
+                                P=atlas.P,
+                                X=matrix.indicator(cond_vec[j]), 
+                                part_vec=part_vec[j],
+                                uniform_kappa=uniform_kappa)
         else:
-            data.append(dat[subj[i],:,:])
-        X = matrix.indicator(info[design_ind[i]].values.reshape(-1,))
-        design.append(X)
-        if part_ind[i] is None:
-            part_vec.append(None)
-        else:
-            part_vec.append(info[part_ind[i]].values)
+            raise((NameError(f'unknown emission model:{emission}')))
+        em_model.initialize(ds)
+        em_models.append(em_model)
+
+    # Make a full fusion model
+    if isinstance(atlas,am.AtlasVolumeSymmetric):
+            M = fm.FullMultiModelSymmetric(ar_model, em_models,
+                                            atlas.indx_full,atlas.indx_reduced,
+                                            same_parcels=False)
+    else:
+            M = fm.FullMultiModel(ar_model, em_models)
+
+    # Step 5: Estimate the parameter thetas to fit the new model using EM
+    M.initialize(subj_ind = subj_ind)
+
+    # Somewhat hacky: Weight different datasets differently 
+    if weighting is not None: 
+        M.ds_weight = weighting # Weighting for each dataset
 
     # Initialize data frame for results
     models=[]
@@ -170,56 +254,11 @@ def batch_fit(datasets,sess,
                          'emission':[emission]*n_fits,
                          'loglik':[np.nan]*n_fits});
 
-
     # Iterate over the number of fits
     ll = np.empty((n_fits,n_iter))
     for i in range(n_fits):
         print(f'fit: {i}')
 
-        # Check for size of Atlas + whether symmetric
-        if isinstance(atlas,am.AtlasVolumeSymmetric):
-            P_arrange = atlas.Psym
-            K_arrange = np.ceil(info.K[i]/2).astype(int)
-        else:
-            P_arrange = atlas.P
-            K_arrange = info.K[i]
-
-        # Initialize arrangement model
-        if arrange=='independent':
-            ar_model = ar.ArrangeIndependent(K=K_arrange, P=P_arrange,
-                                             spatial_specific=True,
-                                             remove_redundancy=False)
-        else:
-            raise(NameError(f'unknown arrangement model:{arrange}'))
-        # Intialize randomly
-        pt.normal(0.0,1.0,ar_model.logpi.shape,out=ar_model.logpi)
-
-        # Initialize emission models
-        em_models=[]
-        for j,ds in enumerate(data):
-            if emission=='VMF':
-                em_model = em.MixVMF(K=info.K[i], N=40, 
-                                     P=atlas.P,
-                                     X=design[j], 
-                                     part_vec=part_vec[j],
-                                     uniform_kappa=uniform_kappa)
-            else:
-                raise((NameError(f'unknown emission model:{emission}')))
-            em_model.initialize(ds)
-            em_models.append(em_model)
-
-        # Make a full fusion model
-        if isinstance(atlas,am.AtlasVolumeSymmetric):
-                M = fm.FullMultiModelSymmetric(ar_model, em_models,
-                                               atlas.indx_full,atlas.indx_reduced,
-                                               same_parcels=False)
-        else:
-                M = fm.FullMultiModel(ar_model, em_models)
-
-        # Step 5: Estimate the parameter thetas to fit the new model using EM
-        M.initialize()
-        if weighting is not None: 
-            M.ds_weight = weighting # Weighting for each dataset
         M, ll, theta, U_hat, ll_init = M.fit_em_ninits(
                                         iter=n_iter,
                                         tol=0.01, 
@@ -245,11 +284,10 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     type = np.array(['CondHalf','TaskHalf','CondHalf','CondHalf', 'NetRun'],
             dtype = object)
 
-    design_ind= np.array(['cond_num_uni','task_num','reg_id','cond_num_uni', 'reg_id'],
-
-            dtype = object)
-    part_ind = np.array(['half','half','half','half', 'half'],
-            dtype = object)
+    cond_ind= np.array(['cond_num_uni','task_num',
+                          'reg_id','cond_num_uni', 'reg_id'],dtype = object)
+    part_ind = np.array(['half','half','half','half', 'half']
+        ,dtype = object)
 
     # Use specific mask / atlas. 
     mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
@@ -262,9 +300,17 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     # Provide different setttings for the different model types 
     if model_type=='01':
         uniform_kappa = True
+        join_sess = True
     elif model_type=='02':
         uniform_kappa = False
-        
+        join_sess = True
+    elif model_type == '03':
+        uniform_kappa = True
+        join_sess = False
+    elif model_type == '04':
+        uniform_kappa = False
+        join_sess = False
+
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
@@ -273,7 +319,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
         info,models = batch_fit(datasets[set_ind],
               sess = sess[set_ind],
               type = type[set_ind],
-              design_ind = design_ind[set_ind],
+              cond_ind = cond_ind[set_ind],
               part_ind = part_ind[set_ind],
               atlas=atlas[i],
               K=K,
@@ -282,6 +328,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
               n_iter=200,
               n_rep=10,
               first_iter=30,
+              join_sess = join_sess,
               uniform_kappa = uniform_kappa)
 
         # Save the fits and information
@@ -299,12 +346,12 @@ if __name__ == "__main__":
     # fit_all([0,1])
     # fit_all([0, 2]) 
     # fit_all([1, 2])
-    for k in [10,20,34,12,14,16,18,22,24,26,28,30,32]:
-        fit_all([4],k,model_type='01')
-        fit_all([0,1,2,3,4],k,model_type='01')
+    for k in [10,20,34]:
+        fit_all([3],k,model_type='03')
+        fit_all([3],k,model_type='04')
         # 
-        fit_all([4],k,model_type='02')
-        fit_all([0,1,2,3,4],k,model_type='02')
+        # fit_all([4],k,model_type='02')
+        # fit_all([0,1,2,3,4],k,model_type='02')
     # fit_all([0],20)
     # fit_all([1],20)
     # fit_all([2],20)
