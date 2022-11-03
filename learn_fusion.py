@@ -73,7 +73,7 @@ def align_fits(models,inplace=True):
             if inplace:
                 em.V=V[j][i,:,:]
                 if not em.uniform_kappa:
-                    em.kappa = em.kappa[j]
+                    em.kappa = em.kappa[indx]
     return Prop, V
 
 
@@ -275,7 +275,7 @@ def batch_fit(datasets,sess,
 
     # Align the different models
     models = np.array(models,dtype=object)
-    align_fits(models)
+    # align_fits(models)
 
     return info,models
 
