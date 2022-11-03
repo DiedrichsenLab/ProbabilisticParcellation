@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
+from copy import deepcopy
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -258,16 +259,16 @@ def batch_fit(datasets,sess,
     ll = np.empty((n_fits,n_iter))
     for i in range(n_fits):
         print(f'fit: {i}')
-
-        M, ll, theta, U_hat, ll_init = M.fit_em_ninits(
+        m = deepcopy(M)
+        m, ll, theta, U_hat, ll_init = m.fit_em_ninits(
                                         iter=n_iter,
                                         tol=0.01, 
                                         fit_arrangement=True,
                                         n_inits=n_inits,
                                         first_iter=first_iter)
         info.loglik.at[i] = ll[-1]
-        M.clear()
-        models.append(M)
+        m.clear()
+        models.append(m)
 
     # Align the different models
     models = np.array(models,dtype=object)
