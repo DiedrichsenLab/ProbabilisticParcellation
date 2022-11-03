@@ -279,8 +279,10 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
+    print(f'Fitting {model_type} with K={K}')
     for i in [0,1]:
         name = mname[i] + '_' + ''.join(dataname) 
+        print(f'{name}')
         info,models = batch_fit(datasets[set_ind],
               sess = sess[set_ind],
               type = type[set_ind],
