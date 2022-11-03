@@ -145,7 +145,7 @@ def batch_fit(datasets,sess,
                 type = type,
                 part_ind=part_ind,
                 subj = subj,
-                join_sess = subj)
+                join_sess = join_sess)
     # Load all necessary data and designs
     n_sets = len(data)
 
