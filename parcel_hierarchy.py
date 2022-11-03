@@ -52,7 +52,8 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
             cos_sim[i,:,:] = V.T @ V
         else:
             cos_sim[i,:,:] = em.V.T @ em.V
-        kappa[i] = em.kappa
+        # Similarity is weighted by mean Kappa
+        kappa[i] = em.kappa.mean() 
         n_subj[i] = em.num_subj
 
     # Integrated parcel similarity with kappa
@@ -316,6 +317,7 @@ def analyze_parcel(mname,sym=True):
 
 
 if __name__ == "__main__":
-    mname = 'Models_01/asym_MdPoNiIb_space-MNISymC3_K-20'
-    analyze_parcel(mname,sym=False)
+    mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
+    analyze_parcel(mname,sym=True)
+    pass
 
