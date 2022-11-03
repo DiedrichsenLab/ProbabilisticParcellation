@@ -30,52 +30,6 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
     
-def align_fits(models,inplace=True):
-    """Aligns the prior probabilities and emission models
-    across different model fits, returns parameters in aligned form
-    if Inplace==True, it also aignes the model parameters in the models themselves.
-
-    Args:
-        models (list): List of full models
-        inplace (bool): If true (default), it al
-    Returns:
-        Prop: Prior Probabilites as 3d-arrays (aligned)
-        V: List of Mean vectors as 3d-arrays (aligned)
-    """
-    n_iter = len(models)
-    K = models[0].arrange.K
-    K_em = models[0].emissions[0].K
-    n_vox = models[0].arrange.P
-
-    # Intialize data arrays
-    Prop = pt.zeros((n_iter,K,n_vox))
-    V = []
-
-    for i,M in enumerate(models):
-
-        pp = M.arrange.logpi.softmax(axis=0)
-        if i == 0:
-            indx = np.arange(K)
-        else:
-            indx = ev.matching_greedy(Prop[0,:,:],pp)
-        Prop[i,:,:]=pp[indx,:]
-        if inplace:
-            models[i].arrange.logpi=models[i].arrange.logpi[indx,:]
-
-        # Now switch the emission models accordingly:
-        for j,em in enumerate(M.emissions):
-            if i==0:
-                V.append(pt.zeros((n_iter,em.M,K_em)))
-            if K == K_em: # non-symmetric model
-                V[j][i,:,:]=em.V[:,indx]
-            else:
-                V[j][i,:,:]=em.V[:,np.concatenate([indx,indx+K])]
-            if inplace:
-                em.V=V[j][i,:,:]
-                if not em.uniform_kappa:
-                    em.kappa = em.kappa[indx]
-    return Prop, V
-
 
 def build_data_list(datasets,
                 atlas = 'MNISymC3',
@@ -275,7 +229,7 @@ def batch_fit(datasets,sess,
 
     # Align the different models
     models = np.array(models,dtype=object)
-    # align_fits(models)
+    # ev.align_fits(models)
 
     return info,models
 
