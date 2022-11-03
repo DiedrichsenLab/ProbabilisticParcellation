@@ -223,7 +223,6 @@ def batch_fit(datasets,sess,
                                 uniform_kappa=uniform_kappa)
         else:
             raise((NameError(f'unknown emission model:{emission}')))
-        em_model.initialize(ds)
         em_models.append(em_model)
 
     # Make a full fusion model
@@ -235,7 +234,6 @@ def batch_fit(datasets,sess,
             M = fm.FullMultiModel(ar_model, em_models)
 
     # Step 5: Estimate the parameter thetas to fit the new model using EM
-    M.initialize(subj_ind = subj_ind)
 
     # Somewhat hacky: Weight different datasets differently 
     if weighting is not None: 
@@ -259,7 +257,11 @@ def batch_fit(datasets,sess,
     ll = np.empty((n_fits,n_iter))
     for i in range(n_fits):
         print(f'fit: {i}')
+        # Copy the obejct (without data)
         m = deepcopy(M)
+        # Attach the data
+        m.initialize(data,subj_ind = subj_ind)
+
         m, ll, theta, U_hat, ll_init = m.fit_em_ninits(
                                         iter=n_iter,
                                         tol=0.01, 
@@ -350,6 +352,9 @@ if __name__ == "__main__":
     for k in [10,20,34]:
         fit_all([3],k,model_type='03')
         fit_all([3],k,model_type='04')
+    for k in [10,20,34]:
+        fit_all([0,1,2,3],k,model_type='03')
+        fit_all([0,1,2,3],k,model_type='04')
         # 
         # fit_all([4],k,model_type='02')
         # fit_all([0,1,2,3,4],k,model_type='02')
