@@ -261,6 +261,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
         join_sess = True
     elif model_type=='02':
         uniform_kappa = False
+        join_sess = True
     elif model_type[:6]=='01-HCP':
         uniform_kappa = True
         weighting = np.repeat(1, len(set_ind)-1).tolist()
@@ -292,7 +293,8 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
               n_rep=10,
               first_iter=30,
               join_sess = join_sess,
-              uniform_kappa = uniform_kappa)
+              uniform_kappa = uniform_kappa,
+              weighting=weighting)
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
