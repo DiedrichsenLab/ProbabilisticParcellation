@@ -305,15 +305,16 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
             pickle.dump(models,file)
 
 if __name__ == "__main__":
-    for k in [10,20,34]:
-        for hcp_weight in [0.1,0.5,0.1]:
-            
-            set_ind=[0,1,2,3,4]
-            weighting = np.repeat(1, len(set_ind)-1)
+    for k in [34]:
+        for hcp_weight in np.arange(0, 1, 0.2):
+            print(hcp_weight)
+            train_datasets=[0,1,2,3,4]
+            weighting = np.repeat(1, len(train_datasets)-1)
 
             weighting = np.append(weighting, hcp_weight)
             
-            fit_all(set_ind,k,model_type='04', weighting=weighting)
+            fit_all(train_datasets, k, model_type='04', weighting=weighting)
+            fit_all(train_datasets, k, model_type='03', weighting=weighting)
 
 
     pass
