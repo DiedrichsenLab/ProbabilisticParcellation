@@ -14,6 +14,7 @@ import generativeMRF.spatial as sp
 import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
+from ProbabilisticParcellation.util import *
 import torch as pt
 from learn_mdtb import get_mdtb_parcel
 import matplotlib.pyplot as plt
@@ -93,7 +94,7 @@ def build_data_list(datasets,
             data.append(dat)
             cond_vec.append(info[cond_ind[i]].values.reshape(-1,))
             part_vec.append(info[part_ind[i]].values.reshape(-1,))
-            subj_ind.append(np.arange(s,s+n_subj))
+            subj_ind.append(np.arange(sub,sub+n_subj))
         else: 
             for s in ds.sessions:
                 indx = info.sess == s
@@ -145,7 +146,7 @@ def batch_fit(datasets,sess,
                 type = type,
                 part_ind=part_ind,
                 subj = subj,
-                join_sess = subj)
+                join_sess = join_sess)
     # Load all necessary data and designs
     n_sets = len(data)
 
@@ -312,13 +313,8 @@ if __name__ == "__main__":
     # fit_all([0,1])
     # fit_all([0, 2]) 
     # fit_all([1, 2])
-    for k in [10,20,34]:
-        fit_all([3],k,model_type='03')
-        fit_all([3],k,model_type='04')
-    for k in [10,20,34]:
-        fit_all([0,1,2,3],k,model_type='03')
-        fit_all([0,1,2,3],k,model_type='04')
-        # 
+    # for k in [34]:
+    #     fit_all([3],k,model_type='04')
         # fit_all([4],k,model_type='02')
         # fit_all([0,1,2,3,4],k,model_type='02')
     # fit_all([0],20)
@@ -344,6 +340,6 @@ if __name__ == "__main__":
 
     # parcel = pt.argmax(Prop,dim=1)
     # plot_parcel_flat(parcel,suit_atlas,(1,4))
-
+    clear_batch('Models_04/sym_Ni_space-MNISymC3_K-34')
 
     pass

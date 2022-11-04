@@ -52,7 +52,8 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
             cos_sim[i,:,:] = V.T @ V
         else:
             cos_sim[i,:,:] = em.V.T @ em.V
-        kappa[i] = em.kappa
+        # Similarity is weighted by mean Kappa
+        kappa[i] = em.kappa.mean() 
         n_subj[i] = em.num_subj
 
     # Integrated parcel similarity with kappa
@@ -89,7 +90,7 @@ def get_conditions(minfo):
     return conditions
 
 def get_profiles(model,info):
-    """Returns the weighted and unweighted functional profile for each parcel
+    """Returns the functional profile for each parcel
     Args:
         model: Loaded model
         info: Model info
@@ -106,26 +107,48 @@ def get_profiles(model,info):
 
     return profile, conditions
 
-def show_parcel_profile(p, profile, conditions, datasets, show_ds='all', ncond=5):
+def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=5):
+    """Returns the functional profile for a given parcel either for selected dataset or all datasets
+    Args:
+        profiles: parcel scores for each condition in each dataset
+        conditions: condition names of each dataset
+        datasets: dataset names
+        show_ds: selected dataset
+                'Mdtb'
+                'Pontine'
+                'Nishimoto'
+                'Ibc'
+                'Hcp'
+                'all'
+        ncond: number of highest scoring conditions to show
+
+    Returns:
+        profile: condition names in order of parcel score
+        
+    """
     if show_ds =='all':
-        # sort conditions by condition score
+        # Collect condition names in order of parcel score from all datasets
+        profile = []
         for d,dataset in enumerate(datasets):
             cond_name = conditions[d]
-            cond_score = profile[d][:,p].tolist()
+            cond_score = profiles[d][:,p].tolist()
             # sort conditions by condition score
             dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name),reverse=True)]
             print('{} :\t{}'.format(dataset, dataset_profile[:ncond]))
-        
+            profile.append(dataset_profile)
 
     else:
+        # Collect condition names in order of parcel score from selected dataset
         d = datasets.index(show_ds)
         cond_name = conditions[d]
-        cond_score = profile[d][:,p].tolist()
+        cond_score = profiles[d][:,p].tolist()
         
         # sort conditions by condition score
         dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
         print('{} :\t{}'.format(datasets[d], dataset_profile[:ncond]))
-    pass
+        profile = dataset_profile
+
+    return profile
 
 def get_clusters(Z,K,num_cluster):
     cluster = np.zeros((K+Z.shape[0]),dtype=int)
@@ -294,6 +317,7 @@ def analyze_parcel(mname,sym=True):
 
 
 if __name__ == "__main__":
-    mname = 'Models_01/asym_MdPoNiIb_space-MNISymC3_K-20'
-    analyze_parcel(mname,sym=False)
+    mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
+    analyze_parcel(mname,sym=True)
+    pass
 
