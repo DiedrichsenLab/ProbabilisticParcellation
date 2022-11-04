@@ -387,7 +387,7 @@ def run_dcbc_individual(model_type,model_names, test_data, test_sess,
             # ------------------------------------------
             # Collect the information from the evaluation
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo.name]*num_subj,
+            ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
                             'atlas':[minfo.atlas]*num_subj,
                             'K':[minfo.K]*num_subj,
                             'train_data':[minfo.datasets]*num_subj,
@@ -491,11 +491,12 @@ if __name__ == "__main__":
     # K = np.arange(10,35,step=2)
     # prefix = ['asym','sym']
     # concat_all_prederror('01',prefix,K,'noHCP')
-    # for K in [10,20,34]: # np.arange(20,35,step=2):
+    eval_all_dcbc('04','asym',34)
+    #for K in [10,20,34]: # np.arange(20,35,step=2):
         # eval_all_prederror('01','sym',K)
         # eval_all_prederror('01','asym',K)
-        # eval_all_dcbc('01','asym',K)
-        # eval_all_dcbc('01','sym',K)
-    eval_old_dcbc()
+    #    eval_all_dcbc('04','asym',K)
+    #    eval_all_dcbc('04','sym',K)
+        # eval_old_dcbc()
 
     pass
