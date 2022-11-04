@@ -513,8 +513,8 @@ if __name__ == "__main__":
         #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
         #     eval_select_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
         
-        # hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
+        hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
         hcp_models = hcp_models[:2] + [hcp_models[-1]]
-        eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw')
+        eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw_asym')
             
     pass
