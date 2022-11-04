@@ -507,7 +507,9 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 
 if __name__ == "__main__":
-    for K in [34]:
+    # Ks = [10,20,34]
+    Ks = [34]
+    for K in Ks:
         # for hcp_weight in np.arange(0, 1.1, 0.2):
         #     windex = ''.join(str(hcp_weight).split('.'))
         #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
@@ -515,6 +517,15 @@ if __name__ == "__main__":
         
         hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
         hcp_models = hcp_models[:2] + [hcp_models[-1]]
-        eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw_asym')
+
+        model_type='04'
+        sym='asym'
+        fname_suffix='HCPw_asym'
+        
+        # # Evaluate DCBC
+        # eval_all_dcbc(model_type=model_type,prefix=sym,K=K,space = 'MNISymC3', models=hcp_models, fname_suffix=fname_suffix)
+
+    # Concat DCBC
+    concat_all_prederror(model_type=model_type,prefix=sym,K=Ks,outfile=fname_suffix)
             
     pass
