@@ -460,9 +460,10 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suf
         results = pd.concat([results,R],ignore_index=True)
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv'
     if fname_suffix is not None:
-        # Optional: Append fname suffix to avoid overwriting old results
-        fname.strip('.tsv') + f'_{fname_suffix}.tsv'
+        # Append fname suffix to avoid overwriting old results
+        fname = fname.strip('.tsv') + f'_{fname_suffix}.tsv'
     results.to_csv(fname,sep='\t',index=False)
+    print(f'Evaluation finished. Saved evaluation results in {fname}')
 
 
 
@@ -512,7 +513,8 @@ if __name__ == "__main__":
         #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
         #     eval_select_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
         
-        hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
+        # hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
+        hcp_models = hcp_models[:2] + [hcp_models[-1]]
         eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw')
             
     pass
