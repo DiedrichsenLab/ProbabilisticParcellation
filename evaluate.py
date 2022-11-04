@@ -297,7 +297,7 @@ def run_dcbc_group(par_names, space, test_data,test_sess='all'):
 def run_dcbc_individual(model_type,model_names, test_data, test_sess,
                     cond_ind=None,part_ind=None,
                     indivtrain_ind=None,indivtrain_values=[0]):
-    """ Calculates a prediction error using a test_data set
+    """ Calculates DCBC using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
     again and uses one half to derive an individual parcellation
@@ -425,7 +425,20 @@ def eval_all_prederror(model_type,prefix,K):
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv'
     results.to_csv(fname,sep='\t',index=False)
 
-def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None):
+def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suffix = None):
+    """ Calculates DCBC over all models. 
+
+        Args:
+        model_type (str): Name of model type
+        prefix (str): Name of test data set
+        K (int): List or sessions to include into test_data
+        space (str): Fieldname of the condition vector in test-data info
+        models (str): List of models run on different training sets to evaluate.
+            Defaults to None.
+        fname_suffix (str): If given, results will be saved as tsv file with suffix appended.
+             Specify if wanting to avoid overwriting old results. Defaults to None.
+
+    """
     if models is None:
         models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
     datasets = ['Mdtb','Pontine','Nishimoto','Ibc']
@@ -446,7 +459,12 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None):
                     indivtrain_ind='half',indivtrain_values=[1,2])
         results = pd.concat([results,R],ignore_index=True)
     fname = base_dir + f'/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv'
+    if fname_suffix is not None:
+        # Optional: Append fname suffix to avoid overwriting old results
+        fname.strip('.tsv') + f'_{fname_suffix}.tsv'
     results.to_csv(fname,sep='\t',index=False)
+
+
 
 def eval_old_dcbc():
     """ Evaluates old and new parcellations using new DCBC
@@ -489,9 +507,12 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 if __name__ == "__main__":
     for K in [34]:
-        for hcp_weight in np.arange(0, 1.1, 0.2):
-            windex = ''.join(str(hcp_weight).split('.'))
-            print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
-            eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
+        # for hcp_weight in np.arange(0, 1.1, 0.2):
+        #     windex = ''.join(str(hcp_weight).split('.'))
+        #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
+        #     eval_select_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
+        
+        hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
+        eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw')
             
     pass
