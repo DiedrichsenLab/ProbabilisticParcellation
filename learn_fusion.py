@@ -305,6 +305,19 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
 
+def clear_models(K,model_type='04'):
+    for t in ['sym','asym']:
+        for k in K:
+            for s in ['MdPoNiIbHc_00','MdPoNiIbHc_02','MdPoNiIbHc_10']: # Md','Po','Ni','Hc','Ib','MdPoNiIb','MdPoNiIbHc','MdPoNiIbHc_00']:
+                fname = f"Models_{model_type}/{t}_{s}_space-MNISymC3_K-{k}"
+                try:
+                    clear_batch(fname)
+                    print(f"cleared {fname}")
+                except:
+                    print(f"skipping {fname}")
+
+
+
 if __name__ == "__main__":
     for k in [34]:
         for hcp_weight in np.arange(0, 1, 0.2):
@@ -317,5 +330,10 @@ if __name__ == "__main__":
             fit_all(train_datasets, k, model_type='04', weighting=weighting)
             fit_all(train_datasets, k, model_type='03', weighting=weighting)
 
+
+    # parcel = pt.argmax(Prop,dim=1)
+    # plot_parcel_flat(parcel,suit_atlas,(1,4))
+    
+                
 
     pass
