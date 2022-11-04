@@ -488,8 +488,10 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 
 if __name__ == "__main__":
-    for K in [20,34]:
-        for model_type in ['01-HCP05','01-HCP02','01-HCP03','01-HCP07']:
-            eval_all_dcbc(model_type,prefix='asym',K=K,space = 'MNISymC3', models=['MdPoNiIbHc'])
-
+    for K in [34]:
+        for hcp_weight in np.arange(0, 1.1, 0.2):
+            windex = ''.join(str(hcp_weight).split('.'))
+            print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
+            eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
+            
     pass
