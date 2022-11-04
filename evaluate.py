@@ -463,6 +463,7 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suf
         # Optional: Append fname suffix to avoid overwriting old results
         fname.strip('.tsv') + f'_{fname_suffix}.tsv'
     results.to_csv(fname,sep='\t',index=False)
+    print('Done. Saved evaluation results in {fname}')
 
 
 
