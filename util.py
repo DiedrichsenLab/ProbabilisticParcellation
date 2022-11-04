@@ -32,6 +32,21 @@ def load_batch_fit(fname):
         models = pickle.load(file)
     return info,models
 
+def clear_batch(fname):
+    """Ensures that pickle file does not contain superflous data
+    Args:
+        fname (): filename
+    """
+    wdir = base_dir + '/Models/'
+    with open(wdir + fname + '.pickle','rb') as file:
+        models = pickle.load(file)
+    # Clear models 
+    for m in models:
+        m.clear()
+    
+    with open(wdir + fname + '.pickle','wb') as file:
+        pickle.dump(models,file)
+
 def load_batch_best(fname):
     """ Loads a batch of model fits and selects the best one
     Args:
