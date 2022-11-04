@@ -14,6 +14,7 @@ import generativeMRF.spatial as sp
 import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
+from ProbabilisticParcellation.util import *
 import torch as pt
 from learn_mdtb import get_mdtb_parcel
 import matplotlib.pyplot as plt
