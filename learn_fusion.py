@@ -312,13 +312,8 @@ if __name__ == "__main__":
     # fit_all([0,1])
     # fit_all([0, 2]) 
     # fit_all([1, 2])
-    for k in [10,20,34]:
-        fit_all([3],k,model_type='03')
+    for k in [34]:
         fit_all([3],k,model_type='04')
-    for k in [10,20,34]:
-        fit_all([0,1,2,3],k,model_type='03')
-        fit_all([0,1,2,3],k,model_type='04')
-        # 
         # fit_all([4],k,model_type='02')
         # fit_all([0,1,2,3,4],k,model_type='02')
     # fit_all([0],20)
