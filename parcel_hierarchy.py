@@ -42,31 +42,40 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
     else:
         K = model.emissions[0].K
     cos_sim = np.empty((n_sets,K,K))
-    kappa = np.empty((n_sets,))
+    if model.emissions[0].uniform_kappa:
+        kappa = np.empty((n_sets,))
+    else:
+        kappa = np.empty((n_sets,K))
     n_subj = np.empty((n_sets,))
 
+    V = []
     for i,em in enumerate(model.emissions):
         if sym:
-            V = em.V[:,:K]+em.V[:,K:] # Average the two sides for clustering
-            V = V/np.sqrt((V**2).sum(axis=0))
-            cos_sim[i,:,:] = V.T @ V
+            V.append(em.V[:,:K]+em.V[:,K:]) # Average the two sides for clustering
+            V[-1] = V[-1]/np.sqrt((V[-1]**2).sum(axis=0))
         else:
-            cos_sim[i,:,:] = em.V.T @ em.V
-        # Similarity is weighted by mean Kappa
-        kappa[i] = em.kappa.mean() 
-        n_subj[i] = em.num_subj
+            V.append(em.V)
+        cos_sim[i]=V[-1].T @ V[-1]
+
+        # V is weighted by Kappa and number of subjects
+        kappa[i] = em.kappa
+        V[-1] = V[-1] * em.kappa * np.sqrt(em.num_subj)
+        if weighting is not None:
+            V[-1] = V[-1] * weighting[i]
+
+    # Combine all Vs and renormalize
+    Vall = np.vstack(V)
+    Vall = Vall/np.sqrt((Vall**2).sum(axis=0))
+    w_cos_sim = Vall.T @ Vall 
 
     # Integrated parcel similarity with kappa
-    weight = kappa * n_subj
-    if weighting is not None:
-        weight = weight * weighting
-    w_cos_sim = (cos_sim * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum()
     if plot is True:
+        grid = int(np.ceil(np.sqrt(n_sets+1)))
         for i in range(n_sets):
-            plt.subplot(1,n_sets+1,i+1)
+            plt.subplot(grid,grid,i+1)
             plt.imshow(cos_sim[i,:,:],vmin=-1,vmax=1)
             plt.title(f"Dataset {i+1}")
-        plt.subplot(1,n_sets+1,n_sets+1)
+        plt.subplot(grid,grid,n_sets+1)
         plt.imshow(w_cos_sim,vmin=-1,vmax=1)
         plt.title(f"Merged")
 
@@ -292,7 +301,7 @@ def analyze_parcel(mname,sym=True):
     info,model = load_batch_best(mname)
 
     # get the parcel similarity
-    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
+    w_cos_sim,_,_ = parcel_similarity(model,plot=True)
 
     # Make a colormap
     cmap = colormap_mds(w_cos_sim,plot='3d',type='rgb')
