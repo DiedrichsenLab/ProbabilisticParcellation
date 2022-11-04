@@ -319,16 +319,17 @@ def clear_models(K,model_type='04'):
 
 
 if __name__ == "__main__":
-    for k in [34]:
-        for hcp_weight in np.arange(0, 1, 0.2):
-            print(hcp_weight)
-            train_datasets=[0,1,2,3,4]
-            weighting = np.repeat(1, len(train_datasets)-1)
+    for model_type in ['04', '03']:
+        for k in [34]:
+            for hcp_weight in np.arange(0.4, 1, 0.2):
+                hcp_weight = round(hcp_weight,2)
+                print(hcp_weight)
+                # train_datasets=[0,1,2,3,4]
+                # weighting = np.repeat(1, len(train_datasets)-1)
 
-            weighting = np.append(weighting, hcp_weight)
-            
-            fit_all(train_datasets, k, model_type='04', weighting=weighting)
-            fit_all(train_datasets, k, model_type='03', weighting=weighting)
+                # weighting = np.append(weighting, hcp_weight)
+
+                # fit_all(train_datasets, k, model_type=model_type, weighting=weighting)
 
 
     # parcel = pt.argmax(Prop,dim=1)
