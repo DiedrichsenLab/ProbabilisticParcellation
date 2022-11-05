@@ -59,14 +59,14 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
 
         # V is weighted by Kappa and number of subjects
         kappa[i] = em.kappa
-        V[-1] = V[-1] * em.kappa * np.sqrt(em.num_subj)
+        V[-1] = V[-1] * np.sqrt(em.kappa * em.num_subj)
         if weighting is not None:
-            V[-1] = V[-1] * weighting[i]
+            V[-1] = V[-1] * np.sqrt(weighting[i])
 
     # Combine all Vs and renormalize
     Vall = np.vstack(V)
     Vall = Vall/np.sqrt((Vall**2).sum(axis=0))
-    w_cos_sim = Vall.T @ Vall 
+    w_cos_sim = Vall.T @ Vall
 
     # Integrated parcel similarity with kappa
     if plot is True:
@@ -85,7 +85,7 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
 def get_conditions(minfo):
     """Loads the conditions for a given dataset
     """
-    
+
     datasets = minfo.datasets.strip("'[").strip("]'").split("' '")
     types = minfo.type.strip("'[").strip("]'").split("' '")
     sessions = minfo.sess.strip("'[").strip("]'").split("' '")
@@ -95,7 +95,7 @@ def get_conditions(minfo):
         condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
         condition_names = condition_names[dataset.cond_name].to_list()
         conditions.append([condition.split('  ')[0] for condition in condition_names])
-    
+
     return conditions
 
 def get_profiles(model,info):
@@ -133,7 +133,7 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
 
     Returns:
         profile: condition names in order of parcel score
-        
+
     """
     if show_ds =='all':
         # Collect condition names in order of parcel score from all datasets
@@ -151,7 +151,7 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
         d = datasets.index(show_ds)
         cond_name = conditions[d]
         cond_score = profiles[d][:,p].tolist()
-        
+
         # sort conditions by condition score
         dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
         print('{} :\t{}'.format(datasets[d], dataset_profile[:ncond]))
