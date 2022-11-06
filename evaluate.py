@@ -467,12 +467,14 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suf
 
 
 
-def eval_old_dcbc():
+def eval_old_dcbc(models=None, datasets=None, fname_suffix=None):
     """ Evaluates old and new parcellations using new DCBC
     """
     parcels = ['Anatom','MDTB10','Buckner7','Buckner17','Ji10']
-    models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
-    datasets = ['Mdtb']
+    if models is None:
+        models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
+    if datasets is None:
+        datasets = ['Mdtb']
 
     par_name = []
     for p in parcels:
@@ -488,6 +490,9 @@ def eval_old_dcbc():
                          test_sess = 'all')
         results = pd.concat([results,R],ignore_index=True)
     fname = base_dir + f'/Models/eval_dcbc_group.tsv'
+    if fname_suffix is not None:
+        # Append fname suffix to avoid overwriting old results
+        fname = fname.strip('.tsv') + f'_{fname_suffix}.tsv'
     results.to_csv(fname,sep='\t',index=False)
 
 
