@@ -42,31 +42,44 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
     else:
         K = model.emissions[0].K
     cos_sim = np.empty((n_sets,K,K))
-    kappa = np.empty((n_sets,))
+    if model.emissions[0].uniform_kappa:
+        kappa = np.empty((n_sets,))
+    else:
+        kappa = np.empty((n_sets,K))
     n_subj = np.empty((n_sets,))
 
+    V = []
     for i,em in enumerate(model.emissions):
         if sym:
-            V = em.V[:,:K]+em.V[:,K:] # Average the two sides for clustering
-            V = V/np.sqrt((V**2).sum(axis=0))
-            cos_sim[i,:,:] = V.T @ V
+            V.append(em.V[:,:K]+em.V[:,K:]) # Average the two sides for clustering
+            V[-1] = V[-1]/np.sqrt((V[-1]**2).sum(axis=0))
+            if model.emissions[0].uniform_kappa:
+                kappa[i] = em.kappa
+            else:
+                kappa[i] = (em.kappa[:K]+em.kappa[K:])/2
         else:
-            cos_sim[i,:,:] = em.V.T @ em.V
-        # Similarity is weighted by mean Kappa
-        kappa[i] = em.kappa.mean() 
-        n_subj[i] = em.num_subj
+            V.append(em.V)
+            kappa[i] = em.kappa
+        cos_sim[i]=V[-1].T @ V[-1]
+
+        # V is weighted by Kappa and number of subjects
+        V[-1] = V[-1] * np.sqrt(kappa[i] * em.num_subj)
+        if weighting is not None:
+            V[-1] = V[-1] * np.sqrt(weighting[i])
+
+    # Combine all Vs and renormalize
+    Vall = np.vstack(V)
+    Vall = Vall/np.sqrt((Vall**2).sum(axis=0))
+    w_cos_sim = Vall.T @ Vall
 
     # Integrated parcel similarity with kappa
-    weight = kappa * n_subj
-    if weighting is not None:
-        weight = weight * weighting
-    w_cos_sim = (cos_sim * weight.reshape((-1,1,1))).sum(axis=0)/weight.sum()
     if plot is True:
+        grid = int(np.ceil(np.sqrt(n_sets+1)))
         for i in range(n_sets):
-            plt.subplot(1,n_sets+1,i+1)
+            plt.subplot(grid,grid,i+1)
             plt.imshow(cos_sim[i,:,:],vmin=-1,vmax=1)
             plt.title(f"Dataset {i+1}")
-        plt.subplot(1,n_sets+1,n_sets+1)
+        plt.subplot(grid,grid,n_sets+1)
         plt.imshow(w_cos_sim,vmin=-1,vmax=1)
         plt.title(f"Merged")
 
@@ -76,7 +89,7 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
 def get_conditions(minfo):
     """Loads the conditions for a given dataset
     """
-    
+
     datasets = minfo.datasets.strip("'[").strip("]'").split("' '")
     types = minfo.type.strip("'[").strip("]'").split("' '")
     sessions = minfo.sess.strip("'[").strip("]'").split("' '")
@@ -86,7 +99,7 @@ def get_conditions(minfo):
         condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
         condition_names = condition_names[dataset.cond_name].to_list()
         conditions.append([condition.split('  ')[0] for condition in condition_names])
-    
+
     return conditions
 
 def get_profiles(model,info):
@@ -124,7 +137,7 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
 
     Returns:
         profile: condition names in order of parcel score
-        
+
     """
     if show_ds =='all':
         # Collect condition names in order of parcel score from all datasets
@@ -143,7 +156,7 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
         d = datasets.index(show_ds)
         cond_name = conditions[d]
         cond_score = profiles[d][:,p].tolist()
-        
+
         # sort conditions by condition score
         dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
         profile = dataset_profile
@@ -167,11 +180,12 @@ def get_clusters(Z,K,num_cluster):
             cluster[indx]=cluster[i+K]
     return cluster[:K],cluster[K:]
 
-def agglomative_clustering(similarity,cmap,
-                        plot=True,
+def agglomative_clustering(similarity,
                         sym=False,
                         num_clusters=5,
-                        method = 'ward'):
+                        method = 'ward',
+                        plot=True,
+                        cmap=None):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
     K = similarity.shape[0]
@@ -180,21 +194,11 @@ def agglomative_clustering(similarity,cmap,
     Z = linkage(dist,method)
     cleaves,clinks = get_clusters(Z,K,num_clusters)
 
-    # Determine colors
-    if sym:
-        colr = (cmap(np.arange(K)+1) + cmap(np.arange(K)+ K +1))/2
-    else:
-        colr = cmap(np.arange(K)+1)
-    group_color=np.empty((num_clusters+1,4))
-    for i in np.unique(cleaves):
-        group_color[i,:]=colr[cleaves==i,:].mean(axis=0)
-    link_colors = group_color[clinks,:]
-
     ax=plt.gca()
     R = dendrogram(Z,color_threshold=-1) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
-    groups = ['A','B','C','D','E','F','G']
+    groups = ['0','A','B','C','D','E','F','G']
     labels = np.empty((K,),dtype=object)
 
     current = -1
@@ -210,6 +214,7 @@ def agglomative_clustering(similarity,cmap,
     current = -1
     if sym:
         labels_map = np.empty((K*2+1,),dtype=object)
+        clusters = np.zeros((K*2,),dtype=int)
         labels_map[0] = '0'
         for i,l in enumerate(leaves):
             if cleaves[l]!=current:
@@ -217,14 +222,24 @@ def agglomative_clustering(similarity,cmap,
                 current = cleaves[l]
             labels_map[l+1]   = f"{groups[cleaves[l]]}{num}L"
             labels_map[l+K+1] = f"{groups[cleaves[l]]}{num}R"
+            clusters[l] = cleaves[l]
+            clusters[l+K] = cleaves[l]
             num+=1
     else:
         labels_map = np.empty((K+1,),dtype=object)
+        clusters = np.zeros((K,),dtype=int)
         labels_map[0] = '0'
         for i,l in enumerate(leaves):
             labels_map[l+1]   = labels[i]
+            clusters[l] = cleaves[l]
+    ax.set_ylim((-0.2,1.5))
+    if cmap is not None:
+        draw_cmap(ax,cmap,leaves,sym)
+    return labels_map,clusters,leaves
 
-    ax.set_ylim((-0.2,1.1))
+def draw_cmap(ax,cmap,leaves,sym):
+    """ Draws the color map on the dendrogram"""
+    K = len(leaves)
     for k in range(K):
         rect = Rectangle((k*10, -0.05), 10,0.05,
         facecolor=cmap(leaves[k]+1),
@@ -239,10 +254,8 @@ def agglomative_clustering(similarity,cmap,
             fill=True,
             edgecolor=(0,0,0,1))
             ax.add_patch(rect)
-    return labels_map
 
-
-def colormap_mds(G,plot='2d',type='hsv'):
+def colormap_mds(G,plot='2d',type='hsv',clusters=None,gamma = 0.2):
     N = G.shape[0]
     G = (G + G.T)/2
     Glam, V = eigh(G)
@@ -270,7 +283,18 @@ def colormap_mds(G,plot='2d',type='hsv'):
         Hue=(np.arctan2(V[:,1],V[:,0])+np.pi)/(2*np.pi)
         Val = (V[:,2]-V[:,2].min())/(V[:,2].max()-V[:,2].min())*0.5+0.4
         rgb = mpl.colors.hsv_to_rgb(np.c_[Hue,Sat,Val])
+    elif type=='rgb_cluster':
+        if clusters is None:
+            raise(NameError('rgb_cluster: Need to provide cluster assignment'))
+        
+        M = np.zeros((clusters.max(),3))
+        for i in np.unique(clusters):
+            M[i-1,:]=np.mean(W[clusters==i,:],axis=0)
+            W[clusters==i,:]=(1-gamma) * W[clusters==i,:] + gamma * M[i-1]
 
+        rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
+    else:
+        raise(NameError(f'Unknown Type: {type}'))
     colors = np.c_[rgb,np.ones((N,))]
     colorsp = np.r_[np.zeros((1,4)),colors] # Add empty for the zero's color
     newcmp = ListedColormap(colorsp)
@@ -294,15 +318,22 @@ def analyze_parcel(mname,sym=True):
     info,model = load_batch_best(mname)
 
     # get the parcel similarity
-    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
-
-    # Make a colormap
-    cmap = colormap_mds(w_cos_sim,plot='3d',type='rgb')
+    w_cos_sim,_,_ = parcel_similarity(model,plot=True)
 
     # Do clustering
     plt.figure()
     w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
-    labels = agglomative_clustering(w_cos_sym,cmap,sym=sym)
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4)
+    ax = plt.gca()
+
+    # Make a colormap
+    cmap = colormap_mds(w_cos_sim,plot='3d',
+                    type='rgb_cluster',
+                    clusters=clusters,
+                    gamma=0.6)
+    
+    draw_cmap(ax,cmap,leaves,sym)
+
 
     # Plot the parcellation
     Prop = np.array(model.marginal_prob())
