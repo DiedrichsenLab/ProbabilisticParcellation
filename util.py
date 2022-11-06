@@ -69,6 +69,7 @@ def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     color_map = color_info.iloc[:, 1:4].to_numpy()
     return color_map
 
+
 def plot_data_flat(data,atlas,
                     cmap = None,
                     dtype = 'label',
