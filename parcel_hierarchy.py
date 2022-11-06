@@ -22,7 +22,7 @@ from util import *
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
-from numpy.linalg import eigh
+from numpy.linalg import eigh, norm
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
@@ -194,7 +194,7 @@ def agglomative_clustering(similarity,
     cleaves,clinks = get_clusters(Z,K,num_clusters)
 
     ax=plt.gca()
-    R = dendrogram(Z,color_threshold=-1) # truncate_mode="level", p=3)
+    R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
     groups = ['0','A','B','C','D','E','F','G']
@@ -207,7 +207,6 @@ def agglomative_clustering(similarity,
             current = cleaves[l]
         labels[i]=f"{groups[cleaves[l]]}{num}"
         num+=1
-    ax.set_xticklabels(labels)
 
     # Make labels for mapping
     current = -1
@@ -231,8 +230,9 @@ def agglomative_clustering(similarity,
         for i,l in enumerate(leaves):
             labels_map[l+1]   = labels[i]
             clusters[l] = cleaves[l]
-    ax.set_ylim((-0.2,1.5))
-    if cmap is not None:
+    if plot & (cmap is not None):
+        ax.set_xticklabels(labels)
+        ax.set_ylim((-0.2,1.5))
         draw_cmap(ax,cmap,leaves,sym)
     return labels_map,clusters,leaves
 
@@ -254,8 +254,7 @@ def draw_cmap(ax,cmap,leaves,sym):
             edgecolor=(0,0,0,1))
             ax.add_patch(rect)
 
-
-def calc_mds(G,clusters=None,gamma = 0.2,center=False):
+def calc_mds(G,center=False):
     N = G.shape[0]
     if center:
         H = np.eye(N)-np.ones((N,N))/N
@@ -266,11 +265,6 @@ def calc_mds(G,clusters=None,gamma = 0.2,center=False):
     V = np.flip(V,axis=1)
     W = V[:,:3] * np.sqrt(Glam[:3])
 
-    if clusters is not None:
-        M = np.zeros((clusters.max(),3))
-        for i in np.unique(clusters):
-            M[i-1,:]=np.mean(W[clusters==i,:],axis=0)
-            W[clusters==i,:]=(1-gamma) * W[clusters==i,:] + gamma * M[i-1]
     return W
 
 """elif type=='hsv':
@@ -304,6 +298,19 @@ def get_target(cmap):
     tV = np.flip(tV,axis=1)
     return tm,tl,tV
 
+def make_orthonormal(U):
+    """Gram-Schmidt process to make 
+    matrix orthonormal"""
+    n = U.shape[1]
+    V=U.copy()
+    for i in range(n):
+        prev_basis = V[:,0:i]     # orthonormal basis before V[i]
+        rem = prev_basis @ prev_basis.T @ U[:,i]  
+        # subtract projections of V[i] onto already determined basis V[0:i]
+        V[:,i] = U[:,i] - rem 
+        V[:,i] /= norm(V[:,i])
+    return V
+
 def plot_colormap(rgb):
     N,a = rgb.shape
     if a==3:
@@ -331,7 +338,7 @@ def plot_colormap(rgb):
     return m,l,V
 
 
-def colormap_mds(W,target=None,scale=False):
+def colormap_mds(W,target=None,scale=False,clusters=None,gamma=0.3):
     """Map the simularity structure of MDS to a colormap
     Args:
         W (_type_): _description_
@@ -356,10 +363,62 @@ def colormap_mds(W,target=None,scale=False):
     # rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
     Wm[Wm<0]=0
     Wm[Wm>1]=1
+    if clusters is not None:
+        M = np.zeros((clusters.max(),3))
+        for i in np.unique(clusters):
+            M[i-1,:]=np.mean(Wm[clusters==i,:],axis=0)
+            Wm[clusters==i,:]=(1-gamma) * Wm[clusters==i,:] + gamma * M[i-1]
+
     colors = np.c_[Wm,np.ones((N,))]
     colorsp = np.r_[np.zeros((1,4)),colors] # Add empty for the zero's color
     newcmp = ListedColormap(colorsp)
     return newcmp
+
+def export_map(data,atlas,cmap,labels,base_name):
+    """Exports a new atlas map as a Nifti, Gifti, and lut-file 
+
+    Args:
+        data (_type_): Parcellation to export
+        atlas (_type_): Space
+        cmap (_type_): Colormap
+        base_name (_type_): File basename for atlas 
+    """
+    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    Nifti = suit_atlas.data_to_nifti(data)
+    
+    # Transform cmap into numpy array
+    if not isinstance(cmap,np.ndarray):
+        cmap = cmap(np.arange(cmap.N))
+    # Figure out correct mapping space 
+    if atlas[0:4]=='SUIT':
+        map_space='SUIT'
+    elif atlas[0:7]=='MNISymC':
+        map_space='MNISymC'
+    else:
+        raise(NameError('Unknown atlas space'))
+
+    # Plotting label 
+    surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
+            space=map_space,ignore_zeros=True)
+    Gifti = nt.make_label_gifti(surf_data,
+                anatomical_struct='Cerebellum',
+                label_names=labels,
+                label_RGBA = cmap)
+
+    nb.save(Nifti,base_name + f'_space-{map_space}_dseg.nii')
+    nb.save(Gifti,base_name + '_dseg.label.gii')
+
+    save_lut(np.arange(35)+1,cmap[:,0:4],labels, base_name + '.lut')
+
+def save_lut(index,colors,labels,fname):
+    L=pd.DataFrame({
+            "key":index,
+            "R":colors[:,0].round(4),
+            "G":colors[:,1].round(4),
+            "B":colors[:,2].round(4),
+            "Name":labels})
+    L.to_csv(fname,header=None,sep=' ')
+
 
 def analyze_parcel(mname,sym=True):
     fileparts = mname.split('/')
@@ -368,29 +427,31 @@ def analyze_parcel(mname,sym=True):
 
     # Do clustering
     w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5)
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=False)
     ax = plt.gca()
 
     # Make a colormap
     # get the parcel similarity
-    w_cos_sim,_,_ = parcel_similarity(model,plot=True)
-    W = calc_mds(w_cos_sim,clusters=clusters,gamma=0.3,center=True)
-    m,l,V = get_target('tab20')
-    V[:,0]=V[:,0]*-1
-    cmap = colormap_mds(W,target=(m,l,V))
-    draw_cmap(ax,cmap,leaves,sym)
+    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
+    W = calc_mds(w_cos_sim,center=True)
+    V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
+    V=make_orthonormal(V)
+    m = np.array([0.65,0.65,0.65])
+    l = np.array([1.0,1.0,1.0])
+    cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
+    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=True,cmap=cmap)
     plot_colormap(cmap(np.arange(34)))
 
     # Plot the parcellation
     Prop = np.array(model.marginal_prob())
     parcel = Prop.argmax(axis=0)+1
     atlas = split_mn[2][6:]
-
     ax = plot_data_flat(parcel,atlas,cmap = cmap,
                     dtype='label',
                     labels=labels,
                     render='plotly')
     ax.show()
+    export_map(parcel,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
     pass
 
 
