@@ -512,25 +512,26 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 
 if __name__ == "__main__":
-    for K in [34]:
-        # for hcp_weight in np.arange(0, 1.1, 0.2):
-        #     windex = ''.join(str(hcp_weight).split('.'))
-        #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
-        #     eval_select_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
+    eval_old_dcbc(models=['Models_01/asym_MdPoNiIb_space-MNISymC3_K-10.pickle', 'Models_01/asym_MdPoNiIbHc_space-MNISymC3_K-10.pickle'], datasets = ['Mdtb', 'Pontine', 'Nishimoto', 'Ibc'], fname_suffix='all')
+    # for K in [34]:
+    #     # for hcp_weight in np.arange(0, 1.1, 0.2):
+    #     #     windex = ''.join(str(hcp_weight).split('.'))
+    #     #     print(f'Evaluating asym {K} MdPoNiIbHc_{windex}')
+    #     #     eval_select_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=[f'MdPoNiIbHc_{windex}'])
         
-        # hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
-        hcp_models = hcp_models[:2] + [hcp_models[-1]]
-        eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw')
+    #     # hcp_models = ['MdPoNiIbHc_{}'.format(''.join(str(hcp_weight).split('.'))) for hcp_weight in np.arange(0, 1.1, 0.2)]
+    #     hcp_models = hcp_models[:2] + [hcp_models[-1]]
+    #     eval_all_dcbc(model_type='04',prefix='asym',K=K,space = 'MNISymC3', models=hcp_models, fname_suffix='HCPw')
             
-    # K = np.arange(10,35,step=2)
-    # prefix = ['asym','sym']
-    # concat_all_prederror('01',prefix,K,'noHCP')
-    eval_all_dcbc('04','asym',34)
-    #for K in [10,20,34]: # np.arange(20,35,step=2):
-        # eval_all_prederror('01','sym',K)
-        # eval_all_prederror('01','asym',K)
-    #    eval_all_dcbc('04','asym',K)
-    #    eval_all_dcbc('04','sym',K)
+    # # K = np.arange(10,35,step=2)
+    # # prefix = ['asym','sym']
+    # # concat_all_prederror('01',prefix,K,'noHCP')
+    # eval_all_dcbc('04','asym',34)
+    # #for K in [10,20,34]: # np.arange(20,35,step=2):
+    #     # eval_all_prederror('01','sym',K)
+    #     # eval_all_prederror('01','asym',K)
+    # #    eval_all_dcbc('04','asym',K)
+    # #    eval_all_dcbc('04','sym',K)
         # eval_old_dcbc()
 
     pass
