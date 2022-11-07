@@ -12,6 +12,7 @@ import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
 from scipy.linalg import block_diag
 import nibabel as nb
+import nibabel.processing as ns
 import SUITPy as suit
 import torch as pt
 import matplotlib.pyplot as plt
@@ -405,10 +406,9 @@ def export_map(data,atlas,cmap,labels,base_name):
                 label_names=labels,
                 label_RGBA = cmap)
 
-    nb.save(Nifti,base_name + f'_space-{map_space}_dseg.nii')
+    nb.save(Nifti,base_name + f'_space-{atlas}_dseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
-
-    save_lut(np.arange(35)+1,cmap[:,0:4],labels, base_name + '.lut')
+    save_lut(np.arange(35),cmap[:,0:4],labels, base_name + '.lut')
 
 def save_lut(index,colors,labels,fname):
     L=pd.DataFrame({
@@ -417,7 +417,7 @@ def save_lut(index,colors,labels,fname):
             "G":colors[:,1].round(4),
             "B":colors[:,2].round(4),
             "Name":labels})
-    L.to_csv(fname,header=None,sep=' ')
+    L.to_csv(fname,header=None,sep=' ',index=False)
 
 
 def analyze_parcel(mname,sym=True):
@@ -451,7 +451,21 @@ def analyze_parcel(mname,sym=True):
                     labels=labels,
                     render='plotly')
     ax.show()
+    
+    # Export these maps
+    atlas_dir = base_dir + '/Atlases/'
     export_map(parcel,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    
+    # Reslice to 1mm MNI and 1mm SUIT space 
+    sym3 = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/atl-NettekovenSym34_space-MNISymC3_dseg.nii')
+    
+    tmp1 = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/tpl-MNISymC_res-1_gmcmask.nii')
+    sym1 = ns.resample_from_to(sym3,tmp1,0)
+    nb.save(sym1,atlas_dir + 'tpl-MNI152NLin2000cSymC/atl-NettekovenSym34_space-MNISymC_dseg.nii')
+
+    deform = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
+    suit1 = nt.deform_image(sym1,deform,0)
+    nb.save(suit1,atlas_dir + 'tpl-SUIT/atl-NettekovenSym34_space-SUIT_dseg.nii')
     pass
 
 
