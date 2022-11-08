@@ -39,7 +39,7 @@ if not Path(base_dir).exists():
 def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
     if sym:
-        K = np.int(model.emissions[0].K/2)
+        K = int(model.emissions[0].K/2)
     else:
         K = model.emissions[0].K
     cos_sim = np.empty((n_sets,K,K))
@@ -376,20 +376,25 @@ def colormap_mds(W,target=None,scale=False,clusters=None,gamma=0.3):
     return newcmp
 
 def export_map(data,atlas,cmap,labels,base_name):
-    """Exports a new atlas map as a Nifti, Gifti, and lut-file 
+    """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file. 
 
     Args:
-        data (_type_): Parcellation to export
-        atlas (_type_): Space
-        cmap (_type_): Colormap
+        data (probabilities): Probabilstic parcellation to export
+        atlas (): FunctionalFusion atlas type (SUIT2,MNISym3)
+        cmap (): Colormap
+        labels (list): List of labels for fields
         base_name (_type_): File basename for atlas 
     """
-    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
-    Nifti = suit_atlas.data_to_nifti(data)
-    
     # Transform cmap into numpy array
     if not isinstance(cmap,np.ndarray):
         cmap = cmap(np.arange(cmap.N))
+
+
+    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    probseg = suit_atlas.data_to_nifti(data)
+    parcel = np.argmax(data,axis=0)+1
+    dseg = suit_atlas.data_to_nifti(parcel)
+    
     # Figure out correct mapping space 
     if atlas[0:4]=='SUIT':
         map_space='SUIT'
@@ -399,14 +404,17 @@ def export_map(data,atlas,cmap,labels,base_name):
         raise(NameError('Unknown atlas space'))
 
     # Plotting label 
-    surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
-            space=map_space,ignore_zeros=True)
-    Gifti = nt.make_label_gifti(surf_data,
+    surf_data = suit.flatmap.vol_to_surf(probseg, stats='nanmean',
+            space=map_space)
+    surf_parcel = np.argmax(surf_data,axis=1)+1
+    Gifti = nt.make_label_gifti(surf_parcel.reshape(-1,1),
                 anatomical_struct='Cerebellum',
+                labels = np.arange(surf_parcel.max()+1),
                 label_names=labels,
                 label_RGBA = cmap)
 
-    nb.save(Nifti,base_name + f'_space-{atlas}_dseg.nii')
+    nb.save(dseg,base_name + f'_space-{atlas}_dseg.nii')
+    nb.save(probseg,base_name + f'_space-{atlas}_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
     save_lut(np.arange(35),cmap[:,0:4],labels, base_name + '.lut')
 
@@ -419,6 +427,44 @@ def save_lut(index,colors,labels,fname):
             "Name":labels})
     L.to_csv(fname,header=None,sep=' ',index=False)
 
+
+def renormalize_probseg(probseg):
+    X = probseg.get_fdata()
+    xs = np.sum(X,axis=3)
+    xs[xs==0]=np.nan
+    X = X/xs
+    X[np.isnan(X)]=0
+    probseg_img = nb.Nifti1Image(X,probseg.affine)
+    parcel = np.argmax(X,axis=3)+1
+    parcel[np.isnan(xs)]=0
+    dseg_img = nb.Nifti1Image(int(parcel),probseg.affine)
+    dseg_img.set_data_dtype('int8')
+    dseg_img.header.set_intent(1002,(),"")
+    dseg_img.header.set_slope_inter(1.0,0.0)
+    return probseg_img,dseg_img
+
+def resample_atlas(base_name):
+    """ Resamples probabilstic atlas into 1mm resolution and
+    SUIT space
+    """
+    mnisym_dir=base_dir + '/Atlases/tpl-MNI152NLin2000cSymC'
+    suit_dir=base_dir + '/Atlases/tpl-SUIT'
+
+    # Reslice to 1mm MNI and 1mm SUIT space 
+    sym3 = nb.load(mnisym_dir + f'/{base_name}_space-MNISymC3_probseg.nii')
+    tmp1 = nb.load(mnisym_dir + f'/tpl-MNISymC_res-1_gmcmask.nii')
+    shap = tmp1.shape+sym3.shape[3:]
+    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),1)
+    sym1,dsym1= renormalize_probseg(sym1)
+    nb.save(sym1,mnisym_dir + f'/{base_name}_space-MNISymC_probseg.nii')
+    nb.save(dsym1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
+    
+    # Now put the image into SUIT space     
+    deform = nb.load(mnisym_dir + '/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
+    suit1 = nt.deform_image(sym1,deform,1)
+    suit1,dsuit1= renormalize_probseg(sym1)
+    nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
+    nb.save(dsuit1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
 
 def analyze_parcel(mname,sym=True):
     fileparts = mname.split('/')
@@ -443,29 +489,17 @@ def analyze_parcel(mname,sym=True):
     plot_colormap(cmap(np.arange(34)))
 
     # Plot the parcellation
-    Prop = np.array(model.marginal_prob())
-    parcel = Prop.argmax(axis=0)+1
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
     atlas = split_mn[2][6:]
     ax = plot_data_flat(parcel,atlas,cmap = cmap,
                     dtype='label',
                     labels=labels,
                     render='plotly')
     ax.show()
-    
-    # Export these maps
-    atlas_dir = base_dir + '/Atlases/'
-    export_map(parcel,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    
-    # Reslice to 1mm MNI and 1mm SUIT space 
-    sym3 = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/atl-NettekovenSym34_space-MNISymC3_dseg.nii')
-    
-    tmp1 = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/tpl-MNISymC_res-1_gmcmask.nii')
-    sym1 = ns.resample_from_to(sym3,tmp1,0)
-    nb.save(sym1,atlas_dir + 'tpl-MNI152NLin2000cSymC/atl-NettekovenSym34_space-MNISymC_dseg.nii')
 
-    deform = nb.load(atlas_dir + 'tpl-MNI152NLin2000cSymC/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
-    suit1 = nt.deform_image(sym1,deform,0)
-    nb.save(suit1,atlas_dir + 'tpl-SUIT/atl-NettekovenSym34_space-SUIT_dseg.nii')
+    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    resample_atlas('atl-NettekovenSym34')
     pass
 
 
