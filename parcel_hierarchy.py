@@ -431,7 +431,7 @@ def save_lut(index,colors,labels,fname):
 def renormalize_probseg(probseg):
     X = probseg.get_fdata()
     xs = np.sum(X,axis=3)
-    xs[xs==0]=np.nan
+    xs[xs<0.5]=np.nan
     X = X/np.expand_dims(xs,3)
     X[np.isnan(X)]=0
     probseg_img = nb.Nifti1Image(X,probseg.affine)
@@ -439,8 +439,9 @@ def renormalize_probseg(probseg):
     parcel[np.isnan(xs)]=0
     dseg_img = nb.Nifti1Image(parcel.astype(np.int8),probseg.affine)
     dseg_img.set_data_dtype('int8')
-    dseg_img.header.set_intent(1002,(),"")
-    dseg_img.header.set_slope_inter(1.0,0.0)
+    # dseg_img.header.set_intent(1002,(),"")
+    probseg_img.set_data_dtype('float32')
+    # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
     return probseg_img,dseg_img
 
 def resample_atlas(base_name):
@@ -451,20 +452,59 @@ def resample_atlas(base_name):
     suit_dir=base_dir + '/Atlases/tpl-SUIT'
 
     # Reslice to 1mm MNI and 1mm SUIT space
+    print('reslicing to 1mm')
     sym3 = nb.load(mnisym_dir + f'/{base_name}_space-MNISymC3_probseg.nii')
     tmp1 = nb.load(mnisym_dir + f'/tpl-MNISymC_res-1_gmcmask.nii')
     shap = tmp1.shape+sym3.shape[3:]
-    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),3)
+    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),5)
+    print('normalizing')
     sym1,dsym1= renormalize_probseg(sym1)
+    print('saving')
     nb.save(sym1,mnisym_dir + f'/{base_name}_space-MNISymC_probseg.nii')
     nb.save(dsym1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
 
     # Now put the image into SUIT space
+    print('reslicing to SUIT')
     deform = nb.load(mnisym_dir + '/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
     suit1 = nt.deform_image(sym1,deform,1)
+    print('normalizing')
     suit1,dsuit1= renormalize_probseg(sym1)
+    print('saving')
     nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
     nb.save(dsuit1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
+
+def make_asymmetry_map(mname):
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info,model = load_batch_best(mname)
+    
+    # Get winner take-all 
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
+
+    # Get similarity
+    w_cos,_,_ = parcel_similarity(model,plot=False,sym=False)
+    indx1 = np.arange(model.K)
+    v = np.arange(model.K_sym)
+    indx2 = np.concatenate([v+model.K_sym,v])
+    sym_score = w_cos[indx1,indx2]
+    
+    suit_atlas = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    Nifti = suit_atlas.data_to_nifti(parcel)
+    surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
+            space='MNISymC',ignore_zeros=True)
+    surf_parcel = np.nan_to_num(surf_parcel,copy=False).astype(int)
+    sym_map = np.zeros(surf_parcel.shape)*np.nan
+    sym_map[surf_parcel>0] = sym_score[surf_parcel[surf_parcel>0]-1]
+    
+    ax = suit.flatmap.plot(sym_map, 
+                render='matplotlib',
+                overlay_type='func',
+                colorbar=True,
+                cscale=[0.3,1])
+    # ax.show()
+    pass
+
 
 def analyze_parcel(mname,sym=True):
     fileparts = mname.split('/')
@@ -506,7 +546,8 @@ def analyze_parcel(mname,sym=True):
 
 if __name__ == "__main__":
     mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
-    analyze_parcel(mname,sym=True)
+    make_asymmetry_map(mname)
+    # analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
     # rgb=cmap(np.arange(20))
     # plot_colormap(rgb)
