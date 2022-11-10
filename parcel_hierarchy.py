@@ -546,8 +546,8 @@ def analyze_parcel(mname,sym=True):
 
 if __name__ == "__main__":
     mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
-    make_asymmetry_map(mname)
-    # analyze_parcel(mname,sym=True)
+    # make_asymmetry_map(mname)
+    analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
     # rgb=cmap(np.arange(20))
     # plot_colormap(rgb)
