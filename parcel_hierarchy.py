@@ -477,8 +477,8 @@ def make_asymmetry_map(mname):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
-    
-    # Get winner take-all 
+
+    # Get winner take-all
     Prob = np.array(model.marginal_prob())
     parcel = Prob.argmax(axis=0)+1
 
@@ -488,7 +488,7 @@ def make_asymmetry_map(mname):
     v = np.arange(model.K_sym)
     indx2 = np.concatenate([v+model.K_sym,v])
     sym_score = w_cos[indx1,indx2]
-    
+
     suit_atlas = am.get_atlas('MNISymC3',base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
     surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
@@ -496,8 +496,8 @@ def make_asymmetry_map(mname):
     surf_parcel = np.nan_to_num(surf_parcel,copy=False).astype(int)
     sym_map = np.zeros(surf_parcel.shape)*np.nan
     sym_map[surf_parcel>0] = sym_score[surf_parcel[surf_parcel>0]-1]
-    
-    ax = suit.flatmap.plot(sym_map, 
+
+    ax = suit.flatmap.plot(sym_map,
                 render='matplotlib',
                 overlay_type='func',
                 colorbar=True,
@@ -528,6 +528,8 @@ def analyze_parcel(mname,sym=True):
     agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=True,cmap=cmap)
     plot_colormap(cmap(np.arange(34)))
 
+
+
     # Plot the parcellation
     Prob = np.array(model.marginal_prob())
     parcel = Prob.argmax(axis=0)+1
@@ -538,8 +540,8 @@ def analyze_parcel(mname,sym=True):
                     render='plotly')
     ax.show()
 
-    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    resample_atlas('atl-NettekovenSym34')
+    # export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    # resample_atlas('atl-NettekovenSym34')
     pass
 
 
