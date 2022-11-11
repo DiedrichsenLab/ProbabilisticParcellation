@@ -185,6 +185,7 @@ def agglomative_clustering(similarity,
                         num_clusters=5,
                         method = 'ward',
                         plot=True,
+                        groups = ['0','A','B','C','D','E','F','G'],
                         cmap=None):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
@@ -198,7 +199,6 @@ def agglomative_clustering(similarity,
     R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
-    groups = ['0','A','L','W','D','M','F','G']
     labels = np.empty((K,),dtype=object)
 
     current = -1
@@ -513,7 +513,8 @@ def analyze_parcel(mname,sym=True):
 
     # Do clustering
     w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=False)
+
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=False,groups=['I','L','W','A','O','D','M'])
     ax = plt.gca()
 
     # Make a colormap
@@ -525,7 +526,8 @@ def analyze_parcel(mname,sym=True):
     m = np.array([0.65,0.65,0.65])
     l = np.array([1.0,1.0,1.0])
     cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
-    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=True,cmap=cmap)
+
+    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap,groups=['I','L','W','A','O','D','M'])
     plot_colormap(cmap(np.arange(34)))
 
 
@@ -540,6 +542,11 @@ def analyze_parcel(mname,sym=True):
                     render='plotly')
     ax.show()
 
+    # Quick hack - hard-code the labels:
+
+    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 
+    'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R',
+       'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
     export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
     resample_atlas('atl-NettekovenSym34')
     pass
