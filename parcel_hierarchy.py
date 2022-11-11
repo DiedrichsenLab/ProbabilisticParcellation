@@ -198,7 +198,7 @@ def agglomative_clustering(similarity,
     R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
-    groups = ['0','A','B','C','D','E','F','G']
+    groups = ['0','A','L','W','D','M','F','G']
     labels = np.empty((K,),dtype=object)
 
     current = -1
@@ -471,7 +471,7 @@ def resample_atlas(base_name):
     suit1,dsuit1= renormalize_probseg(sym1)
     print('saving')
     nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
-    nb.save(dsuit1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
+    nb.save(dsuit1,suit_dir + f'/{base_name}_space-SUIT_dseg.nii')
 
 def make_asymmetry_map(mname):
     fileparts = mname.split('/')
@@ -540,8 +540,8 @@ def analyze_parcel(mname,sym=True):
                     render='plotly')
     ax.show()
 
-    # export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    # resample_atlas('atl-NettekovenSym34')
+    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    resample_atlas('atl-NettekovenSym34')
     pass
 
 
