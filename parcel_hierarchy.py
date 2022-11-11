@@ -456,7 +456,7 @@ def resample_atlas(base_name):
     sym3 = nb.load(mnisym_dir + f'/{base_name}_space-MNISymC3_probseg.nii')
     tmp1 = nb.load(mnisym_dir + f'/tpl-MNISymC_res-1_gmcmask.nii')
     shap = tmp1.shape+sym3.shape[3:]
-    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),5)
+    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),3)
     print('normalizing')
     sym1,dsym1= renormalize_probseg(sym1)
     print('saving')
@@ -468,7 +468,7 @@ def resample_atlas(base_name):
     deform = nb.load(mnisym_dir + '/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
     suit1 = nt.deform_image(sym1,deform,1)
     print('normalizing')
-    suit1,dsuit1= renormalize_probseg(sym1)
+    suit1,dsuit1= renormalize_probseg(suit1)
     print('saving')
     nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
     nb.save(dsuit1,suit_dir + f'/{base_name}_space-SUIT_dseg.nii')
