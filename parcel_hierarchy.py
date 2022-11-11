@@ -12,6 +12,7 @@ import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
 from scipy.linalg import block_diag
 import nibabel as nb
+import nibabel.processing as ns
 import SUITPy as suit
 import torch as pt
 import matplotlib.pyplot as plt
@@ -38,7 +39,7 @@ if not Path(base_dir).exists():
 def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
     if sym:
-        K = np.int(model.emissions[0].K/2)
+        K = int(model.emissions[0].K/2)
     else:
         K = model.emissions[0].K
     cos_sim = np.empty((n_sets,K,K))
@@ -184,6 +185,7 @@ def agglomative_clustering(similarity,
                         num_clusters=5,
                         method = 'ward',
                         plot=True,
+                        groups = ['0','A','B','C','D','E','F','G'],
                         cmap=None):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
@@ -197,7 +199,6 @@ def agglomative_clustering(similarity,
     R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
-    groups = ['0','A','B','C','D','E','F','G']
     labels = np.empty((K,),dtype=object)
 
     current = -1
@@ -299,15 +300,15 @@ def get_target(cmap):
     return tm,tl,tV
 
 def make_orthonormal(U):
-    """Gram-Schmidt process to make 
+    """Gram-Schmidt process to make
     matrix orthonormal"""
     n = U.shape[1]
     V=U.copy()
     for i in range(n):
         prev_basis = V[:,0:i]     # orthonormal basis before V[i]
-        rem = prev_basis @ prev_basis.T @ U[:,i]  
+        rem = prev_basis @ prev_basis.T @ U[:,i]
         # subtract projections of V[i] onto already determined basis V[0:i]
-        V[:,i] = U[:,i] - rem 
+        V[:,i] = U[:,i] - rem
         V[:,i] /= norm(V[:,i])
     return V
 
@@ -375,21 +376,26 @@ def colormap_mds(W,target=None,scale=False,clusters=None,gamma=0.3):
     return newcmp
 
 def export_map(data,atlas,cmap,labels,base_name):
-    """Exports a new atlas map as a Nifti, Gifti, and lut-file 
+    """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file.
 
     Args:
-        data (_type_): Parcellation to export
-        atlas (_type_): Space
-        cmap (_type_): Colormap
-        base_name (_type_): File basename for atlas 
+        data (probabilities): Probabilstic parcellation to export
+        atlas (): FunctionalFusion atlas type (SUIT2,MNISym3)
+        cmap (): Colormap
+        labels (list): List of labels for fields
+        base_name (_type_): File basename for atlas
     """
-    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
-    Nifti = suit_atlas.data_to_nifti(data)
-    
     # Transform cmap into numpy array
     if not isinstance(cmap,np.ndarray):
         cmap = cmap(np.arange(cmap.N))
-    # Figure out correct mapping space 
+
+
+    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    probseg = suit_atlas.data_to_nifti(data)
+    parcel = np.argmax(data,axis=0)+1
+    dseg = suit_atlas.data_to_nifti(parcel)
+
+    # Figure out correct mapping space
     if atlas[0:4]=='SUIT':
         map_space='SUIT'
     elif atlas[0:7]=='MNISymC':
@@ -397,18 +403,20 @@ def export_map(data,atlas,cmap,labels,base_name):
     else:
         raise(NameError('Unknown atlas space'))
 
-    # Plotting label 
-    surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
-            space=map_space,ignore_zeros=True)
-    Gifti = nt.make_label_gifti(surf_data,
+    # Plotting label
+    surf_data = suit.flatmap.vol_to_surf(probseg, stats='nanmean',
+            space=map_space)
+    surf_parcel = np.argmax(surf_data,axis=1)+1
+    Gifti = nt.make_label_gifti(surf_parcel.reshape(-1,1),
                 anatomical_struct='Cerebellum',
+                labels = np.arange(surf_parcel.max()+1),
                 label_names=labels,
                 label_RGBA = cmap)
 
-    nb.save(Nifti,base_name + f'_space-{map_space}_dseg.nii')
+    nb.save(dseg,base_name + f'_space-{atlas}_dseg.nii')
+    nb.save(probseg,base_name + f'_space-{atlas}_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
-
-    save_lut(np.arange(35)+1,cmap[:,0:4],labels, base_name + '.lut')
+    save_lut(np.arange(35),cmap[:,0:4],labels, base_name + '.lut')
 
 def save_lut(index,colors,labels,fname):
     L=pd.DataFrame({
@@ -417,7 +425,85 @@ def save_lut(index,colors,labels,fname):
             "G":colors[:,1].round(4),
             "B":colors[:,2].round(4),
             "Name":labels})
-    L.to_csv(fname,header=None,sep=' ')
+    L.to_csv(fname,header=None,sep=' ',index=False)
+
+
+def renormalize_probseg(probseg):
+    X = probseg.get_fdata()
+    xs = np.sum(X,axis=3)
+    xs[xs<0.5]=np.nan
+    X = X/np.expand_dims(xs,3)
+    X[np.isnan(X)]=0
+    probseg_img = nb.Nifti1Image(X,probseg.affine)
+    parcel = np.argmax(X,axis=3)+1
+    parcel[np.isnan(xs)]=0
+    dseg_img = nb.Nifti1Image(parcel.astype(np.int8),probseg.affine)
+    dseg_img.set_data_dtype('int8')
+    # dseg_img.header.set_intent(1002,(),"")
+    probseg_img.set_data_dtype('float32')
+    # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
+    return probseg_img,dseg_img
+
+def resample_atlas(base_name):
+    """ Resamples probabilstic atlas into 1mm resolution and
+    SUIT space
+    """
+    mnisym_dir=base_dir + '/Atlases/tpl-MNI152NLin2000cSymC'
+    suit_dir=base_dir + '/Atlases/tpl-SUIT'
+
+    # Reslice to 1mm MNI and 1mm SUIT space
+    print('reslicing to 1mm')
+    sym3 = nb.load(mnisym_dir + f'/{base_name}_space-MNISymC3_probseg.nii')
+    tmp1 = nb.load(mnisym_dir + f'/tpl-MNISymC_res-1_gmcmask.nii')
+    shap = tmp1.shape+sym3.shape[3:]
+    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),3)
+    print('normalizing')
+    sym1,dsym1= renormalize_probseg(sym1)
+    print('saving')
+    nb.save(sym1,mnisym_dir + f'/{base_name}_space-MNISymC_probseg.nii')
+    nb.save(dsym1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
+
+    # Now put the image into SUIT space
+    print('reslicing to SUIT')
+    deform = nb.load(mnisym_dir + '/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
+    suit1 = nt.deform_image(sym1,deform,1)
+    print('normalizing')
+    suit1,dsuit1= renormalize_probseg(suit1)
+    print('saving')
+    nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
+    nb.save(dsuit1,suit_dir + f'/{base_name}_space-SUIT_dseg.nii')
+
+def make_asymmetry_map(mname):
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info,model = load_batch_best(mname)
+
+    # Get winner take-all
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
+
+    # Get similarity
+    w_cos,_,_ = parcel_similarity(model,plot=False,sym=False)
+    indx1 = np.arange(model.K)
+    v = np.arange(model.K_sym)
+    indx2 = np.concatenate([v+model.K_sym,v])
+    sym_score = w_cos[indx1,indx2]
+
+    suit_atlas = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    Nifti = suit_atlas.data_to_nifti(parcel)
+    surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
+            space='MNISymC',ignore_zeros=True)
+    surf_parcel = np.nan_to_num(surf_parcel,copy=False).astype(int)
+    sym_map = np.zeros(surf_parcel.shape)*np.nan
+    sym_map[surf_parcel>0] = sym_score[surf_parcel[surf_parcel>0]-1]
+
+    ax = suit.flatmap.plot(sym_map,
+                render='matplotlib',
+                overlay_type='func',
+                colorbar=True,
+                cscale=[0.3,1])
+    # ax.show()
+    pass
 
 
 def analyze_parcel(mname,sym=True):
@@ -427,7 +513,8 @@ def analyze_parcel(mname,sym=True):
 
     # Do clustering
     w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=False)
+
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=False,groups=['I','L','W','A','O','D','M'])
     ax = plt.gca()
 
     # Make a colormap
@@ -439,25 +526,36 @@ def analyze_parcel(mname,sym=True):
     m = np.array([0.65,0.65,0.65])
     l = np.array([1.0,1.0,1.0])
     cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
-    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=5,plot=True,cmap=cmap)
+
+    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap,groups=['I','L','W','A','O','D','M'])
     plot_colormap(cmap(np.arange(34)))
 
+
+
     # Plot the parcellation
-    Prop = np.array(model.marginal_prob())
-    parcel = Prop.argmax(axis=0)+1
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
     atlas = split_mn[2][6:]
     ax = plot_data_flat(parcel,atlas,cmap = cmap,
                     dtype='label',
                     labels=labels,
                     render='plotly')
     ax.show()
-    export_map(parcel,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+
+    # Quick hack - hard-code the labels:
+
+    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 
+    'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R',
+       'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
+    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    resample_atlas('atl-NettekovenSym34')
     pass
 
 
 
 if __name__ == "__main__":
     mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
+    # make_asymmetry_map(mname)
     analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
     # rgb=cmap(np.arange(20))
