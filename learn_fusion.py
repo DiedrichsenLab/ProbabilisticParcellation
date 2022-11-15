@@ -150,14 +150,9 @@ def batch_fit(datasets,sess,
     # Load all necessary data and designs
     n_sets = len(data)
 
-    # Build the model 
-    # Check for size of Atlas + whether symmetric
-    if isinstance(atlas,am.AtlasVolumeSymmetric):
-        P_arrange = atlas.Psym
-        K_arrange = np.ceil(K/2).astype(int)
-    else:
-        P_arrange = atlas.P
-        K_arrange = K
+    # Build the model
+    P_arrange = atlas.P
+    K_arrange = K
 
     # Initialize arrangement model
     if arrange=='independent':
@@ -171,16 +166,16 @@ def batch_fit(datasets,sess,
     em_models=[]
     for j,ds in enumerate(data):
         if emission=='VMF':
-            em_model = em.MixVMF(K=K, 
-                                P=atlas.P,
-                                X=matrix.indicator(cond_vec[j]), 
-                                part_vec=part_vec[j],
-                                uniform_kappa=uniform_kappa)
+            em_model = em.MixVMF(K=K, P=atlas.P,
+                                 X=matrix.indicator(cond_vec[j]),
+                                 part_vec=part_vec[j],
+                                 uniform_kappa=uniform_kappa)
         else:
             raise((NameError(f'unknown emission model:{emission}')))
         em_models.append(em_model)
 
     # Make a full fusion model
+    # TODO: cortical symmetric?
     if isinstance(atlas,am.AtlasVolumeSymmetric):
             M = fm.FullMultiModelSymmetric(ar_model, em_models,
                                             atlas.indx_full,atlas.indx_reduced,
@@ -249,13 +244,10 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     part_ind = np.array(['half','half','half','half', 'half']
         ,dtype = object)
 
-    # Use specific mask / atlas. 
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric('MNISymC3',mask_img=mask),
-             am.AtlasVolumeSymmetric('MNISymC3',mask_img=mask)]
-
+    # Make the atlas object
+    atlas = am.get_atlas('fs32k', base_dir + f'/Atlases')
     # Give a overall name for the type of model
-    mname =['asym','sym']
+    mname =['asym']
 
     # Provide different setttings for the different model types 
     if model_type=='01':
@@ -280,14 +272,14 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
     #Generate a dataname from first two letters of each training data set 
     dataname = [datasets[i][0:2] for i in set_ind]
     
-    for i in [0,1]:
+    for i, n in enumerate(mname):
         name = mname[i] + '_' + ''.join(dataname) 
         info,models = batch_fit(datasets[set_ind],
               sess = sess[set_ind],
               type = type[set_ind],
               cond_ind = cond_ind[set_ind],
               part_ind = part_ind[set_ind],
-              atlas=atlas[i],
+              atlas=atlas,
               K=K,
               name=name,
               n_inits=20, 
@@ -300,7 +292,7 @@ def fit_all(set_ind=[0,1,2,3],K=10,model_type='01',weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+        fname = f'/{name}_space-{atlas.name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv',sep='\t')
         with open(wdir + fname + '.pickle','wb') as file:
             pickle.dump(models,file)
@@ -319,7 +311,7 @@ def clear_models(K,model_type='04'):
 
 
 if __name__ == "__main__":
-    # fit_all([0])
+    fit_all([0])
     # fit_all([1])
     # fit_all([2])
     # fit_all([0,1,2])
