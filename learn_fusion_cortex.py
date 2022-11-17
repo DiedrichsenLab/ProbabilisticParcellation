@@ -1,3 +1,10 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Script to fusion datasets on the cortical data
+
+Created on 11/17/2022 at 2:16 PM
+Author: dzhi
+"""
 # Script for importing the MDTB data set from super_cerebellum to general format.
 from time import gmtime
 from pathlib import Path
@@ -23,6 +30,15 @@ import sys
 import pickle
 from copy import deepcopy
 
+# Find model directory to save model fitting results
+model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
+if not Path(model_dir).exists():
+    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
+if not Path(model_dir).exists():
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
+if not Path(model_dir).exists():
+    raise (NameError('Could not find model_dir'))
+
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
@@ -30,6 +46,8 @@ if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
+
+atlas_dir = base_dir + f'/Atlases'
 
 
 def build_data_list(datasets,
@@ -153,7 +171,7 @@ def batch_fit(datasets, sess,
 
     # Build the model
     # Check for size of Atlas + whether symmetric
-    if isinstance(atlas, am.AtlasVolumeSymmetric):
+    if isinstance(atlas, am.AtlasSurfaceSymmetric):
         P_arrange = atlas.Psym
         K_arrange = np.ceil(K / 2).astype(int)
     else:
@@ -172,8 +190,7 @@ def batch_fit(datasets, sess,
     em_models = []
     for j, ds in enumerate(data):
         if emission == 'VMF':
-            em_model = em.MixVMF(K=K,
-                                 P=atlas.P,
+            em_model = em.MixVMF(K=K, P=atlas.P,
                                  X=matrix.indicator(cond_vec[j]),
                                  part_vec=part_vec[j],
                                  uniform_kappa=uniform_kappa)
@@ -182,7 +199,8 @@ def batch_fit(datasets, sess,
         em_models.append(em_model)
 
     # Make a full fusion model
-    if isinstance(atlas, am.AtlasVolumeSymmetric):
+    # TODO: cortical symmetric?
+    if isinstance(atlas, am.AtlasSurfaceSymmetric):
         M = fm.FullMultiModelSymmetric(ar_model, em_models,
                                        atlas.indx_full, atlas.indx_reduced,
                                        same_parcels=False)
@@ -235,6 +253,7 @@ def batch_fit(datasets, sess,
 
     return info, models
 
+
 def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
     # Data sets need to numpy arrays to allow indixing by list
     datasets = np.array(['Mdtb', 'Pontine', 'Nishimoto', 'Ibc', 'Hcp'],
@@ -249,11 +268,15 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
     part_ind = np.array(['half', 'half', 'half', 'half', 'half']
                         , dtype=object)
 
-    # Use specific mask / atlas.
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
-             am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
+    # Make the atlas object
+    atlas_asym = am.get_atlas('fs32k', atlas_dir)
+    bm_name = ['cortex_left', 'cortex_right']
+    mask = []
+    for i, hem in enumerate(['L', 'R']):
+        mask.append(atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-{hem}_mask.label.gii')
+    atlas_sym = am.AtlasSurfaceSymmetric('fs32k', mask_gii=mask, structure=bm_name)
 
+    atlas = [atlas_asym, atlas_sym]
     # Give a overall name for the type of model
     mname = ['asym', 'sym']
 
@@ -305,6 +328,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
         with open(wdir + fname + '.pickle', 'wb') as file:
             pickle.dump(models, file)
 
+
 def clear_models(K, model_type='04'):
     for t in ['sym', 'asym']:
         for k in K:
@@ -318,8 +342,93 @@ def clear_models(K, model_type='04'):
                     print(f"skipping {fname}")
 
 
+def write_dlabel_cifti(data, atlas,
+                       labels=None,
+                       label_names=None,
+                       column_names=None,
+                       label_RGBA=None):
+    """Generates a label Cifti2Image from a numpy array
+
+    Args:
+        data (np.array):
+            num_vert x num_col data
+        atlas (obejct):
+            the cortical surface <atlasSurface> object
+        labels (list): Numerical values in data indicating the labels -
+            defaults to np.unique(data)
+        label_names (list):
+            List of strings for names for labels
+        column_names (list):
+            List of strings for names for columns
+        label_RGBA (list):
+            List of rgba vectors for labels
+    Returns:
+        gifti (GiftiImage): Label gifti image
+    """
+    if type(data) is pt.Tensor:
+        data = data.numpy()
+
+    if data.ndim == 1:
+        # reshape to (1, num_vertices)
+        data = data.reshape(-1, 1)
+
+    num_verts, num_cols = data.shape
+    if labels is None:
+        labels = np.unique(data)
+    num_labels = len(labels)
+
+    # Create naming and coloring if not specified in varargin
+    # Make columnNames if empty
+    if column_names is None:
+        column_names = []
+        for i in range(num_cols):
+            column_names.append("col_{:02d}".format(i + 1))
+
+    # Determine color scale if empty
+    if label_RGBA is None:
+        label_RGBA = [(0.0, 0.0, 0.0, 0.0)]
+        if 0 in labels:
+            num_labels -= 1
+        hsv = plt.cm.get_cmap('hsv', num_labels)
+        color = hsv(np.linspace(0, 1, num_labels))
+        # Shuffle the order so that colors are more visible
+        color = color[np.random.permutation(num_labels)]
+        for i in range(num_labels):
+            label_RGBA.append((color[i][0],
+                               color[i][1],
+                               color[i][2],
+                               color[i][3]))
+
+    # Create label names from numerical values
+    if label_names is None:
+        label_names = ['???']
+        for i in labels:
+            if i == 0:
+                pass
+            else:
+                label_names.append("label-{:02d}".format(i))
+
+    assert len(label_RGBA) == len(label_names), \
+        "The number of parcel labels must match the length of colors!"
+    labelDict = []
+    for i, nam in enumerate(label_names):
+        labelDict.append((nam, label_RGBA[i]))
+
+    labelAxis = nb.cifti2.LabelAxis(column_names, dict(enumerate(labelDict)))
+    header = nb.Cifti2Header.from_axes((labelAxis, atlas.get_brain_model_axis()))
+    img = nb.Cifti2Image(dataobj=data.reshape(1, -1), header=header)
+
+    return img
+
+
 if __name__ == "__main__":
-    # fit_all([0])
+    # fit_all([0], 10, model_type='04')
+
+    info, model = load_batch_best('Models_04/asym_Md_space-fs32k_K-10')
+    Prop = model.marginal_prob()
+    par = pt.argmax(Prop, dim=0) + 1
+    img = write_dlabel_cifti(par, am.get_atlas('fs32k', atlas_dir))
+    nb.save(img, model_dir + f'/Models/Models_04/asym_Md_space-fs32k_K-10.dlabel.nii')
     # fit_all([1])
     # fit_all([2])
     # fit_all([0,1,2])
@@ -350,10 +459,7 @@ if __name__ == "__main__":
     # r1 = ev.calc_consistency(Prop,dim_rem=0)
     # r2 = ev.calc_consistency(V[0],dim_rem=2)
 
-
     # parcel = pt.argmax(Prop,dim=1)
     # plot_parcel_flat(parcel,suit_atlas,(1,4))
-
-
 
     pass
