@@ -29,6 +29,12 @@ import seaborn as sb
 import sys
 import pickle
 from copy import deepcopy
+import time
+
+# pytorch cuda global flag
+pt.set_default_tensor_type(pt.cuda.FloatTensor
+                           if pt.cuda.is_available() else
+                           torch.FloatTensor)
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
@@ -158,6 +164,8 @@ def batch_fit(datasets, sess,
     Returns:
         info (pd.DataFrame):
     """
+    print(f'Start loading data: {datasets} - {sess} - {type} ...')
+    tic = time.perf_counter()
     data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
                                                          atlas=atlas.name,
                                                          sess=sess,
@@ -166,6 +174,9 @@ def batch_fit(datasets, sess,
                                                          part_ind=part_ind,
                                                          subj=subj,
                                                          join_sess=join_sess)
+    toc = time.perf_counter()
+    print(f'Done loading. Used {toc - tic:0.4f} seconds!')
+
     # Load all necessary data and designs
     n_sets = len(data)
 
@@ -178,6 +189,7 @@ def batch_fit(datasets, sess,
         P_arrange = atlas.P
         K_arrange = K
 
+    print(f'Building fullMultiModel {arrange} + {emission} for fitting...')
     # Initialize arrangement model
     if arrange == 'independent':
         ar_model = ar.ArrangeIndependent(K=K_arrange, P=P_arrange,
@@ -231,7 +243,7 @@ def batch_fit(datasets, sess,
     # Iterate over the number of fits
     ll = np.empty((n_fits, n_iter))
     for i in range(n_fits):
-        print(f'fit: {i}')
+        print(f'Start fit: repetition {i} - {name}')
         # Copy the obejct (without data)
         m = deepcopy(M)
         # Attach the data
@@ -243,7 +255,7 @@ def batch_fit(datasets, sess,
             fit_arrangement=True,
             n_inits=n_inits,
             first_iter=first_iter)
-        info.loglik.at[i] = ll[-1]
+        info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         m.clear()
         models.append(m)
 
@@ -304,6 +316,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
     dataname = [datasets[i][0:2] for i in set_ind]
 
     for i in [0, 1]:
+        tic = time.perf_counter()
         name = mname[i] + '_' + ''.join(dataname)
         info, models = batch_fit(datasets[set_ind],
                                  sess=sess[set_ind],
@@ -314,7 +327,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
                                  K=K,
                                  name=name,
                                  n_inits=20,
-                                 n_iter=200,
+                                 n_iter=100,
                                  n_rep=10,
                                  first_iter=30,
                                  join_sess=join_sess,
@@ -322,11 +335,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
                                  weighting=weighting)
 
         # Save the fits and information
-        wdir = base_dir + f'/Models/Models_{model_type}'
+        wdir = model_dir + f'/Models/Models_{model_type}'
         fname = f'/{name}_space-{atlas[i].name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv', sep='\t')
         with open(wdir + fname + '.pickle', 'wb') as file:
             pickle.dump(models, file)
+
+        toc = time.perf_counter()
+        print(f'Done Model fitting - {mname[i]}. Used {toc - tic:0.4f} seconds!')
 
 
 def clear_models(K, model_type='04'):
@@ -366,7 +382,7 @@ def write_dlabel_cifti(data, atlas,
         gifti (GiftiImage): Label gifti image
     """
     if type(data) is pt.Tensor:
-        data = data.numpy()
+        data = data.cpu().numpy()
 
     if data.ndim == 1:
         # reshape to (1, num_vertices)
@@ -422,13 +438,14 @@ def write_dlabel_cifti(data, atlas,
 
 
 if __name__ == "__main__":
-    # fit_all([0], 10, model_type='04')
+    fit_all([0], 200, model_type='02')
 
-    info, model = load_batch_best('Models_04/asym_Md_space-fs32k_K-10')
-    Prop = model.marginal_prob()
-    par = pt.argmax(Prop, dim=0) + 1
-    img = write_dlabel_cifti(par, am.get_atlas('fs32k', atlas_dir))
-    nb.save(img, model_dir + f'/Models/Models_04/asym_Md_space-fs32k_K-10.dlabel.nii')
+    # info, model = load_batch_best('Models_02/asym_Md_space-fs32k_K-10')
+    # Prop = model.marginal_prob()
+    # par = pt.argmax(Prop, dim=0) + 1
+    # img = write_dlabel_cifti(par, am.get_atlas('fs32k', atlas_dir))
+    # nb.save(img, model_dir + f'/Models/Models_02/asym_Md_space-fs32k_K-10.dlabel.nii')
+
     # fit_all([1])
     # fit_all([2])
     # fit_all([0,1,2])
