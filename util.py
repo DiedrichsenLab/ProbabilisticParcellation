@@ -26,6 +26,27 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
+def cal_corr(Y_target, Y_source):
+    """ Matches the rows of two Y_source matrix to Y_target
+    Using row-wise correlation and matching the highest pairs
+    consecutively
+    Args:
+        Y_target: Matrix to align to
+        Y_source: Matrix that is being aligned
+    Returns:
+        indx: New indices, so that YSource[indx,:]~=Y_target
+    """
+    K = Y_target.shape[0]
+    # Compute the row x row correlation matrix
+    Y_tar = Y_target - Y_target.mean(dim=1,keepdim=True)
+    Y_sou = Y_source - Y_source.mean(dim=1,keepdim=True)
+    Cov = pt.matmul(Y_tar, Y_sou.t())
+    Var1 = pt.sum(Y_tar*Y_tar, dim=1)
+    Var2 = pt.sum(Y_sou*Y_sou, dim=1)
+    Corr = Cov / pt.sqrt(pt.outer(Var1, Var2))
+
+    return Corr
+
 def load_batch_fit(fname):
     """ Loads a batch of fits and extracts marginal probability maps 
     and mean vectors
@@ -162,9 +183,10 @@ def plot_multi_flat(data,atlas,grid,
                     dtype = dtype,
                     cscale = cscale,
                     render='matplotlib',
-                    colorbar = (i==0) & colorbar) 
-        if titles is not None: 
+                    colorbar = (i==0) & colorbar)
+        if titles is not None:
             plt.title(titles[i])
+            plt.savefig(f'rel_{titles[i]}.png', format='png')
 
 def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
     """  Load a bunch of model fits, selects the best from 
@@ -195,12 +217,143 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
     else: 
         Prob = ev.extract_marginal_prob(models)
 
+    if type(Prob) is pt.Tensor:
+        Prob = Prob.cpu().numpy()
+
     parc = np.argmax(Prob,axis=1)+1
 
 
     plot_multi_flat(parc,atlas,grid=grid,
                      cmap=cmap,
-                     titles=titles) 
+                     titles=titles)
+
+def _compute_var_cov(data, cond='all', mean_centering=True):
+    """
+        Compute the affinity matrix by given kernel type,
+        default to calculate Pearson's correlation between all vertex pairs
+
+        :param data: subject's connectivity profile, shape [N * k]
+                     N - the size of vertices (voxel)
+                     k - the size of activation conditions
+        :param cond: specify the subset of activation conditions to evaluation
+                    (e.g condition column [1,2,3,4]),
+                     if not given, default to use all conditions
+        :param mean_centering: boolean value to determine whether the given subject data
+                               should be mean centered
+
+        :return: cov - the covariance matrix of current subject data. shape [N * N]
+                 var - the variance matrix of current subject data. shape [N * N]
+    """
+    if mean_centering:
+        data = data - pt.mean(data, dim=1, keepdim=True) # mean centering
+    else:
+        data = data
+
+    # specify the condition index used to compute correlation, otherwise use all conditions
+    if cond != 'all':
+        data = data[:, cond]
+    elif cond == 'all':
+        data = data
+    else:
+        raise TypeError("Invalid condition type input! cond must be either 'all'"
+                        " or the column indices of expected task conditions")
+
+    k = data.shape[1]
+    cov = pt.matmul(data, data.T) / (k-1)
+    sd = data.std(dim=1).reshape(-1,1)  # standard deviation
+    var = pt.matmul(sd, sd.T)
+
+    return cov, var
+
+def compute_dist(coord, resolution=2):
+    """
+    calculate the distance matrix between each of the voxel pairs by given mask file
+
+    :param coord: the ndarray of all N voxels coordinates x,y,z. Shape N * 3
+    :param resolution: the resolution of .nii file. Default 2*2*2 mm
+
+    :return: a distance matrix of N * N, where N represents the number of masked voxels
+    """
+    if type(coord) is np.ndarray:
+        coord = pt.tensor(coord, dtype=pt.get_default_dtype())
+
+    num_points = coord.shape[0]
+    D = pt.zeros((num_points, num_points))
+    for i in range(3):
+        D = D + (coord[:, i].reshape(-1, 1) - coord[:, i]) ** 2
+    return pt.sqrt(D) * resolution
+
+def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
+                 func=None, dist=None, weighting=True):
+    """
+    The main entry of DCBC calculation for volume space
+    :param hems:        Hemisphere to test. 'L' - left hemisphere; 'R' - right hemisphere; 'all' - both hemispheres
+    :param maxDist:     The maximum distance for vertices pairs
+    :param binWidth:    The spatial binning width in mm, default 1 mm
+    :param parcellation:
+    :param dist_file:   The path of distance metric of vertices pairs, for example Dijkstra's distance, GOD distance
+                        Euclidean distance. Dijkstra's distance as default
+    :param weighting:   Boolean value. True - add weighting scheme to DCBC (default)
+                                       False - no weighting scheme to DCBC
+    """
+
+    numBins = int(np.floor(maxDist / binWidth))
+
+    cov, var = _compute_var_cov(func)
+    # cor = np.corrcoef(func)
+
+    # remove the nan value and medial wall from dist file
+    dist = dist.to_sparse()
+    row = dist.indices()[0]
+    col = dist.indices()[1]
+    distance = dist.values()
+    # row, col, distance = sp.sparse.find(dist)
+
+    # making parcellation matrix without medial wall and nan value
+    par = parcellation
+    num_within, num_between, corr_within, corr_between = [], [], [], []
+    for i in range(numBins):
+        inBin = pt.where((distance > i * binWidth) & (distance <= (i + 1) * binWidth))[0]
+
+        # lookup the row/col index of within and between vertices
+        within = pt.where((par[row[inBin]] == par[col[inBin]]) == True)[0]
+        between = pt.where((par[row[inBin]] == par[col[inBin]]) == False)[0]
+
+        # retrieve and append the number of vertices for within/between in current bin
+        num_within.append(pt.tensor(within.numel(), dtype=pt.get_default_dtype()))
+        num_between.append(pt.tensor(between.numel(), dtype=pt.get_default_dtype()))
+
+        # Compute and append averaged within- and between-parcel correlations in current bin
+        this_corr_within = pt.nanmean(cov[row[inBin[within]], col[inBin[within]]]) \
+                           / pt.nanmean(var[row[inBin[within]], col[inBin[within]]])
+        this_corr_between = pt.nanmean(cov[row[inBin[between]], col[inBin[between]]]) \
+                            / pt.nanmean(var[row[inBin[between]], col[inBin[between]]])
+
+        corr_within.append(this_corr_within)
+        corr_between.append(this_corr_between)
+
+        del inBin
+
+    if weighting:
+        weight = 1/(1/pt.stack(num_within) + 1/pt.stack(num_between))
+        weight = weight / pt.sum(weight)
+        DCBC = pt.nansum(pt.multiply((pt.stack(corr_within) - pt.stack(corr_between)), weight))
+    else:
+        DCBC = pt.nansum(pt.stack(corr_within) - pt.stack(corr_between))
+        weight = pt.nan
+
+    D = {
+        "binWidth": binWidth,
+        "maxDist": maxDist,
+        "num_within": num_within,
+        "num_between": num_between,
+        "corr_within": corr_within,
+        "corr_between": corr_between,
+        "weight": weight,
+        "DCBC": DCBC
+    }
+
+    return D
 
 # def write_dlabel_cifti(parcellation, atlas, res='32k'):
 #     #TODO: unfinished
