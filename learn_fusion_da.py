@@ -265,6 +265,7 @@ def batch_fit(datasets, sess,
     prior = pt.zeros((n_fits, K_arrange, P_arrange))
     for i in range(n_fits):
         print(f'Start fit: repetition {i} - {name}')
+        iter_tic = time.perf_counter()
         # Copy the obejct (without data)
         m = deepcopy(M)
         # Attach the data
@@ -304,6 +305,8 @@ def batch_fit(datasets, sess,
         #              2. num_rep greater than threshold (10% of max_iter)
         if (i>50) and (num_rep >= int(n_fits*0.1)):
             break
+        iter_toc = time.perf_counter()
+        print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
     # Align the different models
     models = np.array(models, dtype=object)
@@ -559,7 +562,7 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
 if __name__ == "__main__":
     # fit_all([0], 10, model_type='04', repeats=100, sym_type=[0])
     ########## Reliability map
-    # rel, sess = reliability_maps(base_dir, 'IBC')
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False)
     # plt.figure(figsize=(25, 18))
     # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
@@ -583,11 +586,8 @@ if __name__ == "__main__":
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 
     ########## IBC all fit ##########
-    type_list = ['02','03','04','05','01']
-    K = [20, 34]
-    for t in type_list:
-        for k in K:
-            fit_all([3], k, model_type=t, repeats=100, sym_type=[0])
+    # fit_all([3], 34, model_type='04', repeats=100, sym_type=[0])
+
 
     ########## Leave-one-oout ##########
     # leave_one_out_fit(dataset=dataset_list, model_type=type_list, K=10)
@@ -605,13 +605,13 @@ if __name__ == "__main__":
     #     fnames.append(f'Models_05/asym_Ib_space-MNISymC3_K-10_{s}')
 
     plt.figure(figsize=(50, 10))
-    plot_model_parcel(['Models_01/asym_Ib_space-MNISymC3_K-10',
-                       'Models_02/asym_Ib_space-MNISymC3_K-10',
-                       'Models_03/asym_Ib_space-MNISymC3_K-10',
-                       'Models_04/asym_Ib_space-MNISymC3_K-10',
-                       'Models_05/asym_Ib_space-MNISymC3_K-10'], [1,5], cmap=MDTBcolors,
+    plot_model_parcel(['Models_01/asym_Ib_space-MNISymC3_K-20',
+                       'Models_02/asym_Ib_space-MNISymC3_K-20',
+                       'Models_03/asym_Ib_space-MNISymC3_K-20',
+                       'Models_04/asym_Ib_space-MNISymC3_K-20',
+                       'Models_05/asym_Ib_space-MNISymC3_K-20'], [1,5], cmap='tab20',
                       align=True)
-    plt.savefig('ib_k-10_allsess.png', format='png')
+    plt.savefig('ib_k-20_allsess.png', format='png')
     plt.show()
 
     pass
