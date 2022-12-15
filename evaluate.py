@@ -21,6 +21,11 @@ import sys
 import time
 import pickle
 from ProbabilisticParcellation.util import *
+######################################################
+# The new GPU capatible DCBC evaluation function is now
+# callable in util.py. If you prefer use CPU version, please
+# uncomment below import line (highly not-recommend)
+######################################################
 # from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
 # pytorch cuda global flag

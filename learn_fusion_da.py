@@ -391,7 +391,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
                                  atlas=atlas[i],
                                  K=K,
                                  name=name,
-                                 n_inits=100,
+                                 n_inits=50,
                                  n_iter=200,
                                  n_rep=repeats,
                                  first_iter=30,
@@ -560,9 +560,12 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
         pickle.dump(models, file)
 
 if __name__ == "__main__":
-    # fit_all([0], 10, model_type='04', repeats=100, sym_type=[0])
+    for k in [20, 34, 50]:
+        for t in ['01','02','03','04','05']:
+            fit_all([0,1,2,3], k, model_type=t, repeats=50, sym_type=[0])
     ########## Reliability map
-    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False)
+    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=True,
+    #                              voxel_wise=False)
     # plt.figure(figsize=(25, 18))
     # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
@@ -593,25 +596,25 @@ if __name__ == "__main__":
     # leave_one_out_fit(dataset=dataset_list, model_type=type_list, K=10)
 
     ########## Plot the flatmap results ##########
-    # Read the MDTB colors
-    color_file = atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
-    color_info = pd.read_csv(color_file, sep=' ', header=None)
-    MDTBcolors = color_info.iloc[:, 1:4].to_numpy()
-
-    # Make IBC session model file names
-    # fnames = []
-    # sess = DataSetIBC(base_dir + '/IBC').sessions
-    # for s in sess:
-    #     fnames.append(f'Models_05/asym_Ib_space-MNISymC3_K-10_{s}')
-
-    plt.figure(figsize=(50, 10))
-    plot_model_parcel(['Models_01/asym_Ib_space-MNISymC3_K-20',
-                       'Models_02/asym_Ib_space-MNISymC3_K-20',
-                       'Models_03/asym_Ib_space-MNISymC3_K-20',
-                       'Models_04/asym_Ib_space-MNISymC3_K-20',
-                       'Models_05/asym_Ib_space-MNISymC3_K-20'], [1,5], cmap='tab20',
-                      align=True)
-    plt.savefig('ib_k-20_allsess.png', format='png')
-    plt.show()
+    # # Read the MDTB colors
+    # color_file = atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
+    # color_info = pd.read_csv(color_file, sep=' ', header=None)
+    # MDTBcolors = color_info.iloc[:, 1:4].to_numpy()
+    #
+    # # Make IBC session model file names
+    # # fnames = []
+    # # sess = DataSetIBC(base_dir + '/IBC').sessions
+    # # for s in sess:
+    # #     fnames.append(f'Models_05/asym_Ib_space-MNISymC3_K-10_{s}')
+    #
+    # plt.figure(figsize=(50, 10))
+    # plot_model_parcel(['Models_01/asym_Ib_space-MNISymC3_K-20',
+    #                    'Models_02/asym_Ib_space-MNISymC3_K-20',
+    #                    'Models_03/asym_Ib_space-MNISymC3_K-20',
+    #                    'Models_04/asym_Ib_space-MNISymC3_K-20',
+    #                    'Models_05/asym_Ib_space-MNISymC3_K-20'], [1,5], cmap='tab20',
+    #                   align=True)
+    # plt.savefig('ib_k-20_allsess.png', format='png')
+    # plt.show()
 
     pass

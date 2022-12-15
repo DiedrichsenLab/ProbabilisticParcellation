@@ -27,6 +27,7 @@ import seaborn as sb
 import sys
 import time
 import pickle
+from itertools import combinations
 from ProbabilisticParcellation.util import *
 from ProbabilisticParcellation.evaluate import *
 
@@ -271,9 +272,9 @@ def result_3_eval(ses1=None, ses2=None):
     for s1 in sess_1:
         sess_2.remove(s1)
         for s2 in sess_2:
-            print(f'- Start evaluating {s1} and {s2}.')
             this_s1 = s1.split('-')[1]
             this_s2 = s2.split('-')[1]
+            print(f'- Start evaluating {this_s1} and {this_s2}.')
             # Making the models for both common/separate kappa
             model_name = [f'Models_03/asym_Ib_space-MNISymC3_K-10_ses-{this_s1}',
                           f'Models_03/asym_Ib_space-MNISymC3_K-10_ses-{this_s2}',
@@ -311,29 +312,39 @@ def result_3_eval(ses1=None, ses2=None):
 
 def result_3_plot(fname):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
+    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
+    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
     num_subj = DataSetIBC(base_dir + '/IBC').get_participants().shape[0]
+    # Calculate session reliability
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=True,
+                                 voxel_wise=True)
+    reliability = dict(zip(sess, rel.mean(axis=1)))
+    mean_rel = np.array(list(reliability.values())).mean()
+    dif_rel = np.array(list(reliability.values())).max() - \
+              np.array(list(reliability.values())).min()
 
     T = pd.DataFrame()
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
-            print(f'- Start evaluating {s1} and {s2}.')
-            this_s1 = s1.split('-')[1]
-            this_s2 = s2.split('-')[1]
+    for s1,s2 in combinations(sess, 2):
+        # print(f'- Start evaluating {s1} and {s2}.')
+        df = D.loc[(D['test_sess_out'] == s1.split('-')[1] + '+' + s2.split('-')[1])]
+        # if df['sess1_rel'].mean() > df['sess2_rel'].mean():
+        if reliability[s1] > reliability[s2]:
+            df.loc[df.D == s1.split('-')[1], 'D'] = 'good'
+            df.loc[df.D == s2.split('-')[1], 'D'] = 'bad'
+        else:
+            df.loc[df.D == s1.split('-')[1], 'D'] = 'bad'
+            df.loc[df.D == s2.split('-')[1], 'D'] = 'good'
 
-            df = D.loc[(D['test_sess_out'] == this_s1 + '+' + this_s2)]
-            df.loc[df.D == this_s1, 'D'] = 'D1'
-            df.loc[df.D == this_s2, 'D'] = 'D2'
-            df.loc[df.D == this_s1 + '+' + this_s2, 'D'] = 'Fusion'
+        df.loc[df.D == s1.split('-')[1] + '+' + s2.split('-')[1], 'D'] = 'Fusion'
+        # Pick the two sessions with larger reliability difference
+        if abs(reliability[s1] - reliability[s2]) > 0.5 * dif_rel:
             T = pd.concat([T, df], ignore_index=True)
 
     plt.figure(figsize=(10,10))
     crits = ['dcbc_group','coserr_group','dcbc_indiv','coserr_floor']
     for i, c in enumerate(crits):
         plt.subplot(2, 2, i + 1)
-        sb.barplot(data=T, x='D', y=c, hue='common_kappa',
+        sb.barplot(data=T, x='D', y=c, order=['good','bad','Fusion'], hue='common_kappa',
                    hue_order=T['common_kappa'].unique(), errorbar="se")
         plt.legend(loc='lower right')
         if 'coserr' in c:
@@ -417,6 +428,69 @@ def result_4_plot(fname, common_kappa=True):
     plt.suptitle(f'IBC individual sessions vs. all sessions fusion, common_kappa={common_kappa}')
     plt.show()
 
+def result_5_eval(K=10, model_type=None, model_name=None,
+                  t_datasets=None):
+    """Evaluate group and individual DCBC and coserr of all dataset fusion
+       and any dataset training standalone on each of the datasets.
+    Args:
+        K: the number of parcels
+        t_datasets (list): a list of test datasets
+    Returns:
+        Write in evaluation file
+    """
+    # Preparing model type, name, and test set is not given
+    if model_type is None:
+        model_type = ['01','02','03','04','05']
+
+    if model_name is None:
+        model_name = ['Md','Po','Ni','Ib','MdPoNiIb']
+
+    if t_datasets is None:
+        t_datasets = ['Mdtb', 'Pontine', 'Nishimoto', 'Ibc']
+
+    results = pd.DataFrame()
+    # Evaluate all single sessions on other datasets
+    for t in model_type:
+        print(f'- Start evaluating Model_{t} - {model_name}...')
+        m_name = [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+
+        for ds in t_datasets:
+            print(f'Testdata: {ds}\n')
+            # 1. Run DCBC individual
+            res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
+                                           part_ind='half', indivtrain_ind='half',
+                                           indivtrain_values=[1,2])
+            # 2. Run coserr individual
+            res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
+                                       part_ind='half', eval_types=['group', 'floor'],
+                                       indivtrain_ind='half', indivtrain_values=[1,2])
+            # 3. Merge the two dataframe
+            res = pd.merge(res_dcbc, res_coserr, how='outer')
+            results = pd.concat([results, res], ignore_index=True)
+
+    # Save file
+    wdir = model_dir + f'/Models/Evaluation'
+    fname = f'/eval_all_asym_Ib_K-{K}_datasetFusion.tsv'
+    results.to_csv(wdir + fname, index=False, sep='\t')
+
+def result_5_plot(fname, model_type='Models_01'):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+
+    df = D.loc[(D['model_type'] == model_type)]
+
+    plt.figure(figsize=(15,10))
+    crits = ['dcbc_group','dcbc_indiv','coserr_group',
+             'coserr_floor','coserr_ind2','coserr_ind3']
+    for i, c in enumerate(crits):
+        plt.subplot(6, 1, i + 1)
+        sb.barplot(data=df, x='test_data', y=c, hue='model_name', errorbar="se")
+        plt.legend('')
+        # if 'coserr' in c:
+        #     plt.ylim(0.4, 1)
+
+    plt.suptitle(f'All datasets fusion, {model_type}')
+    plt.show()
+
 def concat_eval(model_type,prefix,outfile):
     D = pd.DataFrame()
     for m in model_type:
@@ -427,70 +501,6 @@ def concat_eval(model_type,prefix,outfile):
     D.to_csv(oname,index=False,sep='\t')
 
     pass
-
-def plot_all_sessFusion():
-    from learn_fusion_cortex import fit_two_IBC_sessions
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
-            this_s1 = s1.split('-')[1]
-            this_s2 = s2.split('-')[1]
-            fname1 = model_dir + f'/Models/Evaluation/eval_Ib_{this_s1}+' \
-                                f'{this_s2}_dcbc_indv_on_leftsessions_CK.tsv'
-            fname2 = model_dir + f'/Models/Evaluation/eval_Ib_{this_s1}+' \
-                                 f'{this_s2}_coserr_indv_on_leftsessions_CK.tsv'
-            T1 = pd.read_csv(fname1, delimiter='\t')
-            T2 = pd.read_csv(fname2, delimiter='\t')
-            D1_dcbc = T1['dcbc_indiv'][T1['model_type'] == 0].mean()
-            D2_dcbc = T1['dcbc_indiv'][T1['model_type'] == 1].mean()
-            D_fusion_dcbc = T1['dcbc_indiv'][T1['model_type'] == 2].mean()
-
-            D1_cos = T2['coserr_ind3'][T2['model_type'] == 0].mean()
-            D2_cos = T2['coserr_ind3'][T2['model_type'] == 1].mean()
-            D_fusion_cos = T2['coserr_ind3'][T2['model_type'] == 2].mean()
-
-            if (D_fusion_dcbc < max(D1_dcbc, D2_dcbc)) and (D_fusion_cos > min(D1_cos, D2_cos)):
-                # print(f'- Found common kappa {s1} and {s2}.')
-                # Look at separate kappas
-                fname1_sk = model_dir + f'/Models/Evaluation/eval_Ib_{this_s1}+' \
-                                     f'{this_s2}_dcbc_indv_on_leftsessions_SK.tsv'
-                fname2_sk = model_dir + f'/Models/Evaluation/eval_Ib_{this_s1}+' \
-                                     f'{this_s2}_coserr_indv_on_leftsessions_SK.tsv'
-                T1 = pd.read_csv(fname1_sk, delimiter='\t')
-                T2 = pd.read_csv(fname2_sk, delimiter='\t')
-                D1_dcbc_sk = T1['dcbc_indiv'][T1['model_type'] == 0].mean()
-                D2_dcbc_sk = T1['dcbc_indiv'][T1['model_type'] == 1].mean()
-                D_fusion_dcbc_sk = T1['dcbc_indiv'][T1['model_type'] == 2].mean()
-
-                D1_cos_sk = T2['coserr_ind3'][T2['model_type'] == 0].mean()
-                D2_cos_sk = T2['coserr_ind3'][T2['model_type'] == 1].mean()
-                D_fusion_cos_sk = T2['coserr_ind3'][T2['model_type'] == 2].mean()
-
-                if (D_fusion_dcbc_sk > max(D1_dcbc_sk, D2_dcbc_sk)) and (D_fusion_cos_sk < min(
-                        D1_cos_sk, D2_cos_sk)):
-                    print(f'- Found separate kappa {s1} and {s2}.')
-                    # print(D1_dcbc, D1_dcbc_sk, D2_dcbc, D2_dcbc_sk, D_fusion_dcbc, D_fusion_dcbc_sk)
-                    # print(D1_cos, D1_cos_sk, D2_cos, D2_cos_sk, D_fusion_cos, D_fusion_cos_sk)
-
-def plot_figure():
-    concat_eval(['eval_Ib_clips4+hcp2_dcbc_indv_on_leftsessions_CK',
-                 'eval_Ib_clips4+hcp2_dcbc_indv_on_leftsessions_SK'], 'dcbc', 'clips4+hcp2')
-    concat_eval(['eval_Ib_clips4+hcp2_coserr_indv_on_leftsessions_CK',
-                 'eval_Ib_clips4+hcp2_coserr_indv_on_leftsessions_SK'], 'coserr', 'clips4+hcp2')
-    filename = model_dir + f'/Models/Evaluation/eval_dcbc_clips4+hcp2.tsv'
-    T = pd.read_csv(filename, delimiter='\t')
-    sb.barplot(data=T, x='model_type', y='dcbc_indiv',
-               hue='common_kappa', hue_order=T['common_kappa'].unique(), errorbar="se")
-    plt.show()
-    filename = model_dir + f'/Models/Evaluation/eval_coserr_clips4+hcp2.tsv'
-    T = pd.read_csv(filename, delimiter='\t')
-    sb.barplot(data=T, x='model_type', y='coserr_ind3',
-               hue='common_kappa', hue_order=T['common_kappa'].unique(), errorbar="se")
-    plt.ylim(0.8, 0.9)
-    plt.show()
 
 
 if __name__ == "__main__":
@@ -510,67 +520,24 @@ if __name__ == "__main__":
 
     ############# Result 3: IBC two sessions fusion #############
     # result_3_eval(ses1=None, ses2=None)
-    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
-    # result_3_plot(fname)
+    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
+    result_3_plot(fname)
 
     ############# Result 4: IBC single sessions vs. all sessions fusion #############
     # result_4_eval(K=10, t_datasets=['Mdtb', 'Pontine', 'Nishimoto'])
-    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_leftSess.tsv'
-    result_4_plot(fname, common_kappa=False)
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_leftSess.tsv'
+    # result_4_plot(fname, common_kappa=False)
 
-    ############# Evaluating IBC dataset sessions and plot results #############
-    # Make IBC session model file names
-    # fnames = []
-    # sess = DataSetIBC(base_dir + '/IBC').sessions
-    # sess.remove('ses-preference')
-    # sess.remove('ses-rsvplanguage')
-    # for s in sess:
-    #     fnames.append(f'Models_05/asym_Ib_space-MNISymC3_K-10_{s}.pickle')
-    #
+    ############# Result 5: All datasets fusion vs. single dataset #############
+    # result_5_eval(K=10)
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_datasetFusion.tsv'
+    # result_5_plot(fname, model_type='Models_04')
+
+    ## For quick copy
     fnames_group = ['Models_01/asym_Ib_space-MNISymC3_K-10',
                     'Models_02/asym_Ib_space-MNISymC3_K-10',
                     'Models_03/asym_Ib_space-MNISymC3_K-10',
                     'Models_04/asym_Ib_space-MNISymC3_K-10',
                     'Models_05/asym_Ib_space-MNISymC3_K-10']
-
-    # # 1. Run DCBC group evaluation
-    # res = run_dcbc_group(fnames_group, 'MNISymC3', 'MDTB', test_sess=['ses-s2'],
-    #                      saveFile='Evaluation/eval_Md_ses-s1_dcbc_group_on_ses-s2')
-    # res = run_dcbc_individual(fnames_group, 'MDTB', ['ses-s2'], cond_ind=None,
-    #                           part_ind=None, indivtrain_ind=None,
-    #                           indivtrain_values=[0])
-    # res = run_prederror(fnames_group, 'MDTB', ['ses-s2'], cond_ind=None,
-    #                     part_ind=None, eval_types=['group', 'floor'],
-    #                     indivtrain_ind=None, indivtrain_values=[1, 2])
-
-    # sb.barplot(x='fit_type', y='dcbc', data=res)
-    # plt.show()
-
-    # plot_all_sessFusion()
-    # 2. Run DCBC group and individual on IBC sess fusion
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
-            this_s1 = s1.split('-')[1]
-            this_s2 = s2.split('-')[1]
-            # run_ibc_sessfusion_indv_dcbc(sess1=s1.split('-')[1],
-            #                              sess2=s2.split('-')[1])
-            # eval_ibc_sessfusion_prederror(sess1=s1.split('-')[1],
-            #                               sess2=s2.split('-')[1])
-            # print(f'-Done common kappa coserr evaluation fusion {s1} and {s2}.')
-
-            dcbc1 = T.loc[(T['sess_fusion'] == this_s1+'+'+this_s2) & (T['common_kappa']==True)][
-                'dcbc_indiv']
-            dcbc2 = T.loc[(T['sess_fusion'] == this_s1+'+'+this_s2) & (T['common_kappa']==False)][
-                'dcbc_indiv']
-            if dcbc1.mean() < dcbc2.mean():
-                print(f'found {s1}: {dcbc1.mean()} and {s2}: {dcbc2.mean()}')
-    # run_ibc_sessfusion_group_dcbc()
-
-    # 3. Run adjusted expected cosine error
-    eval_ibc_sessfusion_prederror(sess1='clips4', sess2='lyon1')
 
     pass
