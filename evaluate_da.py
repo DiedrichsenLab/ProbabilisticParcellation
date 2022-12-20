@@ -244,7 +244,7 @@ def result_1_plot(D):
     # t.ylim([0.21,0.3])
     pass
 
-def result_3_eval(ses1=None, ses2=None):
+def result_3_eval(K=10, ses1=None, ses2=None):
     """Result3: Evaluate group and individual DCBC and coserr
        of IBC two single sessions and fusion on the IBC
        left-out sessions.
@@ -276,13 +276,13 @@ def result_3_eval(ses1=None, ses2=None):
             this_s2 = s2.split('-')[1]
             print(f'- Start evaluating {this_s1} and {this_s2}.')
             # Making the models for both common/separate kappa
-            model_name = [f'Models_03/asym_Ib_space-MNISymC3_K-10_ses-{this_s1}',
-                          f'Models_03/asym_Ib_space-MNISymC3_K-10_ses-{this_s2}',
-                          f'Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-10_'
+            model_name = [f'Models_03/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s1}',
+                          f'Models_03/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s2}',
+                          f'Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
                           f'ses-{this_s1}+{this_s2}',
-                          f'Models_02/asym_Ib_space-MNISymC3_K-10_ses-{this_s1}',
-                          f'Models_02/asym_Ib_space-MNISymC3_K-10_ses-{this_s2}',
-                          f'Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-10_'
+                          f'Models_04/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s1}',
+                          f'Models_04/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s2}',
+                          f'Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
                           f'ses-{this_s1}+{this_s2}']
 
             # remove the sessions were used to training to make test sessions
@@ -305,19 +305,16 @@ def result_3_eval(ses1=None, ses2=None):
     # Save file
     wdir = model_dir + f'/Models/Evaluation'
     if (ses1 is not None) and (ses2 is not None):
-        fname = f'/eval_all_asym_Ib_K-10_{ses1}+{ses2}_on_leftSess.tsv'
+        fname = f'/eval_all_asym_Ib_K-{K}_{ses1}+{ses2}_on_leftSess.tsv'
     else:
-        fname = f'/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
+        fname = f'/eval_all_asym_Ib_K-{K}_twoSess_on_leftSess.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
-def result_3_plot(fname):
+def result_3_plot(fname, train_model='IBC'):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
-    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    num_subj = DataSetIBC(base_dir + '/IBC').get_participants().shape[0]
     # Calculate session reliability
-    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=True,
-                                 voxel_wise=True)
+    rel, sess = reliability_maps(base_dir, train_model, subtract_mean=False,
+                                 voxel_wise=False)
     reliability = dict(zip(sess, rel.mean(axis=1)))
     mean_rel = np.array(list(reliability.values())).mean()
     dif_rel = np.array(list(reliability.values())).max() - \
@@ -337,8 +334,10 @@ def result_3_plot(fname):
 
         df.loc[df.D == s1.split('-')[1] + '+' + s2.split('-')[1], 'D'] = 'Fusion'
         # Pick the two sessions with larger reliability difference
-        if abs(reliability[s1] - reliability[s2]) > 0.5 * dif_rel:
-            T = pd.concat([T, df], ignore_index=True)
+        # if abs(reliability[s1] - reliability[s2]) > 0.3 * dif_rel:
+        # if (reliability[s1] > mean_rel and reliability[s2] < mean_rel) or \
+        #         (reliability[s1] < mean_rel and reliability[s2] > mean_rel):
+        T = pd.concat([T, df], ignore_index=True)
 
     plt.figure(figsize=(10,10))
     crits = ['dcbc_group','coserr_group','dcbc_indiv','coserr_floor']
@@ -351,6 +350,43 @@ def result_3_plot(fname):
             plt.ylim(0.4, 1)
 
     plt.suptitle(f'IBC two sessions fusion - averaged trend')
+    plt.show()
+
+def result_3_rel_check(fname):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    # Calculate session reliability
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+                                 voxel_wise=False)
+    reliability = dict(zip(sess, rel.mean(axis=1)))
+    crits = ['dcbc_group', 'dcbc_indiv', 'coserr_group', 'coserr_floor']
+
+    plt.figure(figsize=(25, 5))
+    for i, c in enumerate(crits):
+        plt.subplot(1, 4, i + 1)
+        T = pd.DataFrame()
+        for s in sess:
+            this_df = D.loc[(D['D'] == s.split('-')[1])].reset_index()
+            # T1 = pd.DataFrame({'session': [s], 'reliability': [reliability[s]],
+            #                    c: [this_df.loc[(this_df['common_kappa'] == True), c].mean()],
+            #                    'common_kappa': [True]})
+            # T2 = pd.DataFrame({'session': [s], 'reliability': [reliability[s]],
+            #                    c: [this_df.loc[(this_df['common_kappa'] == False), c].mean()],
+            #                    'common_kappa': [False]})
+            # T = pd.concat([T, T1, T2], ignore_index=True)
+            this_df['reliability'] = reliability[s]
+            this_df['session'] = s
+            T = pd.concat([T, this_df], ignore_index=True)
+            for ck in [True, False]:
+                plt.text(reliability[s], this_df.loc[(this_df['common_kappa'] == ck), c].mean(),
+                         s.split('-')[1], fontdict=dict(color='black', alpha=0.5))
+
+        sb.lineplot(data=T, x="reliability", y=c, hue="common_kappa",
+                    hue_order=T['common_kappa'].unique(), errorbar="se",
+                    err_style="bars", markers=True, markersize=10)
+        # sb.scatterplot(data=T, x="reliability", y=c, hue="common_kappa",
+        #                hue_order=T['common_kappa'].unique())
+
+    plt.suptitle(f'IBC individual sessions perfermance vs reliability, test_data=IBC_leftoutSess')
     plt.show()
 
 def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
@@ -416,20 +452,55 @@ def result_4_plot(fname, common_kappa=True):
 
     df = D.loc[(D['common_kappa'] == common_kappa)]
 
-    plt.figure(figsize=(15,10))
+    plt.figure(figsize=(15,15))
     crits = ['dcbc_group','dcbc_indiv','coserr_group','coserr_floor']
     for i, c in enumerate(crits):
         plt.subplot(4, 1, i + 1)
-        sb.barplot(data=df, x='test_data', y=c, hue='D', errorbar="se")
-        plt.legend('')
+        order = df.groupby('D')[c].mean().sort_values().keys().to_list()
+        sb.barplot(data=df, x='test_data', y=c, hue='D', hue_order=order, errorbar="se")
+        plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
         # if 'coserr' in c:
         #     plt.ylim(0.4, 1)
 
     plt.suptitle(f'IBC individual sessions vs. all sessions fusion, common_kappa={common_kappa}')
     plt.show()
 
+def result_4_rel_check(fname, train_model='IBC', t_data=['Mdtb']):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    # Calculate session reliability
+    rel, sess = reliability_maps(base_dir, train_model, subtract_mean=False,
+                                 voxel_wise=False)
+    reliability = dict(zip(sess, rel.mean(axis=1)))
+    crits = ['dcbc_group', 'dcbc_indiv', 'coserr_group', 'coserr_floor']
+    num_row = len(t_data)
+    num_col = len(crits)
+
+    plt.figure(figsize=(25, 15))
+    for i, td in enumerate(t_data):
+        df = D.loc[(D['test_data'] == td)]
+        for j, c in enumerate(crits):
+            plt.subplot(num_row, num_col, i*num_col+j+1)
+            T = pd.DataFrame()
+            for s in sess:
+                this_df = df.loc[df.D == s.split('-')[1]].reset_index()
+                this_df['reliability'] = reliability[s]
+                this_df['session'] = s
+                T = pd.concat([T, this_df], ignore_index=True)
+                for ck in [True, False]:
+                    plt.text(reliability[s], this_df.loc[(this_df['common_kappa'] == ck), c].mean(),
+                             s.split('-')[1], fontdict=dict(color='black', alpha=0.5))
+
+            sb.lineplot(data=T, x="reliability", y=c, hue="common_kappa",
+                        hue_order=T['common_kappa'].unique(),errorbar="se",
+                        err_style="bars", markers=True, markersize=10)
+            # sb.scatterplot(data=T, x="reliability", y=c, hue="common_kappa",
+            #                hue_order=T['common_kappa'].unique())
+
+    plt.suptitle(f'{train_model} individual sessions perfermance vs reliability, test_data={t_data}')
+    plt.show()
+
 def result_5_eval(K=10, model_type=None, model_name=None,
-                  t_datasets=None):
+                  t_datasets=None, return_df=False):
     """Evaluate group and individual DCBC and coserr of all dataset fusion
        and any dataset training standalone on each of the datasets.
     Args:
@@ -468,21 +539,23 @@ def result_5_eval(K=10, model_type=None, model_name=None,
             res = pd.merge(res_dcbc, res_coserr, how='outer')
             results = pd.concat([results, res], ignore_index=True)
 
-    # Save file
-    wdir = model_dir + f'/Models/Evaluation'
-    fname = f'/eval_all_asym_Ib_K-{K}_datasetFusion.tsv'
-    results.to_csv(wdir + fname, index=False, sep='\t')
+    if return_df:
+        return results
+    else:
+        # Save file
+        wdir = model_dir + f'/Models/Evaluation'
+        fname = f'/eval_all_asym_K-{K}_datasetFusion.tsv'
+        results.to_csv(wdir + fname, index=False, sep='\t')
 
 def result_5_plot(fname, model_type='Models_01'):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
-
     df = D.loc[(D['model_type'] == model_type)]
-
-    plt.figure(figsize=(15,10))
     crits = ['dcbc_group','dcbc_indiv','coserr_group',
              'coserr_floor','coserr_ind2','coserr_ind3']
+
+    plt.figure(figsize=(15, 10))
     for i, c in enumerate(crits):
-        plt.subplot(6, 1, i + 1)
+        plt.subplot(1, 6, i + 1)
         sb.barplot(data=df, x='test_data', y=c, hue='model_name', errorbar="se")
         plt.legend('')
         # if 'coserr' in c:
@@ -502,8 +575,74 @@ def concat_eval(model_type,prefix,outfile):
 
     pass
 
+def plot_diffK(fname):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+
+    df = D.loc[(D['model_type'] == 'Models_03')|(D['model_type'] == 'Models_04')]
+
+    plt.figure(figsize=(12,15))
+    crits = ['dcbc_group','dcbc_indiv','coserr_group',
+             'coserr_floor','coserr_ind2','coserr_ind3']
+    for i, c in enumerate(crits):
+        plt.subplot(3, 2, i + 1)
+        sb.lineplot(data=df, x="K", y=c, hue="test_data", style="common_kappa",
+                    style_order=D['common_kappa'].unique(),markers=True)
+        # plt.legend('')
+        # if 'coserr' in c:
+        #     plt.ylim(0.4, 1)
+
+    plt.suptitle(f'All datasets fusion, diff K = {df.K.unique()}')
+    plt.tight_layout()
+    plt.show()
+
+def eval_arbitrary(model_name=[f'Models_03/asym_Ib_space-MNISymC3_K-10'],
+                   t_datasets = ['Mdtb','Pontine','Nishimoto'],
+                   test_ses=['all'], fname=None):
+    """Evaluate group and individual DCBC and coserr of IBC single
+       sessions on all other test datasets.
+    Args:
+        K: the number of parcels
+    Returns:
+        Write in evaluation file
+    """
+    cond_ind = np.array(['cond_num_uni', 'task_num',
+                         'reg_id', 'cond_num_uni', 'reg_id'], dtype=object)
+    results = pd.DataFrame()
+    # Evaluate all single sessions on other datasets
+    for ds in t_datasets:
+        print(f'Testdata: {ds}\n')
+        for s in test_ses:
+            print(f'- Start evaluating {s}.')
+            # 1. Run DCBC individual
+            res_dcbc = run_dcbc_individual(model_name, ds, s, cond_ind=None,
+                                           part_ind='half', indivtrain_ind='half',
+                                           indivtrain_values=[1,2])
+            # 2. Run coserr individual
+            res_coserr = run_prederror(model_name, ds, s, cond_ind=None,
+                                       part_ind='half', eval_types=['group', 'floor'],
+                                       indivtrain_ind='half', indivtrain_values=[1,2])
+            # 3. Merge the two dataframe
+            res = pd.merge(res_dcbc, res_coserr, how='outer')
+            results = pd.concat([results, res], ignore_index=True)
+
+    # Save file
+    wdir = model_dir + f'/Models/Evaluation'
+    if fname is not None:
+        results.to_csv(wdir + fname, index=False, sep='\t')
+    else:
+        return results
+
 
 if __name__ == "__main__":
+    # model_name = [f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s1',
+    #               f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s2',
+    #               f'Models_03/asym_Md_space-MNISymC3_K-10',
+    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s1',
+    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s2',
+    #               f'Models_04/asym_Md_space-MNISymC3_K-10']
+    # eval_arbitrary(model_name, t_datasets = ['Pontine','Nishimoto','IBC','Demand'],
+    #                fname=f'/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv')
+
     ############# Result 1: individual vs. group improvement #############
     # D = result_1_eval(model_name='Models_04/asym_Md_space-MNISymC3_K-10')
     # fname = model_dir + '/Models/Evaluation_04/indivgroup_all_Md_K-10.tsv'
@@ -519,19 +658,38 @@ if __name__ == "__main__":
     #                  iter=100)
 
     ############# Result 3: IBC two sessions fusion #############
-    # result_3_eval(ses1=None, ses2=None)
-    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
-    result_3_plot(fname)
+    result_3_eval(K=20, ses1=None, ses2=None)
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
+    # # result_3_rel_check(fname)
+    # result_3_plot(fname)
+    # result_3_plot(f'/Models/Evaluation/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv',
+    #               train_model='MDTB')
 
     ############# Result 4: IBC single sessions vs. all sessions fusion #############
     # result_4_eval(K=10, t_datasets=['Mdtb', 'Pontine', 'Nishimoto'])
-    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_leftSess.tsv'
-    # result_4_plot(fname, common_kappa=False)
+    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_leftSess.tsv'
+    result_4_plot(fname, common_kappa=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
-    # result_5_eval(K=10)
-    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_datasetFusion.tsv'
-    # result_5_plot(fname, model_type='Models_04')
+    # res = result_5_eval(K=10, model_type=['03','04'], model_name=['Po','Ni','Ib','De','PoNiIbDe'],
+    #                     t_datasets=['Mdtb'], return_df=True)
+    # wdir = model_dir + f'/Models/Evaluation'
+    # fname = f'/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
+    # res.to_csv(wdir + fname, index=False, sep='\t')
+    fname = f'/Models/Evaluation/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
+    result_5_plot(fname, model_type='Models_03')
+
+    ############# Check common/separate kappa on different K #############
+    # D = pd.DataFrame()
+    # for k in [10, 20, 34, 50]:
+    #     res = result_5_eval(K=k, model_name=['MdPoNiIb'], return_df=True)
+    #     D = pd.concat([D, res], ignore_index=True)
+    #
+    # wdir = model_dir + f'/Models/Evaluation'
+    # fname = f'/eval_all_asym_MdPoNiIb_K-10_20_34_datasetFusion.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+    fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIb_K-10_20_34_50_datasetFusion.tsv'
+    plot_diffK(fname)
 
     ## For quick copy
     fnames_group = ['Models_01/asym_Ib_space-MNISymC3_K-10',

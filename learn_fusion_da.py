@@ -318,21 +318,19 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
     # Data sets need to numpy arrays to allow indixing by list
-    datasets = np.array(['Mdtb', 'Pontine', 'Nishimoto', 'Ibc', 'Hcp'],
+    datasets = np.array(['MDTB', 'Pontine', 'Nishimoto', 'IBC', 'Demand'],
                         dtype=object)
-    sess = np.array(['all', 'all', 'all', 'all', 'all'],
-                    dtype=object)
+    sess = np.array(['all', 'all', 'all', 'all', 'all'], dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
-    type = np.array(['CondHalf', 'TaskHalf', 'CondHalf', 'CondHalf', 'NetRun'],
+    type = np.array(['CondHalf', 'TaskHalf', 'CondHalf', 'CondHalf', 'CondHalf'],
                     dtype=object)
 
     cond_ind = np.array(['cond_num_uni', 'task_num',
                          'reg_id', 'cond_num_uni', 'reg_id'], dtype=object)
-    part_ind = np.array(['half', 'half', 'half', 'half', 'half']
-                        , dtype=object)
+    part_ind = np.array(['half', 'half', 'half', 'half', 'half'], dtype=object)
 
     # Make the atlas object
     ############## To be uncomment for cortical parcellation ##############
@@ -377,7 +375,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
-    dataname = [datasets[i][0:2] for i in set_ind]
+    dataname = [datasets[i][0:2].title() for i in set_ind]
 
     for i in sym_type:
         tic = time.perf_counter()
@@ -537,10 +535,13 @@ def leave_one_out_fit(dataset=[0], model_type=['01'], K=10):
             with open(wdir + fname + '.pickle', 'wb') as file:
                 pickle.dump(models, file)
 
-def fit_indv_sess_IBC(model_type='01'):
-    sess = DataSetIBC(base_dir + '/IBC').sessions
+def fit_indv_sess(indx=3, model_type='01', K=10):
+    datasets = np.array(['MDTB', 'Pontine', 'Nishimoto', 'IBC', 'Demand'],
+                        dtype=object)
+    _, _, my_dataset = get_dataset(base_dir, datasets[indx])
+    sess = my_dataset.sessions
     for indv_sess in sess:
-        wdir, fname, info, models = fit_all([3], 10,
+        wdir, fname, info, models = fit_all([indx], K,
                                             model_type=model_type,
                                             repeats=100,
                                             sym_type=[0],
@@ -551,7 +552,7 @@ def fit_indv_sess_IBC(model_type='01'):
             pickle.dump(models, file)
 
 def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
-    wdir, fname, info, models = fit_all([3], 10, model_type=model_type, repeats=50,
+    wdir, fname, info, models = fit_all([3], 20, model_type=model_type, repeats=20,
                                         sym_type=[0], this_sess=[['ses-'+sess1,
                                                                   'ses-'+sess2]])
     fname = fname + f'_ses-{sess1}+{sess2}'
@@ -560,9 +561,17 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
         pickle.dump(models, file)
 
 if __name__ == "__main__":
-    for k in [20, 34, 50]:
-        for t in ['01','02','03','04','05']:
-            fit_all([0,1,2,3], k, model_type=t, repeats=50, sym_type=[0])
+    # for k in [10,20,34,50]:
+    #     for t in ['01','02','03','04','05']:
+    #         wdir = model_dir + f'\Models\Models_{t}'
+    #         fname1 = f'/asym_De_space-MNISymC3_K-{k}.tsv'
+    #         fname2 = f'/asym_PoNiIbDe_space-MNISymC3_K-{k}.tsv'
+    #         if not os.path.isfile(wdir+fname1):
+    #             print(f'fitting model {t} with K={k}...')
+    #             fit_all([4], k, model_type=t, repeats=100, sym_type=[0])
+    #         if not os.path.isfile(wdir + fname2):
+    #             print(f'fitting model {t} with K={k}...')
+    #             fit_all([1,2,3,4], k, model_type=t, repeats=100, sym_type=[0])
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=True,
     #                              voxel_wise=False)
@@ -578,14 +587,16 @@ if __name__ == "__main__":
     #     for s2 in sess_2:
     #         this_s1 = s1.split('-')[1]
     #         this_s2 = s2.split('-')[1]
-    #         wdir = model_dir + '\Models\Models_04\IBC_sessFusion'
-    #         fname = wdir+f'/asym_Ib_space-MNISymC3_K-10_ses-{this_s1}+{this_s2}.tsv'
-    #         if not os.path.isfile(fname):
-    #             fit_two_IBC_sessions(sess1=this_s1, sess2=this_s2, model_type='04')
-    #             print(f'-Done type 04 fusion {s1} and {s2}.')
+    #         for t in ['03','04']:
+    #             wdir = model_dir + f'\Models\Models_{t}\IBC_sessFusion'
+    #             fname = wdir+f'/asym_Ib_space-MNISymC3_K-20_ses-{this_s1}+{this_s2}.tsv'
+    #             if not os.path.isfile(fname):
+    #                 fit_two_IBC_sessions(sess1=this_s1, sess2=this_s2, model_type=t)
+    #                 print(f'-Done type {t} fusion {s1} and {s2}.')
 
     ########## IBC all sessions fit ##########
-    # fit_indv_sess_IBC(model_type='03')
+    # fit_indv_sess(0, model_type='03', K=10)
+    fit_indv_sess(0, model_type='04', K=10)
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 
     ########## IBC all fit ##########
