@@ -336,7 +336,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
     # Make the atlas object
     ############## To be uncomment for cortical parcellation ##############
-    # atlas_asym = am.get_atlas('fs32k', atlas_dir)
+    # atlas_asym, _ = am.get_atlas('fs32k', atlas_dir)
     # bm_name = ['cortex_left', 'cortex_right']
     # mask = []
     # for i, hem in enumerate(['L', 'R']):

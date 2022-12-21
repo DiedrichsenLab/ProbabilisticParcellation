@@ -392,7 +392,7 @@ def export_map(data,atlas,cmap,labels,base_name):
         cmap = cmap(np.arange(cmap.N))
 
 
-    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas(atlas,base_dir + '/Atlases')
     probseg = suit_atlas.data_to_nifti(data)
     parcel = np.argmax(data,axis=0)+1
     dseg = suit_atlas.data_to_nifti(parcel)
@@ -491,7 +491,7 @@ def make_asymmetry_map(mname):
     indx2 = np.concatenate([v+model.K_sym,v])
     sym_score = w_cos[indx1,indx2]
 
-    suit_atlas = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas('MNISymC3',base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
     surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
             space='MNISymC',ignore_zeros=True)
