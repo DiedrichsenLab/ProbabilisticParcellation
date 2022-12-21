@@ -122,7 +122,7 @@ def plot_data_flat(data,atlas,
         ax: Axis / figure of plot
     """
     # Plot Data from a specific atlas space on the flatmap
-    suit_atlas = am.get_atlas(atlas,base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas(atlas,base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(data)
     
     # Figure out correct mapping space 
