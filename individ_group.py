@@ -19,6 +19,20 @@ import generativeMRF.evaluation as ev
 from ProbabilisticParcellation.util import *
 import ProbabilisticParcellation.evaluate as ppev
 
+# pytorch cuda global flag
+pt.set_default_tensor_type(pt.cuda.FloatTensor
+                           if pt.cuda.is_available() else
+                           pt.FloatTensor)
+
+# Find model directory to save model fitting results
+model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
+if not Path(model_dir).exists():
+    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
+if not Path(model_dir).exists():
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
+if not Path(model_dir).exists():
+    raise (NameError('Could not find model_dir'))
+
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
@@ -30,15 +44,29 @@ if not Path(base_dir).exists():
 
 def individ_group(model):
     # Individual training dataset:
-    idata,iinfo,ids = get_dataset(base_dir,'Mdtb',
-                        atlas='MNISymC3',
-                        sess=['ses-s1'],
-                        type='CondRun')
+    idata,iinfo,ids = get_dataset(base_dir,'Mdtb', atlas='MNISymC3',
+                                  sess=['ses-s1'], type='CondRun')
+
     # Test data set:
-    tdata,tinfo,tds = get_dataset(base_dir,'Mdtb',
-                         atlas='MNISymC3',
-                         sess=['ses-s2'],
-                         type='CondHalf')
+    tdata,tinfo,tds = get_dataset(base_dir,'Mdtb', atlas='MNISymC3',
+                                  sess=['ses-s2'], type='CondHalf')
+
+    # convert tdata to tensor
+    idata = pt.tensor(idata, dtype=pt.get_default_dtype())
+    tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+
+    if not hasattr(model.arrange, 'tmp_list'):
+        if model.arrange.__class__.__name__ == 'ArrangeIndependent':
+            model.arrange.tmp_list = ['estep_Uhat']
+        elif model.arrange.__class__.__name__ == 'cmpRBM':
+            model.arrange.tmp_list = ['epos_Uhat', 'epos_Hhat',
+                                      'eneg_U', 'eneg_H']
+
+    if not hasattr(model.emissions[0], 'tmp_list'):
+        if model.emissions[0].name == 'VMF':
+            model.emissions[0].tmp_list = ['Y', 'num_part']
+        elif model.emissions[0].name == 'wVMF':
+            model.emissions[0].tmp_list = ['Y', 'num_part', 'W']
 
     # Build the individual training model on session 1:
     m1 = deepcopy(model)
@@ -46,11 +74,11 @@ def individ_group(model):
     part_vec = iinfo['run'].values.reshape(-1,)
     runs = np.unique(part_vec)
 
-    indivtrain_em = em.MixVMF(K=m1.emissions[0].K,
-                            P = m1.emissions[0].P,
-                            X = matrix.indicator(cond_vec),
-                            part_vec=part_vec,
-                            uniform_kappa=True)
+    indivtrain_em = em.wMixVMF(K=m1.emissions[0].K,
+                               P=m1.emissions[0].P,
+                               X=matrix.indicator(cond_vec),
+                               part_vec=part_vec,
+                               uniform_kappa=True)
     indivtrain_em.initialize(idata)
     m1.emissions = [indivtrain_em]
     m1.initialize()
@@ -64,7 +92,7 @@ def individ_group(model):
     Uhat_complete_all = []
     for i in runs:
         ind = part_vec<=i
-        m1.emissions[0].X = pt.tensor(matrix.indicator(cond_vec[ind]))
+        m1.emissions[0].X = pt.tensor(matrix.indicator(cond_vec[ind]), dtype=pt.get_default_dtype())
         m1.emissions[0].part_vec = pt.tensor(part_vec[ind], dtype=pt.int)
         m1.emissions[0].initialize(idata[:,ind,:])
 
@@ -127,12 +155,13 @@ def figure_indiv_group(D):
     pass
 
 if __name__ == "__main__":
-    # info,model = load_batch_best('Models_01/asym_Md_space-MNISymC3_K-20')
-    # D = individ_group(model)
-    # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
-    # D.to_csv(fname,sep='\t',index=False)
-    # pass
-    fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
-    D = pd.read_csv(fname,sep='\t')
-    figure_indiv_group(D)
+    info,model = load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
+    D = individ_group(model)
+    fname = model_dir + '/Models/Evaluation_02/indivgroup_prederr_Md_K-10.tsv'
+    D.to_csv(fname,sep='\t',index=False)
     pass
+    # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
+    # D = pd.read_csv(fname,sep='\t')
+    # figure_indiv_group(D)
+    # plt.show()
+    # pass
