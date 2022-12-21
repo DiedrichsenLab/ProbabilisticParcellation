@@ -297,7 +297,7 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None):
     """
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas=space,sess=test_sess)
-    atlas = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
+    atlas, _ = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
     dist = compute_dist(atlas.world.T,resolution=1)
 
     num_subj = tdata.shape[0]
@@ -369,7 +369,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     """
     tdata,tinfo,tds = get_dataset(base_dir,test_data,
                               atlas='MNISymC3',sess=test_sess)
-    atlas = am.get_atlas('MNISymC3',atlas_dir=base_dir + '/Atlases')
+    atlas, _ = am.get_atlas('MNISymC3',atlas_dir=base_dir + '/Atlases')
     dist = compute_dist(atlas.world.T,resolution=1)
 
     # convert tdata to tensor
