@@ -122,7 +122,7 @@ def get_profiles(model,info):
 
     return profile, conditions
 
-def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=5):
+def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=5, print=True):
     """Returns the functional profile for a given parcel either for selected dataset or all datasets
     Args:
         profiles: parcel scores for each condition in each dataset
@@ -149,8 +149,9 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
             cond_score = profiles[d][:,p].tolist()
             # sort conditions by condition score
             dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name),reverse=True)]
-            print('{} :\t{}'.format(dataset, dataset_profile[:ncond]))
             profile.append(dataset_profile)
+            if print:
+                print('{} :\t{}'.format(dataset, dataset_profile[:ncond]))
 
     else:
         # Collect condition names in order of parcel score from selected dataset
@@ -160,8 +161,9 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
 
         # sort conditions by condition score
         dataset_profile = [name for _,name in sorted(zip(cond_score,cond_name))]
-        print('{} :\t{}'.format(datasets[d], dataset_profile[:ncond]))
         profile = dataset_profile
+        if print:
+            print('{} :\t{}'.format(datasets[d], dataset_profile[:ncond]))
 
     return profile
 

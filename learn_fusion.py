@@ -280,6 +280,10 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
     # Generate a dataname from first two letters of each training data set
     dataname = [datasets[i][0:2] for i in set_ind]
 
+    if weighting is not None:
+        windex = '_' + ''.join(str(weighting[-1]).split('.'))
+
+    print(f'Fitting {model_type} with K={K}')
     for i in [0, 1]:
         name = mname[i] + '_' + ''.join(dataname)
         info, models = batch_fit(datasets[set_ind],
@@ -300,6 +304,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, model_type='01', weighting=None):
 
         # Save the fits and information
         wdir = base_dir + f'/Models/Models_{model_type}'
+        Path(wdir).mkdir(exist_ok=True)
         fname = f'/{name}_space-{atlas[i].name}_K-{K}'
         info.to_csv(wdir + fname + '.tsv', sep='\t')
         with open(wdir + fname + '.pickle', 'wb') as file:
@@ -319,36 +324,16 @@ def clear_models(K, model_type='04'):
 
 
 if __name__ == "__main__":
-    # fit_all([0])
-    # fit_all([1])
-    # fit_all([2])
-    # fit_all([0,1,2])
-    # fit_all([0,1])
-    # fit_all([0, 2])
-    # fit_all([1, 2])
-    # for k in [34]:
-    #     fit_all([3],k,model_type='04')
-    # fit_all([4],k,model_type='02')
-    # fit_all([0,1,2,3,4],k,model_type='02')
-    # fit_all([0],20)
-    # fit_all([1],20)
-    # fit_all([2],20)
-    # fit_all([3],20)
-    # check_IBC()
-    # mask = base_dir + '/Atlases/tpl-MNI152NLIn2000cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    # atlas = am.AtlasVolumetric('MNISymC3',mask_img=mask)
+    for model_type in ['01']:
+        for k in [10,20,34]:
+            for hcp_weight in np.arange(0.0, 1.1, 0.2):
+                hcp_weight = round(hcp_weight,2)
+                print(hcp_weight)
+                train_datasets=[0,1,2,3,4]
+                weighting = np.repeat(1, len(train_datasets)-1)
+                weighting = np.append(weighting, hcp_weight)
 
-    # sess = [['ses-s1'],['ses-01'],['ses-01','ses-02']]
-    # design_ind= ['cond_num_uni','task_id',',..']
-    # info,models,Prop,V = load_batch_fit('asym_Md','MNISymC3',10)
-    # parcel = pt.argmax(Prop,dim=1) # Get winner take all
-    # parcel=parcel[:,sym_atlas.indx_reduced] # Put back into full space
-    # plot_parcel_flat(parcel[0:3,:],atlas,grid=[1,3],map_space='MNISymC')
-    # pass
-    # pass
-    # Prop, V = fit_niter(data,design,K,n_iter)
-    # r1 = ev.calc_consistency(Prop,dim_rem=0)
-    # r2 = ev.calc_consistency(V[0],dim_rem=2)
+                fit_all(train_datasets, k, model_type=model_type, weighting=weighting)
 
 
     # parcel = pt.argmax(Prop,dim=1)

@@ -579,4 +579,14 @@ def concat_all_prederror(model_type,prefix,K,outfile):
 
 if __name__ == "__main__":
 
+        # model_type='04'
+        # sym='asym'
+        # fname_suffix='HCPw_asym'
+        
+        # # Evaluate DCBC
+        # eval_all_dcbc(model_type=model_type,prefix=sym,K=K,space = 'MNISymC3', models=hcp_models, fname_suffix=fname_suffix)
+
+    # Concat DCBC
+    # concat_all_prederror(model_type=model_type,prefix=sym,K=Ks,outfile=fname_suffix)
+            
     pass
