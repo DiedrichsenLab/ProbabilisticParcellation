@@ -48,8 +48,7 @@ if not Path(base_dir).exists():
 
 data_dir = base_dir + 'FunctionalFusion'
 atlas_dir = data_dir + '/Atlases'
-model_dir = Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym'
-model_dir = model_dir._str
+model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym')
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
