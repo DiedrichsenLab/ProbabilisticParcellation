@@ -573,11 +573,11 @@ if __name__ == "__main__":
     #             print(f'fitting model {t} with K={k}...')
     #             fit_all([1,2,3,4], k, model_type=t, repeats=100, sym_type=[0])
     ########## Reliability map
-    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=True,
-    #                              voxel_wise=False)
-    # plt.figure(figsize=(25, 18))
-    # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
-    #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+                                 voxel_wise=True)
+    plt.figure(figsize=(25, 18))
+    plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
+                    cscale=[-0.3, 0.7], colorbar=False, titles=sess)
 
     ########## IBC selected sessions fusion fit ##########
     # sess_1 = DataSetIBC(base_dir + '/IBC').sessions

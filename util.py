@@ -6,6 +6,7 @@ from pathlib import Path
 import Functional_Fusion.atlas_map as am
 import pandas as pd
 import torch as pt
+import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 
@@ -354,6 +355,46 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
     }
 
     return D
+
+def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
+    """Samples the existing MDTB10 parcellation
+    Then displays it as check
+    """
+    atl_dir = base_dir + '/Atlases'
+    with open(atl_dir + '/atlas_description.json') as file:
+        atlases = json.load(file)
+    if atlas not in atlases:
+        raise(NameError(f'Unknown Atlas: {atlas}'))
+    ainf = atlases[atlas]
+
+    parcel = nb.load(atl_dir + '/%s/atl-%s_space-%s_dseg.nii'
+                     % (ainf['dir'], parcel_name, ainf['space']))
+    suit_atlas = am.get_atlas(atlas, atl_dir)
+
+    data = suit.reslice.sample_image(parcel,
+            suit_atlas.world[0],
+            suit_atlas.world[1],
+            suit_atlas.world[2],0)
+
+    # Read the parcellation colors: Add additional row for parcel 0
+    ########################################################
+    # The path of color .lut file to be changed if color info
+    # stored in separate atlas folder. Right now, all colors are
+    # stored in `tpl-SUIT` folder.
+    ########################################################
+    color_file = atl_dir + f'/tpl-SUIT/atl-{parcel_name}.lut'
+    color_info = pd.read_csv(color_file, sep = ' ',header=None)
+    colors = np.zeros((11,3))
+    colors[1:11,:]  = color_info.iloc[:,1:4].to_numpy()
+
+    # Map Plot if requested (for a check)
+    if do_plot:
+        Nifti = suit_atlas.data_to_nifti(data)
+        surf_data = suit.flatmap.vol_to_surf(Nifti,stats='mode')
+        fig = suit.flatmap.plot(surf_data,render='plotly',
+                                overlay_type='label',cmap=colors)
+        fig.show()
+    return data, colors
 
 # def write_dlabel_cifti(parcellation, atlas, res='32k'):
 #     #TODO: unfinished
