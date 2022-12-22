@@ -38,26 +38,18 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
                            pt.FloatTensor)
 
-
-# Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationSym'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationSym'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationSym'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
-
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+base_dir = '/Volumes/diedrichsen_data$/data/'
 if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
+    base_dir = '/srv/diedrichsen/data/'
 if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
+    base_dir = "Y:\data\ ".strip()
 if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
+    raise (NameError('Could not find data_dir'))
 
-atlas_dir = base_dir + f'/Atlases'
-
+data_dir = base_dir + 'FunctionalFusion'
+atlas_dir = data_dir + '/Atlases'
+model_dir = Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym'
+model_dir = model_dir._str
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
@@ -103,7 +95,7 @@ def build_data_list(datasets,
     sub = 0
     # Run over datasets get data + design
     for i in range(n_sets):
-        dat, info, ds = get_dataset(base_dir, datasets[i],
+        dat, info, ds = get_dataset(data_dir, datasets[i],
                                     atlas=atlas,
                                     sess=sess[i],
                                     type=type[i])
@@ -345,7 +337,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     # atlas_sym = am.AtlasSurfaceSymmetric('fs32k', mask_gii=mask, structure=bm_name)
     # atlas = [atlas_asym, atlas_sym]
     #######################################################################
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
+    mask = data_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
     atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
              am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
 
@@ -548,11 +540,12 @@ if __name__ == "__main__":
         s = 1
     elif msym == 'asym':
         s = 0
+    model_dir
 
     dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0,1,2,3,4,5,6]]
     # dataset_list = [[7], [0,1,2,3,4,5,6,7]] # with HCP
 
-    T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
+    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
     for k in [10,20,34,40]:
         for t in ['03','04']:

@@ -10,22 +10,19 @@ import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 
-# Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise(NameError('Could not find model_dir'))
+base_dir = '/Volumes/diedrichsen_data$/data/'
+if not Path(base_dir).exists():
+    base_dir = '/srv/diedrichsen/data/'
+if not Path(base_dir).exists():
+    base_dir = "Y:\data\ ".strip()
+if not Path(base_dir).exists():
+    raise (NameError('Could not find data_dir'))
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
-if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
+data_dir = base_dir + 'FunctionalFusion'
+atlas_dir = data_dir + '/Atlases'
+model_dir = Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym'
+model_dir = model_dir._str
+
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target
