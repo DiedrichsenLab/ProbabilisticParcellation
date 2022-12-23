@@ -215,7 +215,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
         Prob = ev.extract_marginal_prob(models)
 
     if type(Prob) is pt.Tensor:
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             Prob = Prob.cpu().numpy()
         else:
             Prob = Prob.numpy()

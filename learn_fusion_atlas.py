@@ -31,24 +31,19 @@ import pickle
 from copy import deepcopy
 import time
 
-device = pt.device("mps")
 
-# pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
+# GPU acceleration
+if pt.cuda.is_available():
+    pt.set_default_tensor_type(pt.cuda.FloatTensor)
+elif pt.backends.mps.is_built():
+    device = pt.device("mps")
+    pt.set_default_tensor_type(pt.FloatTensor)
+else:
+    pt.set_default_tensor_type(pt.FloatTensor)
 
 
-# Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+base_dir = '/Volumes/diedrichsen_data$/data/'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/'
 if not Path(base_dir).exists():
@@ -56,9 +51,11 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise (NameError('Could not find data_dir'))
 
+
 data_dir = base_dir + 'FunctionalFusion'
 atlas_dir = data_dir + '/Atlases'
-model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym')
+model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationModel')
+
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
@@ -281,7 +278,7 @@ def batch_fit(datasets, sess,
             fit_arrangement=True,
             n_inits=n_inits,
             first_iter=first_iter)
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         else:
             info.loglik.at[i] = ll[-1]
@@ -291,7 +288,7 @@ def batch_fit(datasets, sess,
 
     # Align the different models
     models = np.array(models, dtype=object)
-    ev.align_models(models)
+    # ev.align_models(models)
 
     return info, models
 
@@ -436,7 +433,7 @@ def write_dlabel_cifti(data, atlas,
         gifti (GiftiImage): Label gifti image
     """
     if type(data) is pt.Tensor:
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             data = data.cpu().numpy()
         else:
             data = data.numpy()
@@ -545,7 +542,7 @@ if __name__ == "__main__":
 
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
-    for k in [10, 17, 20, 34, 40, 68]:
+    for k in [20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 
