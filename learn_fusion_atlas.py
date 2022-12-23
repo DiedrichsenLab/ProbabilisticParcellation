@@ -40,11 +40,11 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
 
 
 # Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationSym'
+model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationSym'
+    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationSym'
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -287,32 +287,6 @@ def batch_fit(datasets, sess,
         m.clear()
         models.append(m)
 
-        # Align group priors
-        if i == 0:
-            indx = pt.arange(K_arrange)
-        else:
-            indx = ev.matching_greedy(prior[0,:,:], m.marginal_prob())
-        prior[i, :, :] = m.marginal_prob()[indx, :]
-
-        this_similarity = []
-        for j in range(i):
-            # Option1: K*K similarity matrix between two Us
-            # this_crit = cal_corr(prior[i, :, :], prior[j, :, :])
-            # this_similarity.append(1 - pt.diagonal(this_crit).mean())
-
-            # Option2: L1 norm between two Us
-            this_crit = pt.abs(prior[i, :, :] - prior[j, :, :]).mean()
-            this_similarity.append(this_crit)
-
-        num_rep = sum(sim < 0.02 for sim in this_similarity)
-        print(num_rep)
-
-        # Convergence: 1. must run enough repetitions (50);
-        #              2. num_rep greater than threshold (10% of max_iter)
-        if (i>50) and (num_rep >= int(n_fits*0.1)):
-            break
-        iter_toc = time.perf_counter()
-        print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
     # Align the different models
     models = np.array(models, dtype=object)
@@ -560,7 +534,7 @@ if __name__ == "__main__":
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
 
-    for k in [10,20,34,40]:
+    for k in [10,17,20,34,40,68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 
