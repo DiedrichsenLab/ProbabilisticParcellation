@@ -551,7 +551,7 @@ if __name__ == "__main__":
             for datasets in dataset_list:
                 
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
-                wdir = model_dir + f'\Models\Models_{t}'
+                wdir = model_dir + f'/Models/Models_{t}'
                 fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
                 
                 if not Path(wdir+fname).exists():
