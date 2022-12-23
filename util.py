@@ -20,7 +20,7 @@ if not Path(base_dir).exists():
 
 data_dir = base_dir + 'FunctionalFusion'
 atlas_dir = data_dir + '/Atlases'
-model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationSym')
+model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationModel')
 
 
 def cal_corr(Y_target, Y_source):
