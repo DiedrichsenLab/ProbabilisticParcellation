@@ -280,7 +280,10 @@ def batch_fit(datasets, sess,
             fit_arrangement=True,
             n_inits=n_inits,
             first_iter=first_iter)
-        info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
+        if pt.cuda.is_available():
+            info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
+        else:
+            info.loglik.at[i] = ll[-1]
         m.clear()
         models.append(m)
 
@@ -458,7 +461,10 @@ def write_dlabel_cifti(data, atlas,
         gifti (GiftiImage): Label gifti image
     """
     if type(data) is pt.Tensor:
-        data = data.cpu().numpy()
+        if pt.cuda.is_available():
+            data = data.cpu().numpy()
+        else:
+            data = data.numpy()
 
     if data.ndim == 1:
         # reshape to (1, num_vertices)
