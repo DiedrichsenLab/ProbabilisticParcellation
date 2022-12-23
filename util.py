@@ -215,7 +215,10 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
         Prob = ev.extract_marginal_prob(models)
 
     if type(Prob) is pt.Tensor:
-        Prob = Prob.cpu().numpy()
+        if pt.cuda.is_available():
+            Prob = Prob.cpu().numpy()
+        else:
+            Prob = Prob.numpy()
 
     parc = np.argmax(Prob,axis=1)+1
 
