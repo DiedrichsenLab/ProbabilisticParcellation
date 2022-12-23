@@ -545,7 +545,7 @@ if __name__ == "__main__":
 
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
-    for k in [10,1 7, 20, 34, 40, 68]:
+    for k in [10, 17, 20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 
