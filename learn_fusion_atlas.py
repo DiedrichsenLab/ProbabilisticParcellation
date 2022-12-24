@@ -523,9 +523,9 @@ if __name__ == "__main__":
     loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
 
     dataset_list = [ [d] for d in alldatasets ]
-    dataset_list.append(loo_datasets)
-    dataset_list.append(alldatasets)
-
+    dataset_list.extend(loo_datasets)
+    dataset_list.extend(alldatasets)
+    dataset_list = dataset_list[5:]
     
 
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
