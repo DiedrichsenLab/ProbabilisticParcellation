@@ -299,14 +299,13 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.array
 
-    sess = ['all'] * len(T)
+    sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
     type = T.default_type.array
     cond_ind = T.default_cond_ind.array
-
     part_ind = np.array(['half'] * len(T), dtype=object)
 
     mask = data_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
