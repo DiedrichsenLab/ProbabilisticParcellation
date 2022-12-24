@@ -294,8 +294,9 @@ def batch_fit(datasets, sess,
 
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
-            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
-    # Data sets need to numpy arrays to allow indixing by list
+            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None, overwrite=True):
+        
+    # Get dataset info
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.array
 
@@ -346,27 +347,28 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     for i in sym_type:
         tic = time.perf_counter()
         name = mname[i] + '_' + dataname
-        info, models = batch_fit(datasets[set_ind],
-                                 sess=sess[set_ind],
-                                 type=type[set_ind],
-                                 cond_ind=cond_ind[set_ind],
-                                 part_ind=part_ind[set_ind],
-                                 subj=subj_list,
-                                 atlas=atlas[i],
-                                 K=K,
-                                 name=name,
-                                 n_inits=50,
-                                 n_iter=200,
-                                 n_rep=repeats,
-                                 first_iter=30,
-                                 join_sess=join_sess,
-                                 join_sess_part=join_sess_part,
-                                 uniform_kappa=uniform_kappa,
-                                 weighting=weighting)
-
-        # Save the fits and information
+        
+        # Generate output name
         wdir = model_dir + f'/Models/Models_{model_type}'
         fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+
+        info, models = batch_fit(datasets[set_ind],
+                                sess=sess[set_ind],
+                                type=type[set_ind],
+                                cond_ind=cond_ind[set_ind],
+                                part_ind=part_ind[set_ind],
+                                subj=subj_list,
+                                atlas=atlas[i],
+                                K=K,
+                                name=name,
+                                n_inits=50,
+                                n_iter=200,
+                                n_rep=repeats,
+                                first_iter=30,
+                                join_sess=join_sess,
+                                join_sess_part=join_sess_part,
+                                uniform_kappa=uniform_kappa,
+                                weighting=weighting)
 
         if this_sess is not None:
             return wdir, fname, info, models
@@ -382,6 +384,8 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         toc = time.perf_counter()
         print(f'Done Model fitting - {mname[i]}. Used {toc - tic:0.4f} seconds!')
+
+
 
 
 def clear_models(K, model_type='04'):
@@ -525,12 +529,11 @@ if __name__ == "__main__":
     dataset_list = [ [d] for d in alldatasets ]
     dataset_list.extend(loo_datasets)
     dataset_list.extend(alldatasets)
-    dataset_list = dataset_list[5:]
     
 
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
-    for k in [20, 34, 40, 68]:
+    for k in [10, 17, 20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 
@@ -540,7 +543,9 @@ if __name__ == "__main__":
                 
                 if not Path(wdir+fname).exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
 
 
     
