@@ -305,7 +305,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sess[idx] = this_sess[i]
 
     type = T.default_type.array
-    cond_ind = T.default_cond_ind
+    cond_ind = T.default_cond_ind.array
 
     part_ind = np.array(['half'] * len(T), dtype=object)
 
