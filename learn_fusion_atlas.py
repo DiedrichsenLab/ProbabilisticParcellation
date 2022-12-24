@@ -296,30 +296,19 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
     # Data sets need to numpy arrays to allow indixing by list
-    datasets = np.array(['MDTB', 'Pontine', 'Nishimoto', 'IBC', 'Demand'],
-                        dtype=object)
-    sess = np.array(['all', 'all', 'all', 'all', 'all'], dtype=object)
+    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
+    datasets = T.name.array
+
+    sess = ['all'] * len(T)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
-    type = np.array(['CondHalf', 'TaskHalf', 'CondHalf', 'CondHalf', 'CondHalf'],
-                    dtype=object)
+    type = T.default_type.array
+    cond_ind = T.default_cond_ind
 
-    cond_ind = np.array(['cond_num_uni', 'task_num',
-                         'reg_id', 'cond_num_uni', 'reg_id'], dtype=object)
-    part_ind = np.array(['half', 'half', 'half', 'half', 'half'], dtype=object)
+    part_ind = np.array(['half'] * len(T), dtype=object)
 
-    # Make the atlas object
-    ############## To be uncomment for cortical parcellation ##############
-    # atlas_asym, _ = am.get_atlas('fs32k', atlas_dir)
-    # bm_name = ['cortex_left', 'cortex_right']
-    # mask = []
-    # for i, hem in enumerate(['L', 'R']):
-    #     mask.append(atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-{hem}_mask.label.gii')
-    # atlas_sym = am.AtlasSurfaceSymmetric('fs32k', mask_gii=mask, structure=bm_name)
-    # atlas = [atlas_asym, atlas_sym]
-    #######################################################################
     mask = data_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
     atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
              am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
@@ -353,11 +342,11 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
-    dataname = [datasets[i][0:2].title() for i in set_ind]
+    dataname = ''.join(T.two_letter_code[set_ind].tolist())
 
     for i in sym_type:
         tic = time.perf_counter()
-        name = mname[i] + '_' + ''.join(dataname)
+        name = mname[i] + '_' + dataname
         info, models = batch_fit(datasets[set_ind],
                                  sess=sess[set_ind],
                                  type=type[set_ind],
