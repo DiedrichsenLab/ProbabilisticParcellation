@@ -33,6 +33,7 @@ from ProbabilisticParcellation.util import *
 from ProbabilisticParcellation.evaluate import *
 
 # pytorch cuda global flag
+# pt.cuda.is_available = lambda : False
 pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
                            pt.FloatTensor)
@@ -762,7 +763,7 @@ if __name__ == "__main__":
     #                fname=f'/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv')
 
     ############# Result 1: individual vs. group improvement #############
-    # D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10_ses-s1')
+    D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10_ses-s1')
     # fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
     # D.to_csv(fname, sep='\t', index=False)
     # result_1_plot_curve(D, save=True)

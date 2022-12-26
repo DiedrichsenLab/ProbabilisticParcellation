@@ -567,16 +567,17 @@ if __name__ == "__main__":
     # dataset_list = [[7], [0,1,2,3,4,5,6,7]] # with HCP
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for k in [10, 17, 20, 34, 40, 68]:
-        for t in ['03', '04']:
-            for datasets in dataset_list:
+    for datasets in dataset_list:
+        for k in [10, 17, 20, 34, 40, 68]:
+            for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
-                wdir = model_dir + f'\Models\Models_{t}'
-                fname = f'/asym_{datanames}_space-{space}_K-{k}.tsv'
+                wdir = model_dir + f'/Models'
+                fname = f'/Models_{t}/asym_{datanames}_space-{space}_K-{k}'
 
-                if not Path(wdir + fname).exists():
-                    print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[0])
+                move_batch_to_device(fname)
+                # if not Path(wdir + fname + '.tsv').exists():
+                #     print(f'fitting model {t} with K={k} as {fname}...')
+                #     fit_all(datasets, k, model_type=t, repeats=100, sym_type=[0])
 
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
