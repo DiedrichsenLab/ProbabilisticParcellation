@@ -524,10 +524,10 @@ if __name__ == "__main__":
     # n_dsets = 8 # with HCP
     n_dsets = 7
     alldatasets = np.arange(n_dsets).tolist()
-    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
 
     dataset_list = [ [d] for d in alldatasets ]
-    dataset_list.extend(loo_datasets)
+    # dataset_list.extend(loo_datasets)
     dataset_list.extend(alldatasets)
     
 
