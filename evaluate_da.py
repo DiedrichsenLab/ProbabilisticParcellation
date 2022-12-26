@@ -33,6 +33,7 @@ from ProbabilisticParcellation.util import *
 from ProbabilisticParcellation.evaluate import *
 
 # pytorch cuda global flag
+# pt.cuda.is_available = lambda : False
 pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
                            pt.FloatTensor)
@@ -55,6 +56,7 @@ if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
 atlas_dir = base_dir + f'/Atlases'
+res_dir = model_dir + f'/Results'
 
 def eval_generative_SNMF(model_names = ['asym_Md_space-SUIT3_K-10']):
     """This is the evaluation case of the parcellation comparison
@@ -267,7 +269,7 @@ def result_1_plot_curve(D, save=False):
     plt.axhline(gm, color='k', ls=':')
     plt.axhline(fl, color='r', ls=':')
     if save:
-        plt.savefig('indiv_group.pdf', format='pdf')
+        plt.savefig(res_dir + '/1.indiv_vs_group/indiv_group_curve.pdf', format='pdf')
 
     plt.show()
 
@@ -293,6 +295,10 @@ def result_1_plot_flatmap(Us, sub=0, save=False):
                             '16 runs data only',
                             'One run data + group probability map',
                             'group probability map'])
+    if save:
+        plt.suptitle(f'Individual vs. group, MDTB - sub {sub}')
+        plt.savefig(res_dir + f'/1.indiv_vs_group/indiv_group_plot_sub_{sub}.png', format='png')
+
     plt.show()
 
 def result_3_eval(K=10, ses1=None, ses2=None):
@@ -392,7 +398,7 @@ def result_3_plot(fname, train_model='IBC'):
         # if abs(reliability[s1] - reliability[s2]) > 0.3 * dif_rel:
         # if (reliability[s1] > mean_rel and reliability[s2] < mean_rel) or \
         #         (reliability[s1] < mean_rel and reliability[s2] > mean_rel):
-        if ses_cor[sess.index(s1)][sess.index(s2)] > 0.3:
+        if ses_cor[sess.index(s1)][sess.index(s2)] < 0:
             T = pd.concat([T, df], ignore_index=True)
 
     plt.figure(figsize=(10,10))
@@ -503,22 +509,32 @@ def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
         fname = f'/eval_all_asym_Ib_K-{K}_indivSess_on_otherDatasets.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
-def result_4_plot(fname, common_kappa=True):
+def result_4_plot(fname, test_data=None, orderby=None):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
-
-    df = D.loc[(D['common_kappa'] == common_kappa)]
+    if test_data is not None:
+        D = D.loc[(D['test_data'] == test_data)]
+    else:
+        test_data = 'all'
 
     plt.figure(figsize=(15,15))
     crits = ['dcbc_group','dcbc_indiv','coserr_group','coserr_floor']
     for i, c in enumerate(crits):
         plt.subplot(4, 1, i + 1)
-        order = df.loc[df.test_data == 'MDTB'].groupby('D')[c].mean().sort_values().keys().to_list()
-        sb.barplot(data=df, x='test_data', y=c, hue='D', hue_order=order, errorbar="se")
+        if orderby is not None:
+            order = D.loc[(D['common_kappa'] == orderby)].groupby('D')[c].mean().sort_values().keys(
+            ).to_list()
+        else:
+            order = D.groupby('D')[c].mean().sort_values().keys().to_list()
+        sb.barplot(data=D, x='D', y=c, order=order, hue='common_kappa',
+                   hue_order=D.common_kappa.unique(), errorbar="se")
+        plt.xticks(rotation=45)
         plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
-        # if 'coserr' in c:
-        #     plt.ylim(0.4, 1)
+        if c == 'coserr_group':
+            plt.ylim(0.8, 0.9)
+        if c == 'coserr_floor':
+            plt.ylim(0.4, 0.6)
 
-    plt.suptitle(f'IBC individual sessions vs. all sessions fusion, common_kappa={common_kappa}')
+    plt.suptitle(f'IBC individual sessions vs. all sessions fusion, test_data={test_data}')
     plt.show()
 
 def result_4_rel_check(fname, train_model='IBC', t_data=['Mdtb']):
@@ -748,11 +764,11 @@ if __name__ == "__main__":
 
     ############# Result 1: individual vs. group improvement #############
     D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10_ses-s1')
-    fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
-    D.to_csv(fname, sep='\t', index=False)
-    result_1_plot_curve(D)
-    result_1_plot_flatmap(Us)
-    plt.show()
+    # fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
+    # D.to_csv(fname, sep='\t', index=False)
+    # result_1_plot_curve(D, save=True)
+    # for i in range(24):
+    #     result_1_plot_flatmap(Us, sub=i, save=True)
 
     ############# Result 2: Simulation on session fusion #############
     # from generativeMRF.notebooks.simulate_fusion import *
@@ -772,7 +788,7 @@ if __name__ == "__main__":
     ############# Result 4: IBC single sessions vs. all sessions fusion #############
     # result_4_eval(K=10, t_datasets=['MDTB', 'Pontine', 'Nishimoto'])
     fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_otherDatasets.tsv'
-    result_4_plot(fname, common_kappa=False)
+    result_4_plot(fname, test_data='Pontine', orderby=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
     # res = result_5_eval(K=10, model_type=['03','04'], model_name=['Po','Ni','Ib','De','PoNiIbDe'],
