@@ -9,6 +9,7 @@ import torch as pt
 import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
+import generativeMRF.full_model as fm
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
@@ -77,6 +78,25 @@ def clear_batch(fname):
     
     with open(wdir + fname + '.pickle','wb') as file:
         pickle.dump(models,file)
+
+def move_batch_to_device(fname, device='cpu'):
+    """Overwrite all tensors in the batch fitted models
+       from torch.cuda to the normal torch.Tensor for
+       people who cannot use cuda.
+    Args:
+        fname (): filename
+        device: the target device to store tensors
+    """
+    wdir = model_dir + '/Models/'
+    with open(wdir + fname + '.pickle', 'rb') as file:
+        models = pickle.load(file)
+
+    # Recursively tensors to device
+    for m in models:
+        fm.move_to(m, device=device)
+
+    with open(wdir + fname + '.pickle', 'wb') as file:
+        pickle.dump(models, file)
 
 def load_batch_best(fname):
     """ Loads a batch of model fits and selects the best one
@@ -372,7 +392,7 @@ def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
 
     parcel = nb.load(atl_dir + '/%s/atl-%s_space-%s_dseg.nii'
                      % (ainf['dir'], parcel_name, ainf['space']))
-    suit_atlas = am.get_atlas(atlas, atl_dir)
+    suit_atlas, _ = am.get_atlas(atlas, atl_dir)
 
     data = suit.reslice.sample_image(parcel,
             suit_atlas.world[0],
