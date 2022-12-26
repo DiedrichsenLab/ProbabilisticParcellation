@@ -522,14 +522,15 @@ if __name__ == "__main__":
 
     # -- Build dataset list --
     # n_dsets = 8 # with HCP
-    n_dsets = 7
-    alldatasets = np.arange(n_dsets).tolist()
+    # n_dsets = 7
+    # alldatasets = np.arange(n_dsets).tolist()
     # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
 
-    dataset_list = [ [d] for d in alldatasets ]
+    # dataset_list = [ [d] for d in alldatasets ]
     # dataset_list.extend(loo_datasets)
-    dataset_list.extend(alldatasets)
+    # dataset_list.extend(alldatasets)
     
+    dataset_list=[[7], [0, 1, 2, 3, 4, 5, 6, 7]]
 
     T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
