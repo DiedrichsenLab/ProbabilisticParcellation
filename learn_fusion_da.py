@@ -550,8 +550,9 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
 
 if __name__ == "__main__":
     space = 'MNISymC3'  # Set atlas space
-    dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
+    # dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     # dataset_list = [[7], [0,1,2,3,4,5,6,7]] # with HCP
+    dataset_list = [[0, 1, 2, 3, 4, 5]]
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for datasets in dataset_list:
@@ -559,12 +560,12 @@ if __name__ == "__main__":
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
                 wdir = model_dir + f'/Models'
-                fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
+                fname = f'/Models_{t}/asym_{datanames}_space-{space}_K-{k}'
 
                 # move_batch_to_device(fname)
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[0])
 
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
