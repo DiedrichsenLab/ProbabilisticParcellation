@@ -39,9 +39,9 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -262,7 +262,7 @@ def batch_fit(datasets, sess,
 
     # Iterate over the number of fits
     ll = np.empty((n_fits, n_iter))
-    prior = pt.zeros((n_fits, K_arrange, P_arrange))
+    prior = pt.zeros((n_fits, K, atlas.P))
     for i in range(n_fits):
         print(f'Start fit: repetition {i} - {name}')
         iter_tic = time.perf_counter()
@@ -283,7 +283,7 @@ def batch_fit(datasets, sess,
 
         # Align group priors
         if i == 0:
-            indx = pt.arange(K_arrange)
+            indx = pt.arange(K)
         else:
             indx = ev.matching_greedy(prior[0,:,:], m.marginal_prob())
         prior[i, :, :] = m.marginal_prob()[indx, :]
@@ -310,7 +310,7 @@ def batch_fit(datasets, sess,
 
     # Align the different models
     models = np.array(models, dtype=object)
-    ev.align_models(models)
+    # ev.align_models(models)
 
     return info, models
 
@@ -318,31 +318,18 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
     # Data sets need to numpy arrays to allow indixing by list
-    datasets = np.array(['MDTB','Pontine','Nishimoto','IBC','WMFS','Demand','Somatotopic'],
-                        dtype=object)
-    sess = np.array(['all','all','all','all','all','all','all'], dtype=object)
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    datasets = T.name.array
+    sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
-    type = np.array(['CondHalf', 'TaskHalf', 'CondHalf', 'CondHalf', 'CondHalf',
-                     'CondHalf', 'CondHalf'],
-                    dtype=object)
-
-    cond_ind = np.array(['cond_num_uni', 'task_num', 'reg_id', 'cond_num_uni',
-                         'reg_id', 'reg_id', 'reg_id'], dtype=object)
-    part_ind = np.array(['half','half','half','half','half','half','half'], dtype=object)
+    type = T.default_type.array
+    cond_ind = T.default_cond_ind.array
+    part_ind = np.array(['half'] * len(T), dtype=object)
 
     # Make the atlas object
-    ############## To be uncomment for cortical parcellation ##############
-    # atlas_asym, _ = am.get_atlas('fs32k', atlas_dir)
-    # bm_name = ['cortex_left', 'cortex_right']
-    # mask = []
-    # for i, hem in enumerate(['L', 'R']):
-    #     mask.append(atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-{hem}_mask.label.gii')
-    # atlas_sym = am.AtlasSurfaceSymmetric('fs32k', mask_gii=mask, structure=bm_name)
-    # atlas = [atlas_asym, atlas_sym]
-    #######################################################################
     mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
     atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
              am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
@@ -572,12 +559,12 @@ if __name__ == "__main__":
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
                 wdir = model_dir + f'/Models'
-                fname = f'/Models_{t}/asym_{datanames}_space-{space}_K-{k}'
+                fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
 
-                move_batch_to_device(fname)
-                # if not Path(wdir + fname + '.tsv').exists():
-                #     print(f'fitting model {t} with K={k} as {fname}...')
-                #     fit_all(datasets, k, model_type=t, repeats=100, sym_type=[0])
+                # move_batch_to_device(fname)
+                if not Path(wdir + fname + '.tsv').exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
 
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
