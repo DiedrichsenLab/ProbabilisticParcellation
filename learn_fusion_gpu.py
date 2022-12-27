@@ -552,21 +552,14 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
         pickle.dump(models, file)
 
 if __name__ == "__main__":
-
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
-
-
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
         s = 0
 
-
-
-    
     # -- Model fitting --
-
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for i in range(7):
         datasets = [0, 1, 2, 3, 4, 5, 6]
@@ -580,7 +573,7 @@ if __name__ == "__main__":
                 # move_batch_to_device(fname)
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
 
