@@ -571,7 +571,7 @@ if __name__ == "__main__":
     for i in range(7):
         datasets = [0, 1, 2, 3, 4, 5, 6]
         datasets.remove(i)
-        for k in [68, 40, 34, 20, 10]:
+        for k in [34, 40]:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
@@ -594,7 +594,7 @@ if __name__ == "__main__":
     dataset_list.extend(loo_datasets)
     dataset_list.extend(alldatasets)
     
-    for k in [68, 40, 34, 20, 10]:
+    for k in [10, 20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 datanames = ''.join(T.two_letter_code[datasets])
