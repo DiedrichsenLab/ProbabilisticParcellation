@@ -318,7 +318,7 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
     # Get dataset info
-    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
+    T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.array
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
