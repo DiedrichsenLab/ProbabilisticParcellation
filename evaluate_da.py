@@ -41,9 +41,9 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -593,23 +593,24 @@ def result_5_eval(K=10, model_type=None, model_name=None,
 
     results = pd.DataFrame()
     # Evaluate all single sessions on other datasets
+    m_name = []
     for t in model_type:
         print(f'- Start evaluating Model_{t} - {model_name}...')
-        m_name = [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+        m_name += [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
 
-        for ds in t_datasets:
-            print(f'Testdata: {ds}\n')
-            # 1. Run DCBC individual
-            res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
-                                           part_ind='half', indivtrain_ind='half',
-                                           indivtrain_values=[1,2])
-            # 2. Run coserr individual
-            res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
-                                       part_ind='half', eval_types=['group', 'floor'],
-                                       indivtrain_ind='half', indivtrain_values=[1,2])
-            # 3. Merge the two dataframe
-            res = pd.merge(res_dcbc, res_coserr, how='outer')
-            results = pd.concat([results, res], ignore_index=True)
+    for ds in t_datasets:
+        print(f'Testdata: {ds}\n')
+        # 1. Run DCBC individual
+        res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
+                                       part_ind='half', indivtrain_ind='half',
+                                       indivtrain_values=[1,2])
+        # 2. Run coserr individual
+        res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
+                                   part_ind='half', eval_types=['group', 'floor'],
+                                   indivtrain_ind='half', indivtrain_values=[1,2])
+        # 3. Merge the two dataframe
+        res = pd.merge(res_dcbc, res_coserr, how='outer')
+        results = pd.concat([results, res], ignore_index=True)
 
     if return_df:
         return results
@@ -763,7 +764,7 @@ if __name__ == "__main__":
     #                fname=f'/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv')
 
     ############# Result 1: individual vs. group improvement #############
-    D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10_ses-s1')
+    # D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10')
     # fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
     # D.to_csv(fname, sep='\t', index=False)
     # result_1_plot_curve(D, save=True)
@@ -779,16 +780,16 @@ if __name__ == "__main__":
 
     ############# Result 3: IBC two sessions fusion #############
     # result_3_eval(K=20, ses1=None, ses2=None)
-    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
     # result_3_rel_check(fname)
-    result_3_plot(fname)
+    # result_3_plot(fname)
     # result_3_plot(f'/Models/Evaluation/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv',
     #               train_model='MDTB')
 
     ############# Result 4: IBC single sessions vs. all sessions fusion #############
     # result_4_eval(K=10, t_datasets=['MDTB', 'Pontine', 'Nishimoto'])
-    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_otherDatasets.tsv'
-    result_4_plot(fname, test_data='Pontine', orderby=False)
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_otherDatasets.tsv'
+    # result_4_plot(fname, test_data='Pontine', orderby=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
     # res = result_5_eval(K=10, model_type=['03','04'], model_name=['Po','Ni','Ib','De','PoNiIbDe'],
@@ -796,19 +797,27 @@ if __name__ == "__main__":
     # wdir = model_dir + f'/Models/Evaluation'
     # fname = f'/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
     # res.to_csv(wdir + fname, index=False, sep='\t')
-    fname = f'/Models/Evaluation/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
-    result_5_plot(fname, model_type='Models_03')
+    # fname = f'/Models/Evaluation/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
+    # result_5_plot(fname, model_type='Models_03')
 
     ############# Check common/separate kappa on different K #############
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     # D = pd.DataFrame()
-    # for k in [10, 20, 34, 50]:
-    #     res = result_5_eval(K=k, model_name=['MdPoNiIb'], return_df=True)
-    #     D = pd.concat([D, res], ignore_index=True)
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    #     for k in [10, 17, 20, 34, 40, 68]:
+    #         datanames = ''.join(T.two_letter_code[datasets].tolist())
+    #         print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
+    #         res = result_5_eval(K=k, model_type=['03','04'],
+    #                             model_name=[datanames],
+    #                             t_datasets=[T.name.array[i]], return_df=True)
+    #         D = pd.concat([D, res], ignore_index=True)
     #
     # wdir = model_dir + f'/Models/Evaluation'
-    # fname = f'/eval_all_asym_MdPoNiIb_K-10_20_34_datasetFusion.tsv'
+    # fname = f'/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
     # D.to_csv(wdir + fname, index=False, sep='\t')
-    fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIb_K-10_20_34_50_datasetFusion.tsv'
+    fname = f'/Models/Evaluation/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
     plot_diffK(fname)
 
     ## For quick copy

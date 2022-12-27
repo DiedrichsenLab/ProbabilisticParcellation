@@ -272,9 +272,9 @@ def run_prederror(model_names,test_data,test_sess,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['D'] = model_name.split('ses-')[1]
+            this_res['session'] = model_name.split('ses-')[1]
         else:
-            this_res['D'] = 'all'
+            this_res['session'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
@@ -467,9 +467,9 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['D'] = model_name.split('ses-')[1]
+            this_res['session'] = model_name.split('ses-')[1]
         else:
-            this_res['D'] = 'all'
+            this_res['session'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
