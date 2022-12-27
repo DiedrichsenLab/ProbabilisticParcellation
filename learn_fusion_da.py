@@ -551,11 +551,11 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
 if __name__ == "__main__":
     space = 'MNISymC3'  # Set atlas space
     dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
-    # dataset_list = [[7], [0,1,2,3,4,5,6,7]] # with HCP
-    # dataset_list = [[0, 1, 2, 3, 4, 5]]
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for datasets in dataset_list:
+    for i in range(7):
+        datasets = [0, 1, 2, 3, 4, 5, 6]
+        datasets.remove(i)
         for k in [10, 20, 34, 40, 68]:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
