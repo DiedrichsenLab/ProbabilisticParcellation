@@ -593,7 +593,7 @@ if __name__ == "__main__":
     dataset_list.extend(loo_datasets)
     dataset_list.extend(alldatasets)
     
-    for k in [10, 17, 20, 34, 40, 68]:
+    for k in [10, 20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 datanames = ''.join(T.two_letter_code[datasets])
