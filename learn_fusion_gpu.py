@@ -317,9 +317,9 @@ def batch_fit(datasets, sess,
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
-    # Data sets need to numpy arrays to allow indixing by list
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    datasets = T.name.to_numpy()
+    # Get dataset info
+    T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
+    datasets = T.name.array
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
@@ -363,7 +363,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
-    dataname = [datasets[i][0:2].title() for i in set_ind]
+    dataname = ''.join(T.two_letter_code[set_ind])
 
     for i in sym_type:
         tic = time.perf_counter()
@@ -443,7 +443,10 @@ def write_dlabel_cifti(data, atlas,
         gifti (GiftiImage): Label gifti image
     """
     if type(data) is pt.Tensor:
-        data = data.cpu().numpy()
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
+            data = data.cpu().numpy()
+        else:
+            data = data.numpy()
 
     if data.ndim == 1:
         # reshape to (1, num_vertices)
@@ -549,8 +552,20 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
         pickle.dump(models, file)
 
 if __name__ == "__main__":
-    space = 'MNISymC3'  # Set atlas space
-    dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
+
+    space = 'MNISymC3' # Set atlas space
+    msym = 'sym' # Set model symmetry
+
+
+    if msym == 'sym':
+        s = 1
+    elif msym == 'asym':
+        s = 0
+
+
+
+    
+    # -- Model fitting --
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for i in range(7):
@@ -558,7 +573,7 @@ if __name__ == "__main__":
         datasets.remove(i)
         for k in [10, 20, 34, 40, 68]:
             for t in ['03', '04']:
-                datanames = ''.join(T.two_letter_code[datasets].tolist())
+                datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
                 fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
 
@@ -566,7 +581,30 @@ if __name__ == "__main__":
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
                     fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
+    
 
+    # ------ Model fitting with HCP ------
+    # -- Build dataset list with HCP--
+    n_dsets = 8 # with HCP
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+
+    dataset_list = [ [d] for d in alldatasets ]
+    dataset_list.extend(loo_datasets)
+    dataset_list.extend(alldatasets)
+    
+    for k in [10, 17, 20, 34, 40, 68]:
+        for t in ['03','04']:
+            for datasets in dataset_list:
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
+                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+                
+                if not Path(wdir+fname).exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
