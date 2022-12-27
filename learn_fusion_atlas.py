@@ -535,7 +535,7 @@ if __name__ == "__main__":
         for t in ['03','04']:
             for datasets in dataset_list:
                 
-                datanames = ''.join(T.two_letter_code[datasets].tolist())
+                datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models/Models_{t}'
                 fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
                 
@@ -561,7 +561,7 @@ if __name__ == "__main__":
         for t in ['03','04']:
             for datasets in dataset_list:
                 
-                datanames = ''.join(T.two_letter_code[datasets].tolist())
+                datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models/Models_{t}'
                 fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
                 
