@@ -593,23 +593,24 @@ def result_5_eval(K=10, model_type=None, model_name=None,
 
     results = pd.DataFrame()
     # Evaluate all single sessions on other datasets
+    m_name = []
     for t in model_type:
         print(f'- Start evaluating Model_{t} - {model_name}...')
-        m_name = [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+        m_name += [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
 
-        for ds in t_datasets:
-            print(f'Testdata: {ds}\n')
-            # 1. Run DCBC individual
-            res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
-                                           part_ind='half', indivtrain_ind='half',
-                                           indivtrain_values=[1,2])
-            # 2. Run coserr individual
-            res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
-                                       part_ind='half', eval_types=['group', 'floor'],
-                                       indivtrain_ind='half', indivtrain_values=[1,2])
-            # 3. Merge the two dataframe
-            res = pd.merge(res_dcbc, res_coserr, how='outer')
-            results = pd.concat([results, res], ignore_index=True)
+    for ds in t_datasets:
+        print(f'Testdata: {ds}\n')
+        # 1. Run DCBC individual
+        res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
+                                       part_ind='half', indivtrain_ind='half',
+                                       indivtrain_values=[1,2])
+        # 2. Run coserr individual
+        res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
+                                   part_ind='half', eval_types=['group', 'floor'],
+                                   indivtrain_ind='half', indivtrain_values=[1,2])
+        # 3. Merge the two dataframe
+        res = pd.merge(res_dcbc, res_coserr, how='outer')
+        results = pd.concat([results, res], ignore_index=True)
 
     if return_df:
         return results
@@ -800,23 +801,24 @@ if __name__ == "__main__":
     # result_5_plot(fname, model_type='Models_03')
 
     ############# Check common/separate kappa on different K #############
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    D = pd.DataFrame()
-    for i in range(7):
-        datasets = [0, 1, 2, 3, 4, 5, 6]
-        datasets.remove(i)
-        for k in [10, 17, 20, 34, 40, 68]:
-            datanames = ''.join(T.two_letter_code[datasets].tolist())
-            res = result_5_eval(K=k, model_type=['03','04'],
-                                model_name=[datanames],
-                                t_datasets=[T.name.array[i]], return_df=True)
-            D = pd.concat([D, res], ignore_index=True)
-
-    wdir = model_dir + f'/Models/Evaluation'
-    fname = f'/eval_all_asym_K-10_17_20_34_40_68_fusion_teston_leftOneOut.tsv'
-    D.to_csv(wdir + fname, index=False, sep='\t')
-    # fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIb_K-10_20_34_50_datasetFusion.tsv'
-    # plot_diffK(fname)
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    # D = pd.DataFrame()
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    #     for k in [10, 17, 20, 34, 40, 68]:
+    #         datanames = ''.join(T.two_letter_code[datasets].tolist())
+    #         print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
+    #         res = result_5_eval(K=k, model_type=['03','04'],
+    #                             model_name=[datanames],
+    #                             t_datasets=[T.name.array[i]], return_df=True)
+    #         D = pd.concat([D, res], ignore_index=True)
+    #
+    # wdir = model_dir + f'/Models/Evaluation'
+    # fname = f'/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+    fname = f'/Models/Evaluation/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    plot_diffK(fname)
 
     ## For quick copy
     fnames_group = ['Models_01/asym_Ib_space-MNISymC3_K-10',

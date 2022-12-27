@@ -319,14 +319,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
     # Data sets need to numpy arrays to allow indixing by list
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    datasets = T.name.array
+    datasets = T.name.to_numpy()
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
-    type = T.default_type.array
-    cond_ind = T.default_cond_ind.array
+    type = T.default_type.to_numpy()
+    cond_ind = T.default_cond_ind.to_numpy()
     part_ind = np.array(['half'] * len(T), dtype=object)
 
     # Make the atlas object
@@ -550,22 +550,22 @@ def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
 
 if __name__ == "__main__":
     space = 'MNISymC3'  # Set atlas space
-    # dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
+    dataset_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     # dataset_list = [[7], [0,1,2,3,4,5,6,7]] # with HCP
-    dataset_list = [[0, 1, 2, 3, 4, 5]]
+    # dataset_list = [[0, 1, 2, 3, 4, 5]]
 
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for datasets in dataset_list:
-        for k in [10, 17, 20, 34, 40, 68]:
+        for k in [10, 20, 34, 40, 68]:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets].tolist())
                 wdir = model_dir + f'/Models'
-                fname = f'/Models_{t}/asym_{datanames}_space-{space}_K-{k}'
+                fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
 
                 # move_batch_to_device(fname)
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[0])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
 
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
