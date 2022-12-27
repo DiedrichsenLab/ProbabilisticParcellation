@@ -581,8 +581,32 @@ if __name__ == "__main__":
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
                     fit_all(datasets, k, model_type=t, repeats=100, sym_type=[1])
-    
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
 
+    # ------ Model fitting with HCP ------
+    # -- Build dataset list with HCP--
+    n_dsets = 8 # with HCP
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+
+    dataset_list = [ [d] for d in alldatasets ]
+    dataset_list.extend(loo_datasets)
+    dataset_list.extend(alldatasets)
+    
+    for k in [10, 20, 34, 40, 68]:
+        for t in ['03','04']:
+            for datasets in dataset_list:
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
+                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+                
+                if not Path(wdir+fname).exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
+    
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
