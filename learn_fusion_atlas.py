@@ -31,32 +31,30 @@ import pickle
 from copy import deepcopy
 import time
 
-device = pt.device("mps")
 
-# pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
+# GPU acceleration
+if pt.cuda.is_available():
+    pt.set_default_tensor_type(pt.cuda.FloatTensor)
+elif pt.backends.mps.is_built():
+    device = pt.device("mps")
+    pt.set_default_tensor_type(pt.FloatTensor)
+else:
+    pt.set_default_tensor_type(pt.FloatTensor)
 
 
-# Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+base_dir = '/Volumes/diedrichsen_data$/data/'
 if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
+    base_dir = '/srv/diedrichsen/data/'
 if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
+    base_dir = "Y:\data\ ".strip()
 if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
+    raise (NameError('Could not find data_dir'))
 
-atlas_dir = base_dir + f'/Atlases'
+
+data_dir = base_dir + 'FunctionalFusion'
+atlas_dir = data_dir + '/Atlases'
+model_dir = str(Path(base_dir) / 'Cerebellum' / 'ProbabilisticParcellationModel')
 
 
 def build_data_list(datasets,
@@ -103,7 +101,7 @@ def build_data_list(datasets,
     sub = 0
     # Run over datasets get data + design
     for i in range(n_sets):
-        dat, info, ds = get_dataset(base_dir, datasets[i],
+        dat, info, ds = get_dataset(data_dir, datasets[i],
                                     atlas=atlas,
                                     sess=sess[i],
                                     type=type[i])
@@ -280,7 +278,7 @@ def batch_fit(datasets, sess,
             fit_arrangement=True,
             n_inits=n_inits,
             first_iter=first_iter)
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         else:
             info.loglik.at[i] = ll[-1]
@@ -290,39 +288,28 @@ def batch_fit(datasets, sess,
 
     # Align the different models
     models = np.array(models, dtype=object)
-    ev.align_models(models)
+    # ev.align_models(models)
 
     return info, models
 
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
-            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
-    # Data sets need to numpy arrays to allow indixing by list
-    datasets = np.array(['MDTB', 'Pontine', 'Nishimoto', 'IBC', 'Demand'],
-                        dtype=object)
-    sess = np.array(['all', 'all', 'all', 'all', 'all'], dtype=object)
+            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None, overwrite=True):
+        
+    # Get dataset info
+    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
+    datasets = T.name.array
+
+    sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
         for i, idx in enumerate(set_ind):
             sess[idx] = this_sess[i]
 
-    type = np.array(['CondHalf', 'TaskHalf', 'CondHalf', 'CondHalf', 'CondHalf'],
-                    dtype=object)
+    type = T.default_type.array
+    cond_ind = T.default_cond_ind.array
+    part_ind = np.array(['half'] * len(T), dtype=object)
 
-    cond_ind = np.array(['cond_num_uni', 'task_num',
-                         'reg_id', 'cond_num_uni', 'reg_id'], dtype=object)
-    part_ind = np.array(['half', 'half', 'half', 'half', 'half'], dtype=object)
-
-    # Make the atlas object
-    ############## To be uncomment for cortical parcellation ##############
-    # atlas_asym, _ = am.get_atlas('fs32k', atlas_dir)
-    # bm_name = ['cortex_left', 'cortex_right']
-    # mask = []
-    # for i, hem in enumerate(['L', 'R']):
-    #     mask.append(atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-{hem}_mask.label.gii')
-    # atlas_sym = am.AtlasSurfaceSymmetric('fs32k', mask_gii=mask, structure=bm_name)
-    # atlas = [atlas_asym, atlas_sym]
-    #######################################################################
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
+    mask = data_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
     atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
              am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
 
@@ -355,32 +342,33 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
-    dataname = [datasets[i][0:2].title() for i in set_ind]
+    dataname = ''.join(T.two_letter_code[set_ind].tolist())
 
     for i in sym_type:
         tic = time.perf_counter()
-        name = mname[i] + '_' + ''.join(dataname)
-        info, models = batch_fit(datasets[set_ind],
-                                 sess=sess[set_ind],
-                                 type=type[set_ind],
-                                 cond_ind=cond_ind[set_ind],
-                                 part_ind=part_ind[set_ind],
-                                 subj=subj_list,
-                                 atlas=atlas[i],
-                                 K=K,
-                                 name=name,
-                                 n_inits=50,
-                                 n_iter=200,
-                                 n_rep=repeats,
-                                 first_iter=30,
-                                 join_sess=join_sess,
-                                 join_sess_part=join_sess_part,
-                                 uniform_kappa=uniform_kappa,
-                                 weighting=weighting)
-
-        # Save the fits and information
+        name = mname[i] + '_' + dataname
+        
+        # Generate output name
         wdir = model_dir + f'/Models/Models_{model_type}'
         fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+
+        info, models = batch_fit(datasets[set_ind],
+                                sess=sess[set_ind],
+                                type=type[set_ind],
+                                cond_ind=cond_ind[set_ind],
+                                part_ind=part_ind[set_ind],
+                                subj=subj_list,
+                                atlas=atlas[i],
+                                K=K,
+                                name=name,
+                                n_inits=50,
+                                n_iter=200,
+                                n_rep=repeats,
+                                first_iter=30,
+                                join_sess=join_sess,
+                                join_sess_part=join_sess_part,
+                                uniform_kappa=uniform_kappa,
+                                weighting=weighting)
 
         if this_sess is not None:
             return wdir, fname, info, models
@@ -396,6 +384,8 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         toc = time.perf_counter()
         print(f'Done Model fitting - {mname[i]}. Used {toc - tic:0.4f} seconds!')
+
+
 
 
 def clear_models(K, model_type='04'):
@@ -435,7 +425,7 @@ def write_dlabel_cifti(data, atlas,
         gifti (GiftiImage): Label gifti image
     """
     if type(data) is pt.Tensor:
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             data = data.cpu().numpy()
         else:
             data = data.numpy()
@@ -528,33 +518,58 @@ if __name__ == "__main__":
         s = 1
     elif msym == 'asym':
         s = 0
+    model_dir
 
     # -- Build dataset list --
-    # n_dsets = 8 # with HCP
     n_dsets = 7
     alldatasets = np.arange(n_dsets).tolist()
     loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
 
     dataset_list = [ [d] for d in alldatasets ]
-    dataset_list.append(loo_datasets)
-    dataset_list.append(alldatasets)
-
+    dataset_list.extend(loo_datasets)
+    dataset_list.extend(alldatasets)
     
+    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
 
-    T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
-
-    for k in [10,1 7, 20, 34, 40, 68]:
+    for k in [10, 17, 20, 34, 40, 68]:
         for t in ['03','04']:
             for datasets in dataset_list:
                 
-                datanames = ''.join(T.two_letter_code[datasets].tolist())
-                wdir = model_dir + f'\Models\Models_{t}'
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
                 fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
                 
                 if not Path(wdir+fname).exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
 
+
+    # ------ Fitting with HCP ------
+    # -- Build dataset list with HCP--
+    n_dsets = 8 # with HCP
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+
+    dataset_list = [ [d] for d in alldatasets ]
+    dataset_list.extend(loo_datasets)
+    dataset_list.extend(alldatasets)
+    
+    T = pd.read_csv(data_dir + '/dataset_description.tsv',sep='\t')
+    for k in [10, 17, 20, 34, 40, 68]:
+        for t in ['03','04']:
+            for datasets in dataset_list:
+                
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
+                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+                
+                if not Path(wdir+fname).exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
 
     
 

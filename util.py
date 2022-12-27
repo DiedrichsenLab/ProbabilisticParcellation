@@ -18,7 +18,7 @@ if not Path(model_dir).exists():
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    raise(NameError('Could not find model_dir'))
+    raise (NameError('Could not find model_dir'))
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -26,7 +26,8 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
+    raise (NameError('Could not find base_dir'))
+
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target
@@ -239,7 +240,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
         Prob = ev.extract_marginal_prob(models)
 
     if type(Prob) is pt.Tensor:
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             Prob = Prob.cpu().numpy()
         else:
             Prob = Prob.numpy()
