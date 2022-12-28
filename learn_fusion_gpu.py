@@ -603,7 +603,7 @@ if __name__ == "__main__":
                 
                 if not Path(wdir+fname).exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s],overwrite=False)
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
     
