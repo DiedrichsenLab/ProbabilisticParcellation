@@ -662,11 +662,14 @@ if __name__ == "__main__":
     # # -- Build dataset list with HCP--
     n_dsets = 8 # with HCP
     alldatasets = np.arange(n_dsets).tolist()
-    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    # dataset_list = [ [d] for d in alldatasets ]
-    # dataset_list.extend(alldatasets)
-    # dataset_list.extend(loo_datasets)
-    dataset_list = alldatasets
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    individual_datasets = [ [d] for d in alldatasets ]
+
+    dataset_list = []
+    dataset_list.extend(alldatasets)
+    dataset_list.extend(individual_datasets)
+    dataset_list.extend(loo_datasets)
+    
     
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for k in [10, 20, 34, 40, 68]:
