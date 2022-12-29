@@ -661,7 +661,7 @@ if __name__ == "__main__":
         s = 0
     # # -- Build dataset list with HCP--
     n_dsets = 8 # with HCP
-    alldatasets = np.arange(n_dsets).tolist()
+    alldatasets = [np.arange(n_dsets).tolist()]
     loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
     individual_datasets = [ [d] for d in alldatasets ]
 
