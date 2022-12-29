@@ -37,7 +37,7 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 # Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
+model_dir = 'Y:/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
@@ -49,7 +49,7 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
 if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
+    base_dir = 'Y:/data/FunctionalFusion'
 if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
 
@@ -527,31 +527,42 @@ def leave_one_out_fit(dataset=[0], model_type=['01'], K=10):
                 pickle.dump(models, file)
 
 def fit_indv_sess(indx=3, model_type='01', K=10):
-    datasets = np.array(['MDTB', 'Pontine', 'Nishimoto', 'IBC', 'Demand'],
+    datasets = np.array(['MDTB','Pontine','Nishimoto',
+                         'IBC','WMFS','Demand','Somatotopic'],
                         dtype=object)
     _, _, my_dataset = get_dataset(base_dir, datasets[indx])
     sess = my_dataset.sessions
     for indv_sess in sess:
-        wdir, fname, info, models = fit_all([indx], K,
-                                            model_type=model_type,
-                                            repeats=100,
-                                            sym_type=[0],
-                                            this_sess=[[indv_sess]])
-        fname = fname + f'_{indv_sess}'
-        info.to_csv(wdir + fname + '.tsv', sep='\t')
-        with open(wdir + fname + '.pickle', 'wb') as file:
+        ibc_dir = model_dir + f'/Models/Models_{model_type}'
+        nam = f'/asym_Ib_space-MNISymC3_K-{K}_{indv_sess}'
+
+        if not Path(ibc_dir + nam + '.tsv').exists():
+            print(f'fitting model {model_type} with K={K} on IBC sessions {indv_sess} ...')
+            wdir, fname, info, models = fit_all([indx], K,
+                                                model_type=model_type,
+                                                repeats=100,
+                                                sym_type=[0],
+                                                this_sess=[[indv_sess]])
+            fname = fname + f'_{indv_sess}'
+            info.to_csv(wdir + fname + '.tsv', sep='\t')
+            with open(wdir + fname + '.pickle', 'wb') as file:
+                pickle.dump(models, file)
+
+def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type='04'):
+    ibc_dir = model_dir + f'/Models/Models_{model_type}/IBC_sessFusion'
+    nam = f'/asym_Ib_space-MNISymC3_K-{K}_ses-{sess1}+{sess2}'
+
+    if not Path(ibc_dir + nam + '.tsv').exists():
+        print(f'fitting model {model_type} with K={K} on IBC sessions {sess1} + {sess2} ...')
+        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=100,
+                                            sym_type=[0], this_sess=[['ses-'+sess1,
+                                                                      'ses-'+sess2]])
+        fname = fname + f'_ses-{sess1}+{sess2}'
+        info.to_csv(wdir + '/IBC_sessFusion' + fname + '.tsv', sep='\t')
+        with open(wdir + '/IBC_sessFusion' + fname + '.pickle', 'wb') as file:
             pickle.dump(models, file)
 
-def fit_two_IBC_sessions(sess1='clips4', sess2='rsvplanguage', model_type='04'):
-    wdir, fname, info, models = fit_all([3], 20, model_type=model_type, repeats=20,
-                                        sym_type=[0], this_sess=[['ses-'+sess1,
-                                                                  'ses-'+sess2]])
-    fname = fname + f'_ses-{sess1}+{sess2}'
-    info.to_csv(wdir + '/IBC_sessFusion' + fname + '.tsv', sep='\t')
-    with open(wdir + '/IBC_sessFusion' + fname + '.pickle', 'wb') as file:
-        pickle.dump(models, file)
-
-if __name__ == "__main__":
+def fit_all_datasets():
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
     if msym == 'sym':
@@ -581,7 +592,8 @@ if __name__ == "__main__":
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
 
-    
+
+if __name__ == "__main__":
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
@@ -590,23 +602,24 @@ if __name__ == "__main__":
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
 
     ########## IBC selected sessions fusion fit ##########
-    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    # for s1 in sess_1:
-    #     sess_2.remove(s1)
-    #     for s2 in sess_2:
-    #         this_s1 = s1.split('-')[1]
-    #         this_s2 = s2.split('-')[1]
-    #         for t in ['03','04']:
-    #             wdir = model_dir + f'\Models\Models_{t}\IBC_sessFusion'
-    #             fname = wdir+f'/asym_Ib_space-MNISymC3_K-20_ses-{this_s1}+{this_s2}.tsv'
-    #             if not os.path.isfile(fname):
-    #                 fit_two_IBC_sessions(sess1=this_s1, sess2=this_s2, model_type=t)
-    #                 print(f'-Done type {t} fusion {s1} and {s2}.')
+    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
+    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
+    for s1 in sess_1:
+        sess_2.remove(s1)
+        for s2 in sess_2:
+            this_s1 = s1.split('-')[1]
+            this_s2 = s2.split('-')[1]
+            for k in [17, 34, 40, 68]:
+                for t in ['03','04']:
+                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                    if not os.path.isfile(fname):
+                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                        print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
 
     ########## IBC all sessions fit ##########
-    # fit_indv_sess(0, model_type='03', K=10)
-    # fit_indv_sess(0, model_type='04', K=10)
+    # fit_indv_sess(3, model_type='03', K=40)
+    # fit_indv_sess(3, model_type='04', K=40)
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 
     ########## IBC all fit ##########
