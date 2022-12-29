@@ -672,9 +672,11 @@ if __name__ == "__main__":
     
     
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for k in [10, 20, 34, 40, 68]:
+    for datasets in dataset_list:
         for t in ['03','04']:
-            for datasets in dataset_list:
+            for k in [10, 20, 34, 40, 68]:
+            
+            
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models/Models_{t}'
                 fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
