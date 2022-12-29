@@ -560,6 +560,7 @@ if __name__ == "__main__":
         s = 0
 
     # -- Model fitting --
+    datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for i in range(7):
         datasets = [0, 1, 2, 3, 4, 5, 6]
@@ -570,7 +571,10 @@ if __name__ == "__main__":
                 wdir = model_dir + f'/Models'
                 fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
 
-                # move_batch_to_device(fname)
+                # inf, m = load_batch_fit(fname)
+                # if not m[0].ds_weight.is_cuda:
+                #     print(f'Convert model {t} with K={k} {fname} to cuda...')
+                #     # move_batch_to_device(fname, device='cuda')
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
                     fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])

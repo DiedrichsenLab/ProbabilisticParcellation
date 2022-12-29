@@ -75,7 +75,8 @@ def calc_test_error(M,tdata,U_hats):
     group_parc = M.marginal_prob()
     pred_err = np.empty((len(U_hats),num_subj))
     for s in range(num_subj):
-        print(f'Subject:{s}')
+        print(f'Subject:{s}',end=':')
+        tic = time.perf_counter()
         # initialize the emssion model using all but one subject
         M.emissions[0].initialize(tdata[subj != s,:,:])
         # For fitting an emission model witout the arrangement model,
@@ -95,7 +96,6 @@ def calc_test_error(M,tdata,U_hats):
                 # U,ll = M.Estep(Y=pt.tensor(tdata[subj==s,:,:]).unsqueeze(0))
                 M.emissions[0].initialize(tdata[subj == s,:,:])
                 U = pt.softmax(M.emissions[0].Estep(tdata[subj == s, :, :]), dim=1)
-                U = M.remap_evidence(U)
             elif crit.ndim == 2:
                 U = crit
             elif crit.ndim == 3: 
@@ -105,6 +105,8 @@ def calc_test_error(M,tdata,U_hats):
             a=ev.coserr(dat, M.emissions[0].V, U,
                         adjusted=True, soft_assign=True)
             pred_err[i,s] = a
+        toc = time.perf_counter()
+        print(f"{toc - tic:0.4f}s")
     return pred_err
 
 
@@ -228,7 +230,7 @@ def run_prederror(model_names,test_data,test_sess,
                 # Add individual U_hat data (emission) only
                 Uhat_em = pt.softmax(m.emissions[0].Estep(), dim=1)
                 # Uhat_compl, _ = m.arrange.Estep(m.emissions[0].Estep())
-                all_eval = eval_types + [model.remap_evidence(Uhat_em)] + \
+                all_eval = eval_types + [Uhat_em] + \
                            [model.remap_evidence(U_indiv)]
             else:
                 test_indx =  np.ones((tinfo.shape[0],),dtype=bool)

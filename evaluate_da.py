@@ -571,7 +571,7 @@ def result_4_rel_check(fname, train_model='IBC', t_data=['Mdtb']):
     plt.suptitle(f'{train_model} individual sessions perfermance vs reliability, test_data={t_data}')
     plt.show()
 
-def result_5_eval(K=10, model_type=None, model_name=None,
+def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
                   t_datasets=None, return_df=False):
     """Evaluate group and individual DCBC and coserr of all dataset fusion
        and any dataset training standalone on each of the datasets.
@@ -596,7 +596,7 @@ def result_5_eval(K=10, model_type=None, model_name=None,
     m_name = []
     for t in model_type:
         print(f'- Start evaluating Model_{t} - {model_name}...')
-        m_name += [f'Models_{t}/asym_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+        m_name += [f'Models_{t}/{symmetric}_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
 
     for ds in t_datasets:
         print(f'Testdata: {ds}\n')
@@ -617,7 +617,7 @@ def result_5_eval(K=10, model_type=None, model_name=None,
     else:
         # Save file
         wdir = model_dir + f'/Models/Evaluation'
-        fname = f'/eval_all_asym_K-{K}_datasetFusion.tsv'
+        fname = f'/eval_all_{symmetric}_K-{K}_datasetFusion.tsv'
         results.to_csv(wdir + fname, index=False, sep='\t')
 
 def result_5_plot(fname, model_type='Models_01'):
@@ -801,22 +801,22 @@ if __name__ == "__main__":
     # result_5_plot(fname, model_type='Models_03')
 
     ############# Check common/separate kappa on different K #############
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    # D = pd.DataFrame()
-    # for i in range(7):
-    #     datasets = [0, 1, 2, 3, 4, 5, 6]
-    #     datasets.remove(i)
-    #     for k in [10, 17, 20, 34, 40, 68]:
-    #         datanames = ''.join(T.two_letter_code[datasets].tolist())
-    #         print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
-    #         res = result_5_eval(K=k, model_type=['03','04'],
-    #                             model_name=[datanames],
-    #                             t_datasets=[T.name.array[i]], return_df=True)
-    #         D = pd.concat([D, res], ignore_index=True)
-    #
-    # wdir = model_dir + f'/Models/Evaluation'
-    # fname = f'/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
-    # D.to_csv(wdir + fname, index=False, sep='\t')
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    D = pd.DataFrame()
+    for i in range(7):
+        datasets = [0, 1, 2, 3, 4, 5, 6]
+        datasets.remove(i)
+        for k in [10, 20, 34, 40, 68]:
+            datanames = ''.join(T.two_letter_code[datasets].tolist())
+            print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
+            res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+                                model_name=[datanames], t_datasets=[T.name.array[i]],
+                                return_df=True)
+            D = pd.concat([D, res], ignore_index=True)
+
+    wdir = model_dir + f'/Models/Evaluation'
+    fname = f'/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    D.to_csv(wdir + fname, index=False, sep='\t')
     fname = f'/Models/Evaluation/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
     plot_diffK(fname)
 
