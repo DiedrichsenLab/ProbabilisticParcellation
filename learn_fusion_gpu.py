@@ -667,12 +667,12 @@ if __name__ == "__main__":
     
     # # -- Build dataset list --
     n_dsets = 7 # without HCP
-    alldatasets = [np.arange(n_dsets).tolist()]
+    alldatasets = np.arange(n_dsets).tolist()
     loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
     individual_datasets = [ [d] for d in alldatasets ]
 
     dataset_list = []
-    dataset_list.extend(alldatasets)
+    dataset_list.extend([alldatasets])
     dataset_list.extend(individual_datasets)
     # dataset_list.extend(loo_datasets)
     
@@ -695,12 +695,12 @@ if __name__ == "__main__":
     
     # # -- Build dataset list with HCP--
     n_dsets = 8 # with HCP
-    alldatasets = [np.arange(n_dsets).tolist()]
+    alldatasets = np.arange(n_dsets).tolist()
     loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
     individual_datasets = [ [d] for d in alldatasets ]
 
     dataset_list = []
-    dataset_list.extend(alldatasets)
+    dataset_list.extend([alldatasets])
     dataset_list.extend(individual_datasets)
     # dataset_list.extend(loo_datasets)
     
