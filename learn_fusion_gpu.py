@@ -658,7 +658,7 @@ if __name__ == "__main__":
     # ########## Higher K ##########
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
-    ks = [20, 34, 40, 68, 80]
+    ks = [80]
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
