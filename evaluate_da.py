@@ -39,7 +39,7 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 # Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
+model_dir = 'Y:/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
@@ -51,7 +51,7 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
 if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
+    base_dir = 'Y:/data/FunctionalFusion'
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
@@ -663,7 +663,7 @@ def plot_diffK(fname, hue="test_data", style="common_kappa"):
              'coserr_floor','coserr_ind2','coserr_ind3']
     for i, c in enumerate(crits):
         plt.subplot(3, 2, i + 1)
-        sb.lineplot(data=df, x="K", y=c, hue=hue, style=style,
+        sb.lineplot(data=df, x="K", y=c, hue=style,
                     style_order=D[style].unique(),markers=True)
         # if i == len(crits)-1:
         #     plt.legend(loc='upper left')
@@ -758,8 +758,24 @@ def plot_IBC_rel():
     plt.suptitle(f'IBC individual sessions performance, tested on otherData vs. leftSess')
     plt.show()
 
+def make_all_in_one_tsv(path):
+    files = os.listdir(path)
+
+    if not any(".tsv" in x for x in files):
+        raise Exception('Input data file type must be .tsv file!')
+    else:
+        D = pd.DataFrame()
+        for fname in files:
+            D = pd.read_csv(path + f'/{fname}', delimiter='\t')
+            trains = D["train_data"]
+            print(trains)
+
+    return data
+
 
 if __name__ == "__main__":
+    path = model_dir + '/Models/Evaluation/asym'
+    make_all_in_one_tsv(path)
     # plot_IBC_rel()
     # model_name = [f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s1',
     #               f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s2',

@@ -309,6 +309,8 @@ def batch_fit(datasets, sess,
         print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
     # Align the different models
+    for m in models:
+        m.move_to(device='cpu')
     models = np.array(models, dtype=object)
     # ev.align_models(models)
 
@@ -554,7 +556,7 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
     if not Path(ibc_dir + nam + '.tsv').exists():
         print(f'fitting model {model_type} with K={K} on IBC sessions {sess1} + {sess2} ...')
-        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=100,
+        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=5,
                                             sym_type=[0], this_sess=[['ses-'+sess1,
                                                                       'ses-'+sess2]])
         fname = fname + f'_ses-{sess1}+{sess2}'
