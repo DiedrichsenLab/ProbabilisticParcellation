@@ -94,7 +94,7 @@ def move_batch_to_device(fname, device='cpu'):
 
     # Recursively tensors to device
     for m in models:
-        fm.move_to(m, device=device)
+        m.move_to(device=device)
 
     with open(wdir + fname + '.pickle', 'wb') as file:
         pickle.dump(models, file)
