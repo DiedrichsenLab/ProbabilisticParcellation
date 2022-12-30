@@ -309,6 +309,8 @@ def batch_fit(datasets, sess,
         print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
     # Align the different models
+    for m in models:
+        m.move_to(device='cpu')
     models = np.array(models, dtype=object)
     # ev.align_models(models)
 
@@ -554,7 +556,7 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
     if not Path(ibc_dir + nam + '.tsv').exists():
         print(f'fitting model {model_type} with K={K} on IBC sessions {sess1} + {sess2} ...')
-        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=100,
+        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=5,
                                             sym_type=[0], this_sess=[['ses-'+sess1,
                                                                       'ses-'+sess2]])
         fname = fname + f'_ses-{sess1}+{sess2}'
@@ -564,7 +566,7 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
 def fit_all_datasets():
     space = 'MNISymC3' # Set atlas space
-    msym = 'sym' # Set model symmetry
+    msym = 'asym' # Set model symmetry
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
@@ -573,14 +575,15 @@ def fit_all_datasets():
     # -- Model fitting --
     datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for i in range(7):
-        datasets = [0, 1, 2, 3, 4, 5, 6]
-        datasets.remove(i)
-        for k in [34, 40]:
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    for datasets in datasets_list:
+        for k in [10, 17, 20, 34, 40, 68]:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
-                fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
+                fname = f'/Models_{t}/{msym}_{datanames}_space-{space}_K-{k}'
 
                 # inf, m = load_batch_fit(fname)
                 # if not m[0].ds_weight.is_cuda:
@@ -594,6 +597,7 @@ def fit_all_datasets():
 
 
 if __name__ == "__main__":
+    fit_all_datasets()
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)

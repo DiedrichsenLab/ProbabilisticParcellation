@@ -94,7 +94,7 @@ def move_batch_to_device(fname, device='cpu'):
 
     # Recursively tensors to device
     for m in models:
-        fm.move_to(m, device=device)
+        m.move_to(device=device)
 
     with open(wdir + fname + '.pickle', 'wb') as file:
         pickle.dump(models, file)
@@ -106,7 +106,12 @@ def load_batch_best(fname):
     """
     info, models = load_batch_fit(fname)
     j = info.loglik.argmax()
-    return info.iloc[j],models[j]
+
+    best_model = models[j]
+    if not best_model.ds_weight.is_cuda:
+        fm.move_to(best_model)
+
+    return info.iloc[j], best_model
 
 def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     """ Makes a color map from a *.lut file 
@@ -408,8 +413,7 @@ def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
     ########################################################
     color_file = atl_dir + f'/tpl-SUIT/atl-{parcel_name}.lut'
     color_info = pd.read_csv(color_file, sep = ' ',header=None)
-    colors = np.zeros((11,3))
-    colors[1:11,:]  = color_info.iloc[:,1:4].to_numpy()
+    colors = color_info.iloc[:,1:4].to_numpy()
 
     # Map Plot if requested (for a check)
     if do_plot:
