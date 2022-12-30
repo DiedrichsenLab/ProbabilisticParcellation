@@ -655,7 +655,7 @@ if __name__ == "__main__":
     # plt.savefig('ib_k-20_allsess.png', format='png')
     # plt.show()
 
-    # ########## HCP ##########
+    # ########## Higher K ##########
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
     ks = [80]
