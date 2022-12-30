@@ -758,7 +758,15 @@ def plot_IBC_rel():
     plt.suptitle(f'IBC individual sessions performance, tested on otherData vs. leftSess')
     plt.show()
 
-def make_all_in_one_tsv(path):
+def make_all_in_one_tsv(path, out_name):
+    """Making all-in-one tsv file of evaluation
+    Args:
+        path: the path of the folder that contains
+              all tsv files will be integrated
+        out_name: output file name
+    Returns:
+        None
+    """
     files = os.listdir(path)
 
     if not any(".tsv" in x for x in files):
@@ -766,16 +774,22 @@ def make_all_in_one_tsv(path):
     else:
         D = pd.DataFrame()
         for fname in files:
-            D = pd.read_csv(path + f'/{fname}', delimiter='\t')
-            trains = D["train_data"]
-            print(trains)
+            res = pd.read_csv(path + f'/{fname}', delimiter='\t')
 
-    return data
+            # Making sure <PandasArray> mistakes are well-handled
+            trains = res["train_data"].unique()
+            print(trains)
+            D = pd.concat([D, res], ignore_index=True)
+
+        D.to_csv(out_name, sep='\t', index=False)
 
 
 if __name__ == "__main__":
-    path = model_dir + '/Models/Evaluation/asym'
-    make_all_in_one_tsv(path)
+    ############# Making all-in-one #############
+    # path = model_dir + '/Models/Evaluation/sym'
+    # oname = model_dir + '/Models/Evaluation/eval_dataset7_sym.tsv'
+    # make_all_in_one_tsv(path, out_name=oname)
+
     # plot_IBC_rel()
     # model_name = [f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s1',
     #               f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s2',
