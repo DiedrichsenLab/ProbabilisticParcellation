@@ -20,6 +20,7 @@ import seaborn as sb
 import sys
 import pickle
 from util import *
+import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
@@ -35,6 +36,8 @@ if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
+
+pt.set_default_tensor_type('pt.FloatTensor')
 
 def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
@@ -512,7 +515,7 @@ def analyze_parcel(mname,sym=True):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
-
+    model.move_to('cpu')
     # Do clustering
     w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
 
@@ -556,7 +559,7 @@ def analyze_parcel(mname,sym=True):
 
 
 if __name__ == "__main__":
-    mname = 'Models_04/sym_MdPoNiIb_space-MNISymC3_K-34'
+    mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
     # make_asymmetry_map(mname)
     analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
