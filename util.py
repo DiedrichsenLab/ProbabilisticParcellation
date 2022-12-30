@@ -108,8 +108,6 @@ def load_batch_best(fname):
     j = info.loglik.argmax()
 
     best_model = models[j]
-    if not best_model.ds_weight.is_cuda:
-        fm.move_to(best_model)
 
     return info.iloc[j], best_model
 

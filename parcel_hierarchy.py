@@ -37,7 +37,7 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
-pt.set_default_tensor_type('pt.FloatTensor')
+pt.set_default_tensor_type(pt.FloatTensor)
 
 def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
@@ -200,7 +200,10 @@ def agglomative_clustering(similarity,
     Z = linkage(dist,method)
     cleaves,clinks = get_clusters(Z,K,num_clusters)
 
-    ax=plt.gca()
+    if plot:
+        plt.figure()    
+        ax=plt.gca()
+
     R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
     leaves = R['leaves']
     # make the labels for the dendrogram
@@ -516,14 +519,16 @@ def analyze_parcel(mname,sym=True):
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
     model.move_to('cpu')
-    # Do clustering
-    w_cos_sym,_,_ = parcel_similarity(model,plot=False,sym=sym)
 
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=False,groups=['I','L','W','A','O','D','M'])
+    # Get parcel similarity:
+    w_cos_sym,_,_ = parcel_similarity(model,plot=True,sym=sym)
+
+    # groups=['I','L','W','A','O','D','M']
+    # Do Clustering: 
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=False)
     ax = plt.gca()
 
     # Make a colormap
-    # get the parcel similarity
     w_cos_sim,_,_ = parcel_similarity(model,plot=False)
     W = calc_mds(w_cos_sim,center=True)
     V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
@@ -532,8 +537,9 @@ def analyze_parcel(mname,sym=True):
     l = np.array([1.0,1.0,1.0])
     cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
 
-    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap,groups=['I','L','W','A','O','D','M'])
-    plot_colormap(cmap(np.arange(34)))
+    # Replot the Clustering dendrogram, this time with the correct color map 
+    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
+    plot_colormap(cmap(np.arange(model.K)))
 
 
 
@@ -547,21 +553,20 @@ def analyze_parcel(mname,sym=True):
                     render='plotly')
     ax.show()
 
-    # Quick hack - hard-code the labels:
+    return Prob,parcel,atlas,labels,cmap
 
-    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 
-    'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R',
-       'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
+def make_sfn_atlas():
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # Quick hack - hard-code the labels:
+    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
     export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
     resample_atlas('atl-NettekovenSym34')
-    pass
-
 
 
 if __name__ == "__main__":
-    mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
+    mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
     # make_asymmetry_map(mname)
-    analyze_parcel(mname,sym=True)
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
     # rgb=cmap(np.arange(20))
     # plot_colormap(rgb)

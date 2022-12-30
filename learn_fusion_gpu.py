@@ -556,7 +556,7 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
     if not Path(ibc_dir + nam + '.tsv').exists():
         print(f'fitting model {model_type} with K={K} on IBC sessions {sess1} + {sess2} ...')
-        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=5,
+        wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=50,
                                             sym_type=[0], this_sess=[['ses-'+sess1,
                                                                       'ses-'+sess2]])
         fname = fname + f'_ses-{sess1}+{sess2}'
