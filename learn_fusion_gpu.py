@@ -654,7 +654,7 @@ if __name__ == "__main__":
     # ########## HCP ##########
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
-    ks = [80,]
+    ks = [80]
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
@@ -676,7 +676,7 @@ if __name__ == "__main__":
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for datasets in dataset_list:
         for t in ['03','04']:
-            for k in [80]:
+            for k in ks:
             
             
                 datanames = ''.join(T.two_letter_code[datasets])
@@ -704,7 +704,7 @@ if __name__ == "__main__":
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for datasets in dataset_list:
         for t in ['03','04']:
-            for k in [80]:
+            for k in ks:
             
             
                 datanames = ''.join(T.two_letter_code[datasets])
