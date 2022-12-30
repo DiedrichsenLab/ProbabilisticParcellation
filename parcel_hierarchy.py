@@ -564,7 +564,7 @@ def make_sfn_atlas():
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
+    mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
     # make_asymmetry_map(mname)
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
