@@ -652,13 +652,43 @@ if __name__ == "__main__":
     # plt.show()
 
     # ########## HCP ##########
-    # # ------ Model fitting with HCP ------
     space = 'MNISymC3' # Set atlas space
     msym = 'sym' # Set model symmetry
+    ks = [80,]
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
         s = 0
+
+    
+    # # -- Build dataset list --
+    n_dsets = 7 # without HCP
+    alldatasets = [np.arange(n_dsets).tolist()]
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    individual_datasets = [ [d] for d in alldatasets ]
+
+    dataset_list = []
+    dataset_list.extend(alldatasets)
+    dataset_list.extend(individual_datasets)
+    # dataset_list.extend(loo_datasets)
+    
+    
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    for datasets in dataset_list:
+        for t in ['03','04']:
+            for k in [80]:
+            
+            
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
+                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+                
+                if not Path(wdir+fname).exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
+    
     # # -- Build dataset list with HCP--
     n_dsets = 8 # with HCP
     alldatasets = [np.arange(n_dsets).tolist()]
@@ -668,13 +698,13 @@ if __name__ == "__main__":
     dataset_list = []
     dataset_list.extend(alldatasets)
     dataset_list.extend(individual_datasets)
-    dataset_list.extend(loo_datasets)
+    # dataset_list.extend(loo_datasets)
     
     
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     for datasets in dataset_list:
         for t in ['03','04']:
-            for k in [10, 20, 34, 40, 68]:
+            for k in [80]:
             
             
                 datanames = ''.join(T.two_letter_code[datasets])
