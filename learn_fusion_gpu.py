@@ -564,7 +564,7 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
 def fit_all_datasets():
     space = 'MNISymC3' # Set atlas space
-    msym = 'sym' # Set model symmetry
+    msym = 'asym' # Set model symmetry
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
@@ -573,14 +573,15 @@ def fit_all_datasets():
     # -- Model fitting --
     datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for i in range(7):
-        datasets = [0, 1, 2, 3, 4, 5, 6]
-        datasets.remove(i)
-        for k in [10, 20, 34, 40, 68]:
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    for datasets in datasets_list:
+        for k in [10, 17, 20, 34, 40, 68]:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
-                fname = f'/Models_{t}/sym_{datanames}_space-{space}_K-{k}'
+                fname = f'/Models_{t}/{msym}_{datanames}_space-{space}_K-{k}'
 
                 # inf, m = load_batch_fit(fname)
                 # if not m[0].ds_weight.is_cuda:
@@ -594,6 +595,7 @@ def fit_all_datasets():
 
 
 if __name__ == "__main__":
+    fit_all_datasets()
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
@@ -609,7 +611,7 @@ if __name__ == "__main__":
         for s2 in sess_2:
             this_s1 = s1.split('-')[1]
             this_s2 = s2.split('-')[1]
-            for k in [17, 34, 40, 68]:
+            for k in [40, 68]:
                 for t in ['03','04']:
                     wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
                     fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'

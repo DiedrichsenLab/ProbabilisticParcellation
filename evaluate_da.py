@@ -451,7 +451,7 @@ def result_3_rel_check(fname):
     plt.suptitle(f'IBC individual sessions perfermance vs reliability, test_data=IBC_leftoutSess')
     plt.show()
 
-def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
+def result_4_eval(K=10, t_datasets = ['MDTB','Pontine','Nishimoto'],
                   test_ses=None):
     """Evaluate group and individual DCBC and coserr of IBC single
        sessions on all other test datasets.
@@ -472,8 +472,10 @@ def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
             print(f'- Start evaluating {s}.')
             this_sess = DataSetIBC(base_dir + '/IBC').sessions
             this_sess.remove(s)
-            model_name = [f'Models_03/asym_Ib_space-MNISymC3_K-{K}_{s}',
-                          f'Models_04/asym_Ib_space-MNISymC3_K-{K}_{s}']
+            model_name = []
+            for this_k in K:
+                model_name += [f'Models_03/asym_Ib_space-MNISymC3_K-{this_k}_{s}',
+                               f'Models_04/asym_Ib_space-MNISymC3_K-{this_k}_{s}']
             # 1. Run DCBC individual
             res_dcbc = run_dcbc_individual(model_name, ds, 'all', cond_ind=None,
                                            part_ind='half', indivtrain_ind='half',
@@ -487,8 +489,10 @@ def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
             results = pd.concat([results, res], ignore_index=True)
 
         # Additionally, evaluate all IBC sessions fusion on other datasets
-        fusion_name = [f'Models_03/asym_Ib_space-MNISymC3_K-{K}',
-                       f'Models_04/asym_Ib_space-MNISymC3_K-{K}']
+        fusion_name = []
+        for this_k in K:
+            fusion_name += [f'Models_03/asym_Ib_space-MNISymC3_K-{this_k}',
+                            f'Models_04/asym_Ib_space-MNISymC3_K-{this_k}']
         # 1. Run DCBC individual
         res_dcbc = run_dcbc_individual(fusion_name, ds, 'all', cond_ind=None,
                                        part_ind='half', indivtrain_ind='half',
@@ -506,7 +510,7 @@ def result_4_eval(K=10, t_datasets = ['Mdtb','Pontine','Nishimoto'],
     if test_ses is not None:
         fname = f'/eval_all_asym_Ib_K-{K}_{test_ses}_on_otherDatasets.tsv'
     else:
-        fname = f'/eval_all_asym_Ib_K-{K}_indivSess_on_otherDatasets.tsv'
+        fname = f'/eval_all_asym_Ib_K-10_to_68_indivSess_on_otherDatasets.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 def result_4_plot(fname, test_data=None, orderby=None):
@@ -586,10 +590,11 @@ def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
         model_type = ['01','02','03','04','05']
 
     if model_name is None:
-        model_name = ['Md','Po','Ni','Ib','MdPoNiIb']
+        model_name = ['Md','Po','Ni','Ib','Wm','De','So','MdPoNiIbWmDeSo']
 
     if t_datasets is None:
-        t_datasets = ['Mdtb', 'Pontine', 'Nishimoto', 'Ibc']
+        t_datasets = ['MDTB','Pontine','Nishimoto','IBC',
+                      'WMFS','Demand','Somatotopic']
 
     results = pd.DataFrame()
     # Evaluate all single sessions on other datasets
@@ -648,7 +653,7 @@ def concat_eval(model_type,prefix,outfile):
 
     pass
 
-def plot_diffK(fname):
+def plot_diffK(fname, hue="test_data", style="common_kappa"):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
 
     df = D.loc[(D['model_type'] == 'Models_03')|(D['model_type'] == 'Models_04')]
@@ -658,11 +663,13 @@ def plot_diffK(fname):
              'coserr_floor','coserr_ind2','coserr_ind3']
     for i, c in enumerate(crits):
         plt.subplot(3, 2, i + 1)
-        sb.lineplot(data=df, x="K", y=c, hue="test_data", style="common_kappa",
-                    style_order=D['common_kappa'].unique(),markers=True)
-        # plt.legend('')
-        # if 'coserr' in c:
-        #     plt.ylim(0.4, 1)
+        sb.lineplot(data=df, x="K", y=c, hue=hue, style=style,
+                    style_order=D[style].unique(),markers=True)
+        # if i == len(crits)-1:
+        #     plt.legend(loc='upper left')
+        # else:
+        #     plt.legend('')
+        # plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
 
     plt.suptitle(f'All datasets fusion, diff K = {df.K.unique()}')
     plt.tight_layout()
@@ -786,19 +793,36 @@ if __name__ == "__main__":
     # result_3_plot(f'/Models/Evaluation/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv',
     #               train_model='MDTB')
 
-    ############# Result 4: IBC single sessions vs. all sessions fusion #############
-    # result_4_eval(K=10, t_datasets=['MDTB', 'Pontine', 'Nishimoto'])
+    ############# Result 4: IBC individual sessions vs. all sessions fusion #############
+    # result_4_eval(K=[10,17,20,34,40,68], t_datasets=['MDTB', 'Pontine', 'Nishimoto',
+    #                                                  'WMFS', 'Demand', 'Somatotopic'])
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_otherDatasets.tsv'
     # result_4_plot(fname, test_data='Pontine', orderby=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
-    # res = result_5_eval(K=10, model_type=['03','04'], model_name=['Po','Ni','Ib','De','PoNiIbDe'],
-    #                     t_datasets=['Mdtb'], return_df=True)
+    # D = pd.DataFrame()
+    # for k in [10,20,17,34,40,68]:
+    #     res = result_5_eval(K=k, model_type=['03','04'],
+    #                         model_name=['Md','Po','Ni','Ib','Wm','De','MdPoNiIbWmDe'],
+    #                         t_datasets=['Somatotopic'], return_df=True)
+    #     D = pd.concat([D, res], ignore_index=True)
     # wdir = model_dir + f'/Models/Evaluation'
-    # fname = f'/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
-    # res.to_csv(wdir + fname, index=False, sep='\t')
-    # fname = f'/Models/Evaluation/eval_all_asym_PoNiIbDe_K-10_teston_Md.tsv'
+    # fname = f'/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+    # fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
     # result_5_plot(fname, model_type='Models_03')
+
+    ############# HCP integration #############
+    D = pd.DataFrame()
+    for k in [10, 20, 34, 40, 68]:
+        res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+                            model_name=['MdPoNiIbWmDeSo'],
+                            return_df=True)
+        D = pd.concat([D, res], ignore_index=True)
+
+    wdir = model_dir + f'/Models/Evaluation'
+    fname = f'/eval_all_sym_K-10_to_68_all_teston_leftOneOut.tsv'
+    D.to_csv(wdir + fname, index=False, sep='\t')
 
     ############# Check common/separate kappa on different K #############
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
@@ -817,7 +841,7 @@ if __name__ == "__main__":
     wdir = model_dir + f'/Models/Evaluation'
     fname = f'/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
     D.to_csv(wdir + fname, index=False, sep='\t')
-    fname = f'/Models/Evaluation/eval_all_asym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    fname = f'/Models/Evaluation/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
     plot_diffK(fname)
 
     ## For quick copy
