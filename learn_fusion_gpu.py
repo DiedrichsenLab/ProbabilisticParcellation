@@ -597,7 +597,7 @@ def fit_all_datasets():
 
 
 if __name__ == "__main__":
-    fit_all_datasets()
+    # fit_all_datasets()
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
