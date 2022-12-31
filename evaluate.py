@@ -148,10 +148,10 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
     return pt.stack(dcbc_values)
 
 
-def run_prederror(model_names,test_data,test_sess,
-                    cond_ind,part_ind=None,
-                    eval_types=['group','floor'],
-                    indivtrain_ind=None,indivtrain_values=[0]):
+def run_prederror(model_names, test_data, test_sess, cond_ind,
+                  part_ind=None, eval_types=['group','floor'],
+                  indivtrain_ind=None, indivtrain_values=[0],
+                  device=None):
     """ Calculates a prediction error using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
@@ -204,7 +204,7 @@ def run_prederror(model_names,test_data,test_sess,
     # Now loop over possible models we want to evaluate
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(f"{model_name}")
+        minfo, model = load_batch_best(f"{model_name}", device=device)
         model_kp = model.emissions[0].uniform_kappa
         this_res = pd.DataFrame()
         # Loop over the splits - if split then train a individual model
@@ -282,7 +282,8 @@ def run_prederror(model_names,test_data,test_sess,
     return results
 
 
-def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None):
+def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
+                   device=None):
     """ Run DCBC group evaluation
 
     Args:
@@ -317,7 +318,8 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None):
         pname_parts = pname.split('.')
         print(f'evaluating {pname}')
         if pname_parts[-1]=='pickle':
-            minfo, model = load_batch_best(f"{fileparts[-2]}/{pname_parts[-2]}")
+            minfo, model = load_batch_best(f"{fileparts[-2]}/{pname_parts[-2]}",
+                                           device=device)
             Prop = model.marginal_prob()
             par = pt.argmax(Prop,dim=0)+1
         elif pname_parts[-1]=='nii':
@@ -345,8 +347,9 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None):
 
 
 def run_dcbc_individual(model_names, test_data, test_sess,
-                    cond_ind=None,part_ind=None,
-                    indivtrain_ind=None,indivtrain_values=[0]):
+                        cond_ind=None,part_ind=None,
+                        indivtrain_ind=None,indivtrain_values=[0],
+                        device=None):
     """ Calculates DCBC using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
@@ -404,14 +407,15 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     # Now loop over possible models we want to evaluate
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(f"{model_name}")
+        minfo, model = load_batch_best(f"{model_name}", device=device)
         Prop = model.marginal_prob()
 
         this_res = pd.DataFrame()
         # Loop over the splits - if split then train a individual model
         for n in range(n_splits):
             # ------------------------------------------
-            # Train an emission model on the individual training data and get a Uhat (individual parcellation) from it.
+            # Train an emission model on the individual training data
+            # and get a Uhat (individual parcellation) from it.
             if indivtrain_ind is not None:
                 train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
                 test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
