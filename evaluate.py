@@ -110,7 +110,8 @@ def calc_test_error(M,tdata,U_hats):
     return pred_err
 
 
-def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
+def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
+                   trim_nan=False):
     """DCBC: evaluate the resultant parcellation using DCBC
     Args:
         parcels (np.ndarray): the input parcellation:
@@ -137,10 +138,12 @@ def calc_test_dcbc(parcels, testdata, dist, trim_nan=False):
         print(f'Subject {sub}',end=':')
         tic = time.perf_counter()
         if parcels.ndim==1:
-            D = compute_DCBC(maxDist=110, binWidth=5, parcellation=parcels,
+            D = compute_DCBC(maxDist=max_dist, binWidth=bin_width,
+                             parcellation=parcels,
                              dist=dist, func=testdata[sub].T)
         else:
-            D = compute_DCBC(maxDist=110, binWidth=5, parcellation=parcels[sub],
+            D = compute_DCBC(maxDist=max_dist, binWidth=bin_width,
+                             parcellation=parcels[sub],
                              dist=dist, func=testdata[sub].T)
         dcbc_values.append(D['DCBC'])
         toc = time.perf_counter()

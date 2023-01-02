@@ -822,7 +822,8 @@ if __name__ == "__main__":
     #                  iter=100)
 
     ############# Result 3: IBC two sessions fusion #############
-    result_3_eval(K=17, ses1='ses-hcp1', ses2='ses-mtt1')
+    for k in [17,34,40,68]:
+        result_3_eval(K=k)
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
     # result_3_rel_check(fname)
     # result_3_plot(fname)
