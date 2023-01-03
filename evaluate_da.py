@@ -796,16 +796,6 @@ if __name__ == "__main__":
     # oname = model_dir + '/Models/Evaluation/eval_dataset7_sym.tsv'
     # make_all_in_one_tsv(path, out_name=oname)
 
-    # plot_IBC_rel()
-    # model_name = [f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s1',
-    #               f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s2',
-    #               f'Models_03/asym_Md_space-MNISymC3_K-10',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s1',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s2',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10']
-    # eval_arbitrary(model_name, t_datasets = ['Pontine','Nishimoto','IBC','Demand'],
-    #                fname=f'/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv')
-
     ############# Result 1: individual vs. group improvement #############
     # D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10')
     # fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
@@ -822,8 +812,8 @@ if __name__ == "__main__":
     #                  iter=100)
 
     ############# Result 3: IBC two sessions fusion #############
-    for k in [17,34,40,68]:
-        result_3_eval(K=k)
+    # for k in [34,40,68]:
+    #     result_3_eval(K=k)
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
     # result_3_rel_check(fname)
     # result_3_plot(fname)
