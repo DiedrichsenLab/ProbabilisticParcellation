@@ -133,13 +133,14 @@ def run_ibc_sessfusion_group_dcbc(sess1='preference', sess2='rsvplanguage'):
                   f'Models_02/asym_Ib_space-MNISymC3_K-10_ses-{sess2}.pickle',
                   f'Models_04/asym_Ib_space-MNISymC3_K-10_ses-{sess1}+{sess2}.pickle']
     res = run_dcbc_group(model_name, 'MNISymC3', 'IBC', test_sess=sess,
-                         saveFile=f'Evaluation/eval_Ib_{sess1}+{sess2}_dcbc_group_on_leftsessions')
+                         saveFile=f'Evaluation/eval_Ib_{sess1}+{sess2}_dcbc_group_on_leftsessions',
+                         device='cuda')
     sb.barplot(x='model_type', y='dcbc', data=res)
     plt.show()
 
 
 def result_1_eval(model_name='Models_05/asym_Md_space-MNISymC3_K-10'):
-    info, model = load_batch_best(model_name)
+    info, model = load_batch_best(model_name, device='cuda')
     # Individual training dataset:
     idata, iinfo, ids = get_dataset(base_dir, 'MDTB', atlas='MNISymC3',
                                     sess=['ses-s1'], type='CondRun')
@@ -347,11 +348,12 @@ def result_3_eval(K=10, ses1=None, ses2=None):
             # 1. Run DCBC individual
             res_dcbc = run_dcbc_individual(model_name, 'IBC', this_sess, cond_ind=None,
                                            part_ind=None, indivtrain_ind=None,
-                                           indivtrain_values=[0])
+                                           indivtrain_values=[0], device='cuda')
             # 2. Run coserr individual
             res_coserr = run_prederror(model_name, 'IBC', this_sess, cond_ind=None,
                                        part_ind=None, eval_types=['group', 'floor'],
-                                       indivtrain_ind=None, indivtrain_values=[0])
+                                       indivtrain_ind=None, indivtrain_values=[0],
+                                       device='cuda')
             # 3. Merge the two dataframe
             res = pd.merge(res_dcbc, res_coserr, how='outer')
             res['sess1_rel'] = reliability[s1]
@@ -479,11 +481,12 @@ def result_4_eval(K=10, t_datasets = ['MDTB','Pontine','Nishimoto'],
             # 1. Run DCBC individual
             res_dcbc = run_dcbc_individual(model_name, ds, 'all', cond_ind=None,
                                            part_ind='half', indivtrain_ind='half',
-                                           indivtrain_values=[1,2])
+                                           indivtrain_values=[1,2], device='cuda')
             # 2. Run coserr individual
             res_coserr = run_prederror(model_name, ds, 'all', cond_ind=None,
                                        part_ind='half', eval_types=['group', 'floor'],
-                                       indivtrain_ind='half', indivtrain_values=[1,2])
+                                       indivtrain_ind='half', indivtrain_values=[1,2],
+                                       device='cuda')
             # 3. Merge the two dataframe
             res = pd.merge(res_dcbc, res_coserr, how='outer')
             results = pd.concat([results, res], ignore_index=True)
@@ -496,11 +499,12 @@ def result_4_eval(K=10, t_datasets = ['MDTB','Pontine','Nishimoto'],
         # 1. Run DCBC individual
         res_dcbc = run_dcbc_individual(fusion_name, ds, 'all', cond_ind=None,
                                        part_ind='half', indivtrain_ind='half',
-                                       indivtrain_values=[1, 2])
+                                       indivtrain_values=[1, 2], device='cuda')
         # 2. Run coserr individual
         res_coserr = run_prederror(fusion_name, ds, 'all', cond_ind=None,
                                    part_ind='half', eval_types=['group', 'floor'],
-                                   indivtrain_ind='half', indivtrain_values=[1, 2])
+                                   indivtrain_ind='half', indivtrain_values=[1, 2],
+                                   device='cuda')
         # 3. Merge the two dataframe
         res = pd.merge(res_dcbc, res_coserr, how='outer')
         results = pd.concat([results, res], ignore_index=True)
@@ -608,11 +612,12 @@ def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
         # 1. Run DCBC individual
         res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
                                        part_ind='half', indivtrain_ind='half',
-                                       indivtrain_values=[1,2])
+                                       indivtrain_values=[1,2], device='cuda')
         # 2. Run coserr individual
         res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
                                    part_ind='half', eval_types=['group', 'floor'],
-                                   indivtrain_ind='half', indivtrain_values=[1,2])
+                                   indivtrain_ind='half', indivtrain_values=[1,2],
+                                   device='cuda')
         # 3. Merge the two dataframe
         res = pd.merge(res_dcbc, res_coserr, how='outer')
         results = pd.concat([results, res], ignore_index=True)
@@ -696,11 +701,12 @@ def eval_arbitrary(model_name=[f'Models_03/asym_Ib_space-MNISymC3_K-10'],
             # 1. Run DCBC individual
             res_dcbc = run_dcbc_individual(model_name, ds, s, cond_ind=None,
                                            part_ind='half', indivtrain_ind='half',
-                                           indivtrain_values=[1,2])
+                                           indivtrain_values=[1,2], device='cuda')
             # 2. Run coserr individual
             res_coserr = run_prederror(model_name, ds, s, cond_ind=None,
                                        part_ind='half', eval_types=['group', 'floor'],
-                                       indivtrain_ind='half', indivtrain_values=[1,2])
+                                       indivtrain_ind='half', indivtrain_values=[1,2],
+                                       device='cuda')
             # 3. Merge the two dataframe
             res = pd.merge(res_dcbc, res_coserr, how='outer')
             results = pd.concat([results, res], ignore_index=True)
@@ -790,16 +796,6 @@ if __name__ == "__main__":
     # oname = model_dir + '/Models/Evaluation/eval_dataset7_sym.tsv'
     # make_all_in_one_tsv(path, out_name=oname)
 
-    # plot_IBC_rel()
-    # model_name = [f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s1',
-    #               f'Models_03/asym_Md_space-MNISymC3_K-10_ses-s2',
-    #               f'Models_03/asym_Md_space-MNISymC3_K-10',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s1',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10_ses-s2',
-    #               f'Models_04/asym_Md_space-MNISymC3_K-10']
-    # eval_arbitrary(model_name, t_datasets = ['Pontine','Nishimoto','IBC','Demand'],
-    #                fname=f'/eval_all_asym_Md_K-10_indivSess_on_otherDatasets.tsv')
-
     ############# Result 1: individual vs. group improvement #############
     # D, Us = result_1_eval(model_name='Models_03/asym_Md_space-MNISymC3_K-10')
     # fname = model_dir + '/Models/Evaluation_03/coserr_indivgroup_asym_Md_K-10.tsv'
@@ -816,7 +812,8 @@ if __name__ == "__main__":
     #                  iter=100)
 
     ############# Result 3: IBC two sessions fusion #############
-    # result_3_eval(K=20, ses1=None, ses2=None)
+    # for k in [34,40,68]:
+    #     result_3_eval(K=k)
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_twoSess_on_leftSess.tsv'
     # result_3_rel_check(fname)
     # result_3_plot(fname)
@@ -830,15 +827,20 @@ if __name__ == "__main__":
     # result_4_plot(fname, test_data='Pontine', orderby=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
-    # D = pd.DataFrame()
-    # for k in [10,20,17,34,40,68]:
-    #     res = result_5_eval(K=k, model_type=['03','04'],
-    #                         model_name=['Md','Po','Ni','Ib','Wm','De','MdPoNiIbWmDe'],
-    #                         t_datasets=['Somatotopic'], return_df=True)
-    #     D = pd.concat([D, res], ignore_index=True)
-    # wdir = model_dir + f'/Models/Evaluation'
-    # fname = f'/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
-    # D.to_csv(wdir + fname, index=False, sep='\t')
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    D = pd.DataFrame()
+    for i in range(7):
+        datasets = [0, 1, 2, 3, 4, 5, 6]
+        datasets.remove(i)
+        for k in [10,20,34,40,68]:
+            datanames = T.two_letter_code[datasets].to_list()
+            res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+                                model_name=datanames, t_datasets=[T.name[i]],
+                                return_df=True)
+            D = pd.concat([D, res], ignore_index=True)
+    wdir = model_dir + f'/Models/Evaluation/sym'
+    fname = f'/eval_all_sym_MdPoNiIbWmDeSo_K-10_to_68_teston_indivDataset.tsv'
+    D.to_csv(wdir + fname, index=False, sep='\t')
     # fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
     # result_5_plot(fname, model_type='Models_03')
 
