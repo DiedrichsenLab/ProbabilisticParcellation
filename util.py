@@ -99,7 +99,7 @@ def move_batch_to_device(fname, device='cpu'):
     with open(wdir + fname + '.pickle', 'wb') as file:
         pickle.dump(models, file)
 
-def load_batch_best(fname):
+def load_batch_best(fname, device=None):
     """ Loads a batch of model fits and selects the best one
     Args:
         fname (str): File name
@@ -108,6 +108,8 @@ def load_batch_best(fname):
     j = info.loglik.argmax()
 
     best_model = models[j]
+    if device is not None:
+        best_model.move_to(device)
 
     return info.iloc[j], best_model
 
