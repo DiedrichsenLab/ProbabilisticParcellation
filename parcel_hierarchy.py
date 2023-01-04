@@ -35,9 +35,7 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
-    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
-if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
+    raise(NameError('Could not find base_dir'))
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
