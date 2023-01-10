@@ -334,9 +334,10 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     # Make the atlas object
     if space is None:
         space='MNISymC3'
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric(space, mask_img=mask),
-             am.AtlasVolumeSymmetric(space, mask_img=mask)]
+    
+    atlas, _ = am.get_atlas(space, atlas_dir)
+    atlas_sym, _ = am.get_atlas(space, atlas_dir,sym=True)
+    atlasses = [atlas, atlas_sym]
 
     # Give a overall name for the type of model
     mname = ['asym', 'sym']
@@ -378,7 +379,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
                                  cond_ind=cond_ind[set_ind],
                                  part_ind=part_ind[set_ind],
                                  subj=subj_list,
-                                 atlas=atlas[i],
+                                 atlas=atlasses[i],
                                  K=K,
                                  name=name,
                                  n_inits=50,
@@ -392,14 +393,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+        fname = f'/{name}_space-{atlasses[i].name}_K-{K}'
 
         if this_sess is not None:
             return wdir, fname, info, models
 
         if subj_list is not None:
             wdir = model_dir + f'/Models/Models_{model_type}/leaveNout'
-            fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+            fname = f'/{name}_space-{atlasses[i].name}_K-{K}'
             return wdir, fname, info, models
 
         info.to_csv(wdir + fname + '.tsv', sep='\t')

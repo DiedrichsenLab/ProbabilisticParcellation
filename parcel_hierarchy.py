@@ -583,6 +583,7 @@ def merge_probs(fine_model, coarse_model):
     """
     # Get winner take all assignment for fine model
     Prob = np.array(fine_model.marginal_prob())
+    Prob = pt.exp(fine_model.arrange.logpi)
     fine_parcellation = Prob.argmax(axis=0)+1
     fine_parcellation = fine_parcellation[:fine_model.arrange.logpi.shape[1]]
 
