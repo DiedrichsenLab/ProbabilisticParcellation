@@ -652,16 +652,18 @@ def merge_parcel(mname_fine, mname_coarse, outname, sym=True):
 if __name__ == "__main__":
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-20'
-    outname = f"{mname}_merged_{mname_coarse.split('_')[-1]}"
-    # merged_model = merge_parcel(mname, mname_coarse, '/Models/' + outname, sym=True)
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(outname, load_best=False, sym=True)
-    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + outname)
-
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-
+    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
+    mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
+    merged_model = merge_parcel(mname_fine, mname_coarse, '/Models/' + mname_merged, sym=True)
+    
+    # Plot fine, coarse and merged model
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
+
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
+
 
     # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
