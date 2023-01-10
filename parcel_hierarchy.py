@@ -657,7 +657,11 @@ if __name__ == "__main__":
     outname = f"{mname}_merged_{mname_coarse.split('_')[-1]}"
     # merged_model = merge_parcel(mname, mname_coarse, '/Models/' + outname, sym=True)
     Prob,parcel,atlas,labels,cmap = analyze_parcel(outname, load_best=False, sym=True)
-    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname)
+    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + outname)
+
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
     # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
