@@ -28,12 +28,15 @@ from numpy.linalg import eigh, norm
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
+from copy import deepcopy
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
@@ -424,7 +427,7 @@ def export_map(data,atlas,cmap,labels,base_name):
     nb.save(dseg,base_name + f'_space-{atlas}_dseg.nii')
     nb.save(probseg,base_name + f'_space-{atlas}_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
-    save_lut(np.arange(35),cmap[:,0:4],labels, base_name + '.lut')
+    save_lut(np.arange(len(labels)),cmap[:,0:4],labels, base_name + '.lut')
 
 def save_lut(index,colors,labels,fname):
     L=pd.DataFrame({
@@ -514,11 +517,16 @@ def make_asymmetry_map(mname):
     pass
 
 
-def analyze_parcel(mname,sym=True):
+def analyze_parcel(mname, load_best=True, sym=True):
+    
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info,model = load_batch_best(mname)
-    model.move_to('cpu')
+    if load_best:
+        info,model = load_batch_best(mname)
+    else:
+        info,model = load_batch_fit(mname)
+
+    # model.move_to('cpu')
 
     # Get parcel similarity:
     w_cos_sym,_,_ = parcel_similarity(model,plot=True,sym=sym)
@@ -562,11 +570,120 @@ def make_sfn_atlas():
     export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
     resample_atlas('atl-NettekovenSym34')
 
+def merge_probs(fine_model, coarse_model):
+    """Merges the probabilities of a fine parcellation model according to a coarser model.
+
+    Args:
+        fine_model: Probabilstic parcellation to merge (fine parcellation)
+        coarse_model: Probabilstic parcellation that determines how to merge (coarse parcellation)
+
+    Returns:
+        new_model: Fine model containing voxel probabilities of belonging to coarse parcels
+
+    """
+    # Get winner take all assignment for fine model
+    Prob = np.array(fine_model.marginal_prob())
+    fine_parcellation = Prob.argmax(axis=0)+1
+    fine_parcellation = fine_parcellation[:fine_model.arrange.logpi.shape[1]]
+
+    # Create new, clustered model
+    new_model = deepcopy(fine_model)
+
+    # Get probabilities of coarse model
+    c_probabilities = np.array(coarse_model.arrange.logpi)
+
+    # For each parcel, assign parcel probabilities of belonging to coarse parcel
+    new_prob = np.zeros((new_model.arrange.logpi.shape))
+    for k,parcel in enumerate(np.arange(0, fine_model.arrange.K)+1):
+        # print(k, parcel)
+        # get voxels belonging to fine parcel
+        voxel_idx = (fine_parcellation == parcel)[:c_probabilities.shape[1]]
+        # get probabilities of each voxel within parcel
+        voxel_probabilities = c_probabilities[:,voxel_idx] # K-by-Nvoxel array of probabilities
+        # average probabilities
+        parcel_prob = np.log(np.exp(voxel_probabilities).sum(axis=1)) # K array of probabilities for this parcel
+        # repeat parcel_prob for each voxel of the parcel
+        parcel_prob = np.repeat(parcel_prob[:, np.newaxis], voxel_probabilities.shape[1], axis=1)
+        # fill probabilities
+        new_prob[:c_probabilities.shape[0],voxel_idx] = parcel_prob
+    
+    # fill new probabilities
+    new_model.arrange.logpi = pt.tensor(new_prob)
+
+    return new_model
+
+
+def merge_parcel(mname_fine, mname_coarse, outname, sym=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
+
+    Args:
+        mname_fine: Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
+        merge: Vector that indicates cluster assignment
+        
+    """
+    
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fmodel = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo,cmodel = load_batch_best(mname_coarse)
+
+    merged_model = merge_probs(fmodel, cmodel)
+
+    # # reduce the merged model dimensions to the coarse model dimensions
+    # merged_model
+
+
+    # save new model
+    with open(f'{model_dir}/{outname}.pickle', 'wb') as file:
+        pickle.dump(merged_model, file)
+
+    # save new info
+    finfo.to_csv(f'{model_dir}/{outname}.tsv', sep='\t')
+
+    return merged_model
+
 
 if __name__ == "__main__":
-    mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
+    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-20'
+    outname = f"{mname}_merged_{mname_coarse.split('_')[-1]}"
+    # merged_model = merge_parcel(mname, mname_coarse, '/Models/' + outname, sym=True)
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(outname, load_best=False, sym=True)
+    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname)
+
+    # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname)
+
+    # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+
+    # --> Model 03, K=68
+
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+
+    # mname = 'Models_04/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+
+    # resample_atlas(mname)
     # make_asymmetry_map(mname)
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # cmap = mpl.cm.get_cmap('tab20')
     # rgb=cmap(np.arange(20))
     # plot_colormap(rgb)
