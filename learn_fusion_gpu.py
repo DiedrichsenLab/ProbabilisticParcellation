@@ -318,7 +318,7 @@ def batch_fit(datasets, sess,
 
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
-            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
+            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
     T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.to_numpy()
@@ -332,9 +332,11 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     part_ind = np.array(['half'] * len(T), dtype=object)
 
     # Make the atlas object
+    if space is None:
+        space='MNISymC3'
     mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
-             am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
+    atlas = [am.AtlasVolumetric(space, mask_img=mask),
+             am.AtlasVolumeSymmetric(space, mask_img=mask)]
 
     # Give a overall name for the type of model
     mname = ['asym', 'sym']
@@ -690,7 +692,7 @@ if __name__ == "__main__":
                 
                 if not Path(wdir+fname).exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s], space=space)
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
     
