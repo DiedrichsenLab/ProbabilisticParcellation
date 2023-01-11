@@ -11,6 +11,7 @@ import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
 from scipy.linalg import block_diag
+import PcmPy as pcm
 import nibabel as nb
 import nibabel.processing as ns
 import SUITPy as suit
@@ -583,7 +584,7 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
     """
     fine_parcellation = fine_probabilities.argmax(axis=0)
 
-    fine_coarse_mapping = deepcopy(fine_parcellation)
+    fine_coarse_mapping = np.zeros(fine_probabilities.shape[0])
     for fine_parcel in (fine_parcellation).unique():
         # find voxels belonging to fine parcel
         fine_voxels = (fine_parcellation == fine_parcel)
@@ -592,14 +593,15 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
         # get winner take all assignment for mapping fine parcel to coarse parcel by adding within-fine-parcel voxel probabilities and assigning winner
         winner = fine_coarse_prob.sum(axis=1).argmax()
         # assign coarse parcel winner to fine parcel
-        fine_coarse_mapping[fine_parcellation == fine_parcel] = winner.item()
+        fine_coarse_mapping[fine_parcel] = winner.item()
     
     return fine_coarse_mapping
 
-def assign_probs(coarse_probabilities, fine_coarse_mapping, log_message=False):
+def get_probs(fine_probabilities, fine_coarse_mapping, log_message=False):
     """Gets probabilities of fine parcels of belonging to mapped coarse parcel.
 
     Args:
+        fine_probabilities: Probabilstic parcellation of a fine model (fine parcellation)
         coarse_probabilities: Probabilstic parcellation of a coarse model (coarse parcellation)
         fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
         log_message: If true, prints out how many voxels originally belonged to coarse parcel and how many voxels belong to merged coarse parcel. Defaults to False.
@@ -609,19 +611,28 @@ def assign_probs(coarse_probabilities, fine_coarse_mapping, log_message=False):
         
 
     """
-    coarse_parcellation = coarse_probabilities.argmax(axis=0)
-
-    merged_probabilities = np.zeros(coarse_probabilities.shape)
-    # Add the probabilities of all fine parcels belonging to the mapped coarse parcel
-    for coarse_parcel in (coarse_parcellation).unique():
+    # fine_parcellation = fine_probabilities.argmax(axis=0)
+    K_merged = np.unique(fine_coarse_mapping).shape[0]
+    merged_probabilities = np.zeros((K_merged,fine_probabilities.shape[1]))
+    # Add the probabilities of all fine parcels that belong to the mapped coarse parcel
+    for i, merged_parcel in enumerate(np.unique(fine_coarse_mapping)):
         # find voxels of the fine parcels that belong to coarse parcel
-        fine_voxels = (fine_coarse_mapping == coarse_parcel)
-        if log_message:
-            nvox_original = np.where(coarse_parcellation == coarse_parcel)[0].shape[0]
-            nvox_fine = np.where(fine_voxels)[0].shape[0]
-            print(f'P {coarse_parcel} - Nvox original: {nvox_original} \t Nvox fine: {nvox_fine}')
-        # get probabilities of voxels belonging to coarse parcel
-        merged_probabilities[coarse_parcel,fine_voxels] = coarse_probabilities[coarse_parcel,fine_voxels]
+        selected_parcels = (fine_coarse_mapping == merged_parcel)
+        # get fine parcel voxels
+        for fine_parcel in np.where(selected_parcels)[0]:
+            fine_parcel
+
+        # get probabilities of voxels belonging to selected parcels
+        probs = fine_probabilities[selected_parcels,:].sum(axis=0)
+        merged_probabilities[int(merged_parcel),:] = probs
+
+        # if log_message:
+            # nvox_original = np.where(coarse_parcellation == merged_parcel)[0].shape[0]
+            # nvox_fine = np.where(fine_voxels)[0].shape[0]
+            # print(f'P {merged_parcel} - Nvox original: {nvox_original} \t Nvox fine: {nvox_fine}')
+        
+
+        # merged_probabilities[merged_parcel,fine_voxels] = fine_probabilities[selected_parcels,:]
     
     return merged_probabilities
 
@@ -643,18 +654,22 @@ def merge_probs(fine_model, coarse_model):
     coarse_probabilities = pt.softmax(coarse_model.arrange.logpi,dim=0)
 
     # Get mapping between fine parcels and coarse parcels
-    fine_coarse_mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
+    mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
 
-    # -- Assign new probabilities --
-    merged_probabilities = assign_probs(coarse_probabilities, fine_coarse_mapping, log_message=True)
+    # -- Get new probabilities --    
+    new_K = len(np.unique(mapping))
+    new_probabilities = np.zeros(coarse_probabilities.shape)
+
+    indicator = pcm.matrix.indicator(mapping)
+    new_probabilities[:new_K] = np.dot(indicator.T, (fine_probabilities))
+    
+    # merged_probabilities = get_probs(fine_probabilities, fine_coarse_mapping, log_message=True)
 
     # Create new, clustered model
     new_model = deepcopy(coarse_model)    
 
     # fill new probabilities
-    new_model.arrange.logpi = pt.log(pt.tensor(merged_probabilities))
-    # new_model.arrange.logpi = pt.tensor(merged_probabilities, dtype=pt.double)
-    # pt.tensor(merged_probabilities).double()
+    new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.double))
 
     return new_model
 
