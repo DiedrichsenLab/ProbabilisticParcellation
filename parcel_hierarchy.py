@@ -681,10 +681,6 @@ def merge_parcel(mname_fine, mname_coarse, outname, sym=True):
 
     merged_model = merge_probs(fmodel, cmodel)
 
-    # # reduce the merged model dimensions to the coarse model dimensions
-    # merged_model
-
-
     # save new model
     with open(f'{model_dir}/{outname}.pickle', 'wb') as file:
         pickle.dump(merged_model, file)
