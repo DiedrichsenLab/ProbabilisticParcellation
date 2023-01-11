@@ -619,7 +619,6 @@ def merge_model(fine_model, coarse_model):
 
     # -- Make new model --    
     # Initiliaze new probabilities
-    new_K = len(np.unique(mapping))
     new_probabilities = np.zeros(coarse_probabilities.shape)
     # get new probabilities
     indicator = pcm.matrix.indicator(mapping)
