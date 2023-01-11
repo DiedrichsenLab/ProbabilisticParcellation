@@ -318,7 +318,7 @@ def batch_fit(datasets, sess,
 
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
-            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
+            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
     T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.to_numpy()
@@ -332,9 +332,12 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     part_ind = np.array(['half'] * len(T), dtype=object)
 
     # Make the atlas object
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
-             am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
+    if space is None:
+        space='MNISymC3'
+    
+    atlas, _ = am.get_atlas(space, atlas_dir)
+    atlas_sym, _ = am.get_atlas(space, atlas_dir,sym=True)
+    atlasses = [atlas, atlas_sym]
 
     # Give a overall name for the type of model
     mname = ['asym', 'sym']
@@ -376,7 +379,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
                                  cond_ind=cond_ind[set_ind],
                                  part_ind=part_ind[set_ind],
                                  subj=subj_list,
-                                 atlas=atlas[i],
+                                 atlas=atlasses[i],
                                  K=K,
                                  name=name,
                                  n_inits=50,
@@ -390,14 +393,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+        fname = f'/{name}_space-{atlasses[i].name}_K-{K}'
 
         if this_sess is not None:
             return wdir, fname, info, models
 
         if subj_list is not None:
             wdir = model_dir + f'/Models/Models_{model_type}/leaveNout'
-            fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+            fname = f'/{name}_space-{atlasses[i].name}_K-{K}'
             return wdir, fname, info, models
 
         info.to_csv(wdir + fname + '.tsv', sep='\t')
@@ -659,8 +662,8 @@ if __name__ == "__main__":
     # ########## Higher K ##########
     space = 'MNISymC2' # Set atlas space
     msym = 'sym' # Set model symmetry
-    ks = [10, 20, 34]
-    # ks = [40, 68]
+    # ks = [10, 20, 34]
+    ks = [34, 40, 68, 80]
     # ks=[80]
     if msym == 'sym':
         s = 1
@@ -690,7 +693,7 @@ if __name__ == "__main__":
                 
                 if not Path(wdir+fname).exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s], space=space)
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
     
