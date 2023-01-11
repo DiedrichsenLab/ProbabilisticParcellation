@@ -619,8 +619,9 @@ def merge_model(fine_model, coarse_model):
 
     # -- Make new model --    
     # Initiliaze new probabilities
-    new_K = len(np.unique(mapping))
     new_probabilities = np.zeros(coarse_probabilities.shape)
+    # min_val = float("1e-30")
+    # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
     # get new probabilities
     indicator = pcm.matrix.indicator(mapping)
     merged_probabilities = np.dot(indicator.T, (fine_probabilities))
@@ -672,23 +673,32 @@ def get_clustered_model(mname_fine, mname_coarse, outname, sym=True):
 
 
 if __name__ == "__main__":
-    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
 
-    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
-    mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
-    
-    # merge model
-    merged_model = get_clustered_model(mname_fine, mname_coarse, '/Models/' + mname_merged, sym=True)
+    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+    # --- Merge parcels at K=20, 34 & 40 ---
+    for k in [20, 34, 40]:
+
+        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+        mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
+        mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
+        
+        # merge model
+        merged_model = get_clustered_model(mname_fine, mname_coarse, '/Models/' + mname_merged, sym=True)
 
     # export the merged model
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
-    export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
     
-    # Plot fine, coarse and merged model
+    # # Plot fine, coarse and merged model
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
+
+    # --- Show Merged Parcellation at K=20, K=34, K=40--- 
+    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    for k in [20, 34, 40]:
+        mname_merged = f"{mname_fine}_merged_K-{k}"
+        Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
     
 
     # # Show MNISymC2 Parcellation
