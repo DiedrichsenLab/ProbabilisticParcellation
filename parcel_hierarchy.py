@@ -634,7 +634,7 @@ def merge_model(fine_model, coarse_model):
     new_model = deepcopy(coarse_model)    
 
     # fill new probabilities
-    new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.double))
+    new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
 
     return new_model
 
