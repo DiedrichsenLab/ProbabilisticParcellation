@@ -211,6 +211,8 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
             minfo, model = load_batch_best(f"{model_name}", device=device)
         else:
             minfo, model = load_batch_fit(f"{model_name}")
+            minfo = minfo.iloc[0]
+        
         model_kp = model.emissions[0].uniform_kappa
         this_res = pd.DataFrame()
         # Loop over the splits - if split then train a individual model
