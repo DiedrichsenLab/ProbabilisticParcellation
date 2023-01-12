@@ -534,7 +534,10 @@ def analyze_parcel(mname, load_best=True, sym=True):
 
     # groups=['I','L','W','A','O','D','M']
     # Do Clustering: 
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=False)
+    num_clusters = 7
+    if num_clusters > model.arrange.K:
+        num_clusters = model.arrange.K-1
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
     ax = plt.gca()
 
     # Make a colormap
@@ -636,7 +639,7 @@ def reduce_model(new_model, new_parcels):
 
     return reduced_model
 
-def merge_model(fine_model, coarse_model):
+def merge_model(fine_model, coarse_model, reduce_model=True):
     """Merges the probabilities of a fine parcellation model according to a coarser model.
 
     Args:
@@ -679,14 +682,14 @@ def merge_model(fine_model, coarse_model):
     new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
 
     # If merged parcels are fewer than coarse parcels, create reduced model
-    if len(new_K_sym) < coarse_model.arrange.K:
+    if len(new_K_sym) < coarse_model.arrange.K and reduce_model:
         new_model = reduce_model(new_model, new_parcels)
 
     K = len(new_K_sym)*2
     return new_model, K
 
 
-def get_clustered_model(mname_fine, mname_coarse, sym=True):
+def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
@@ -706,7 +709,7 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True):
     split_mn = fileparts[-1].split('_')
     cinfo,cmodel = load_batch_best(mname_coarse)
 
-    merged_model, K = merge_model(fmodel, cmodel)
+    merged_model, K = merge_model(fmodel, cmodel, reduce_model=reduce_model)
     mname_merged = f'{mname_fine}_merged_K-{K}'
 
     # save new model
@@ -724,14 +727,14 @@ if __name__ == "__main__":
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
-    for k in [40, 34, 20]:
+    for k in [40, 34, 20, 10]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
         # mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
         
         # merge model
-        merged_model, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True)
+        merged_model, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True)
         merged_models.append(mname_merged)
 
     # export the merged model
