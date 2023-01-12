@@ -112,7 +112,7 @@ def evaluate(K=10, symmetric='asym', model_type=None, model_name=None,
         wdir = model_dir + f'/Models/Evaluation'
         fname = f'/eval_all_{symmetric}_K-{K}_datasetFusion.tsv'
         if k_merged is not None:
-            fname = f'/eval_all_{symmetric}_K-{K}__merged_K-{k_merged}.tsv'
+            fname = f'/eval_all_{symmetric}_K-{K}_merged_K-{k_merged}.tsv'
         results.to_csv(wdir + fname, index=False, sep='\t')
 
 
@@ -123,15 +123,16 @@ if __name__ == "__main__":
     D = pd.DataFrame()
     datasets = [0, 1, 2, 3, 4, 5, 6]
     datanames = T.two_letter_code[datasets].to_list()
-    
+    sym='sym'
+
     for i in range(7):        
         for k_merged in [10,18,22,26]:
-            res = evaluate(K=68, symmetric='sym', model_type=['03'],
+            res = evaluate(K=68, symmetric=sym, model_type=['03'],
                                 model_name=['MdPoNiIbWmDeSo'], t_datasets=[T.name[i]],
                                 return_df=True, k_merged=k_merged)
             D = pd.concat([D, res], ignore_index=True)
     wdir = model_dir + f'/Models/Evaluation/sym'
-    fname = f'/eval_all_sym_MdPoNiIbWmDeSo_merged_teston_indivDataset.tsv'
+    fname = f'/eval_{sym}_K-{K}_merged_K-{k_merged}.tsv.tsv'
     D.to_csv(wdir + fname, index=False, sep='\t')
 
     pass
