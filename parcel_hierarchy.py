@@ -597,6 +597,45 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
     
     return fine_coarse_mapping
 
+def reduce_model(new_model, new_parcels):
+    """Merges the probabilities of a fine parcellation model according to a coarser model.
+
+    Args:
+        new_model: Coarse model containing voxel probabilities of fine model (Clustered model)
+        new_parcels: Vector of new parcels
+
+    Returns:
+        reduced_model: Reduced model with empty parcels removed (Clustered fine model with effective K)
+
+    """
+    reduced_model = deepcopy(new_model)
+
+    reduced_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
+    
+    if hasattr(new_model, 'K_sym'):
+        reduced_model.K_sym = len(new_parcels)
+        all_parcels = [*new_parcels, *new_parcels + new_model.K_sym]
+    else:
+        all_parcels = new_parcels
+    
+    reduced_model.K = len(all_parcels)
+    reduced_model.arrange.K = len(all_parcels)
+
+    # Reduce emission models
+    for e, em in enumerate(new_model.emissions):
+        reduced_model.emissions[e].V = em.V[:, all_parcels]
+        reduced_model.emissions[e].K = len(all_parcels)
+        
+
+    # Reduce emission model K and kappa
+    if hasattr(new_model, 'K_sym'):
+        for e, em in enumerate(new_model.emissions):
+            if not em.uniform_kappa:
+                raise NotImplementedError('Reducing of nonuniform kappa models not implemented yet.')
+                # reduced_model.emissions[e] = em.V[:, all_parcels]   
+
+    return reduced_model
+
 def merge_model(fine_model, coarse_model):
     """Merges the probabilities of a fine parcellation model according to a coarser model.
 
@@ -616,20 +655,22 @@ def merge_model(fine_model, coarse_model):
 
     # Get mapping between fine parcels and coarse parcels
     mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
+    new_K_sym = np.unique(mapping)
 
     # -- Make new model --    
     # Initiliaze new probabilities
     new_probabilities = np.zeros(coarse_probabilities.shape)
     # min_val = float("1e-30")
     # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
+
     # get new probabilities
     indicator = pcm.matrix.indicator(mapping)
     merged_probabilities = np.dot(indicator.T, (fine_probabilities))
 
     # sort probabilities according to original coarse parcels
-    sort_by = [int(el) for el in np.unique(mapping)]
-    merged_probabilities_sorted = np.array([x for _,x in sorted(zip(sort_by,merged_probabilities))])
-    new_probabilities[sort_by] = merged_probabilities_sorted
+    new_parcels = [int(k) for k in new_K_sym]
+    merged_probabilities_sorted = np.array([x for _,x in sorted(zip(new_parcels,merged_probabilities))])
+    new_probabilities[new_parcels] = merged_probabilities_sorted
     
     # Create new, clustered model
     new_model = deepcopy(coarse_model)    
@@ -637,10 +678,15 @@ def merge_model(fine_model, coarse_model):
     # fill new probabilities
     new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
 
-    return new_model
+    # If merged parcels are fewer than coarse parcels, create reduced model
+    if len(new_K_sym) < coarse_model.arrange.K:
+        new_model = reduce_model(new_model, new_parcels)
+
+    K = len(new_K_sym)*2
+    return new_model, K
 
 
-def get_clustered_model(mname_fine, mname_coarse, outname, sym=True):
+def get_clustered_model(mname_fine, mname_coarse, sym=True):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
@@ -660,30 +706,33 @@ def get_clustered_model(mname_fine, mname_coarse, outname, sym=True):
     split_mn = fileparts[-1].split('_')
     cinfo,cmodel = load_batch_best(mname_coarse)
 
-    merged_model = merge_model(fmodel, cmodel)
+    merged_model, K = merge_model(fmodel, cmodel)
+    mname_merged = f'{mname_fine}_merged_K-{K}'
 
     # save new model
-    with open(f'{model_dir}/{outname}.pickle', 'wb') as file:
+    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
         pickle.dump(merged_model, file)
 
     # save new info
-    finfo.to_csv(f'{model_dir}/{outname}.tsv', sep='\t')
+    finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
 
-    return merged_model
+    return merged_model, mname_merged
 
 
 if __name__ == "__main__":
 
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
-    for k in [20, 34, 40]:
+    merged_models = []
+    for k in [40, 34, 20]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-        mname_coarse = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
-        mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
+        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+        # mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
         
         # merge model
-        merged_model = get_clustered_model(mname_fine, mname_coarse, '/Models/' + mname_merged, sym=True)
+        merged_model, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True)
+        merged_models.append(mname_merged)
 
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
@@ -696,8 +745,7 @@ if __name__ == "__main__":
     # --- Show Merged Parcellation at K=20, K=34, K=40--- 
     mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    for k in [20, 34, 40]:
-        mname_merged = f"{mname_fine}_merged_K-{k}"
+    for mname_merged in merged_models:
         Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
     
 
