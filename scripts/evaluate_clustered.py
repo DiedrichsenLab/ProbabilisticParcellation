@@ -119,20 +119,27 @@ def evaluate(K=10, symmetric='asym', model_type=None, model_name=None,
 if __name__ == "__main__":
     
     ############# Result 6: Clustered models #############
+    wdir = model_dir + f'/Models/Evaluation/sym'
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     D = pd.DataFrame()
     datasets = [0, 1, 2, 3, 4, 5, 6]
     datanames = T.two_letter_code[datasets].to_list()
     sym='sym'
+    K=68
+    
 
     for i in range(7):        
         for k_merged in [10,18,22,26]:
-            res = evaluate(K=68, symmetric=sym, model_type=['03'],
+            res = evaluate(K=K, symmetric=sym, model_type=['03'],
                                 model_name=['MdPoNiIbWmDeSo'], t_datasets=[T.name[i]],
                                 return_df=True, k_merged=k_merged)
+            
+            fname = f'/eval_{sym}_K-{K}_merged_K-{k_merged}.tsv'
+            res.to_csv(wdir + fname, index=False, sep='\t')
+
             D = pd.concat([D, res], ignore_index=True)
-    wdir = model_dir + f'/Models/Evaluation/sym'
-    fname = f'/eval_{sym}_K-{K}_merged_K-{k_merged}.tsv.tsv'
+    
+    fname = f'/eval_{sym}_K-{K}_merged_K-all.tsv'
     D.to_csv(wdir + fname, index=False, sep='\t')
 
     pass
