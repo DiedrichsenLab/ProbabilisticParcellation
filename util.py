@@ -215,7 +215,7 @@ def plot_multi_flat(data,atlas,grid,
             plt.title(titles[i])
             plt.savefig(f'rel_{titles[i]}.png', format='png')
 
-def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
+def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     """  Load a bunch of model fits, selects the best from 
     each of them and plots the flatmap of the parcellation
 
@@ -230,7 +230,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
 
     # Load models and produce titles 
     for i,mn in enumerate(model_names):
-        info,model = load_batch_best(mn)
+        info,model = load_batch_best(mn, device=device)
         models.append(model)
         # Split the name and build titles
         fname = mn.split('/') # Get filename if directory is given 
