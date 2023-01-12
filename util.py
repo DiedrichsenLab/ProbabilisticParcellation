@@ -114,8 +114,9 @@ def load_batch_best(fname, device=None):
     best_model = models[j]
     if device is not None:
         best_model.move_to(device)
-
-    return info.iloc[j], best_model
+    
+    info_reduced = info.iloc[[j]]
+    return info_reduced, best_model
 
 def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     """ Makes a color map from a *.lut file 
