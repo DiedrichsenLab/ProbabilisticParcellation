@@ -580,7 +580,7 @@ def result_4_rel_check(fname, train_model='IBC', t_data=['Mdtb']):
     plt.show()
 
 def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
-                  t_datasets=None, return_df=False):
+                  t_datasets=None, return_df=False, k_merged=None, load_best=True):
     """Evaluate group and individual DCBC and coserr of all dataset fusion
        and any dataset training standalone on each of the datasets.
     Args:
@@ -606,18 +606,21 @@ def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
     for t in model_type:
         print(f'- Start evaluating Model_{t} - {model_name}...')
         m_name += [f'Models_{t}/{symmetric}_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+        if k_merged is not None:
+            m_name = [f'Models_{t}/{symmetric}_{nam}_space-MNISymC3_K-{K}_merged_K-{k_merged}' for nam in model_name]
+            load_best=False
 
     for ds in t_datasets:
         print(f'Testdata: {ds}\n')
         # 1. Run DCBC individual
         res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
                                        part_ind='half', indivtrain_ind='half',
-                                       indivtrain_values=[1,2], device='cuda')
+                                       indivtrain_values=[1,2], device='cuda', load_best=load_best)
         # 2. Run coserr individual
         res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
                                    part_ind='half', eval_types=['group', 'floor'],
                                    indivtrain_ind='half', indivtrain_values=[1,2],
-                                   device='cuda')
+                                   device='cuda', load_best=load_best)
         # 3. Merge the two dataframe
         res = pd.merge(res_dcbc, res_coserr, how='outer')
         results = pd.concat([results, res], ignore_index=True)
@@ -827,60 +830,78 @@ if __name__ == "__main__":
     # result_4_plot(fname, test_data='Pontine', orderby=False)
 
     ############# Result 5: All datasets fusion vs. single dataset #############
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    # D = pd.DataFrame()
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    #     for k in [10,20,34,40,68]:
+    #         datanames = T.two_letter_code[datasets].to_list()
+    #         res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+    #                             model_name=datanames, t_datasets=[T.name[i]],
+    #                             return_df=True)
+    #         D = pd.concat([D, res], ignore_index=True)
+    # wdir = model_dir + f'/Models/Evaluation/sym'
+    # fname = f'/eval_all_sym_MdPoNiIbWmDeSo_K-10_to_68_teston_indivDataset.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+    # # fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
+    # # result_5_plot(fname, model_type='Models_03')
+
+    # ############# HCP integration #############
+    # D = pd.DataFrame()
+    # for k in [10, 20, 34, 40, 68]:
+    #     res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+    #                         model_name=['MdPoNiIbWmDeSo'],
+    #                         return_df=True)
+    #     D = pd.concat([D, res], ignore_index=True)
+
+    # wdir = model_dir + f'/Models/Evaluation'
+    # fname = f'/eval_all_sym_K-10_to_68_all_teston_leftOneOut.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+
+    # ############# Check common/separate kappa on different K #############
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    # D = pd.DataFrame()
+    # for i in range(7):
+    #     datasets = [0, 1, 2, 3, 4, 5, 6]
+    #     datasets.remove(i)
+    #     for k in [10, 20, 34, 40, 68]:
+    #         datanames = ''.join(T.two_letter_code[datasets].tolist())
+    #         print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
+    #         res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
+    #                             model_name=[datanames], t_datasets=[T.name.array[i]],
+    #                             return_df=True)
+    #         D = pd.concat([D, res], ignore_index=True)
+
+    # wdir = model_dir + f'/Models/Evaluation'
+    # fname = f'/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    # D.to_csv(wdir + fname, index=False, sep='\t')
+    # fname = f'/Models/Evaluation/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
+    # plot_diffK(fname)
+
+    # ## For quick copy
+    # fnames_group = ['Models_01/asym_Ib_space-MNISymC3_K-10',
+    #                 'Models_02/asym_Ib_space-MNISymC3_K-10',
+    #                 'Models_03/asym_Ib_space-MNISymC3_K-10',
+    #                 'Models_04/asym_Ib_space-MNISymC3_K-10',
+    #                 'Models_05/asym_Ib_space-MNISymC3_K-10']
+
+
+    
+    ############# Result 6: Clustered models #############
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     D = pd.DataFrame()
-    for i in range(7):
-        datasets = [0, 1, 2, 3, 4, 5, 6]
-        datasets.remove(i)
-        for k in [10,20,34,40,68]:
-            datanames = T.two_letter_code[datasets].to_list()
-            res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
-                                model_name=datanames, t_datasets=[T.name[i]],
-                                return_df=True)
+    datasets = [0, 1, 2, 3, 4, 5, 6]
+    datanames = T.two_letter_code[datasets].to_list()
+    
+    for i in range(7):        
+        for k_merged in [10,18,22,26]:
+            res = result_5_eval(K=68, symmetric='sym', model_type=['03'],
+                                model_name=['MdPoNiIbWmDeSo'], t_datasets=[T.name[i]],
+                                return_df=True, k_merged=k_merged)
             D = pd.concat([D, res], ignore_index=True)
     wdir = model_dir + f'/Models/Evaluation/sym'
-    fname = f'/eval_all_sym_MdPoNiIbWmDeSo_K-10_to_68_teston_indivDataset.tsv'
+    fname = f'/eval_all_sym_MdPoNiIbWmDeSo_merged_teston_indivDataset.tsv'
     D.to_csv(wdir + fname, index=False, sep='\t')
-    # fname = f'/Models/Evaluation/eval_all_asym_MdPoNiIbWmDe_K-10_to_68_teston_So.tsv'
-    # result_5_plot(fname, model_type='Models_03')
-
-    ############# HCP integration #############
-    D = pd.DataFrame()
-    for k in [10, 20, 34, 40, 68]:
-        res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
-                            model_name=['MdPoNiIbWmDeSo'],
-                            return_df=True)
-        D = pd.concat([D, res], ignore_index=True)
-
-    wdir = model_dir + f'/Models/Evaluation'
-    fname = f'/eval_all_sym_K-10_to_68_all_teston_leftOneOut.tsv'
-    D.to_csv(wdir + fname, index=False, sep='\t')
-
-    ############# Check common/separate kappa on different K #############
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    D = pd.DataFrame()
-    for i in range(7):
-        datasets = [0, 1, 2, 3, 4, 5, 6]
-        datasets.remove(i)
-        for k in [10, 20, 34, 40, 68]:
-            datanames = ''.join(T.two_letter_code[datasets].tolist())
-            print(f'----Starting evaluating {datanames}, K={k}, test on {T.name.array[i]}...')
-            res = result_5_eval(K=k, symmetric='sym', model_type=['03','04'],
-                                model_name=[datanames], t_datasets=[T.name.array[i]],
-                                return_df=True)
-            D = pd.concat([D, res], ignore_index=True)
-
-    wdir = model_dir + f'/Models/Evaluation'
-    fname = f'/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
-    D.to_csv(wdir + fname, index=False, sep='\t')
-    fname = f'/Models/Evaluation/eval_all_sym_K-10_to_68_MdPoNiIbWmDeSo_CV.tsv'
-    plot_diffK(fname)
-
-    ## For quick copy
-    fnames_group = ['Models_01/asym_Ib_space-MNISymC3_K-10',
-                    'Models_02/asym_Ib_space-MNISymC3_K-10',
-                    'Models_03/asym_Ib_space-MNISymC3_K-10',
-                    'Models_04/asym_Ib_space-MNISymC3_K-10',
-                    'Models_05/asym_Ib_space-MNISymC3_K-10']
 
     pass

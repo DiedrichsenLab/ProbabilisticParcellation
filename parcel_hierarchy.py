@@ -601,7 +601,7 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
     return fine_coarse_mapping
 
 def reduce_model(new_model, new_parcels):
-    """Merges the probabilities of a fine parcellation model according to a coarser model.
+    """Reduces model to effective K.
 
     Args:
         new_model: Coarse model containing voxel probabilities of fine model (Clustered model)
@@ -616,18 +616,18 @@ def reduce_model(new_model, new_parcels):
     reduced_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
     
     if hasattr(new_model, 'K_sym'):
-        reduced_model.K_sym = len(new_parcels)
+        reduced_model.K_sym = int(len(new_parcels))
         all_parcels = [*new_parcels, *new_parcels + new_model.K_sym]
     else:
         all_parcels = new_parcels
     
-    reduced_model.K = len(all_parcels)
-    reduced_model.arrange.K = len(all_parcels)
+    reduced_model.K = int(len(all_parcels))
+    reduced_model.arrange.K = int(len(all_parcels))
 
     # Reduce emission models
     for e, em in enumerate(new_model.emissions):
         reduced_model.emissions[e].V = em.V[:, all_parcels]
-        reduced_model.emissions[e].K = len(all_parcels)
+        reduced_model.emissions[e].K = int(len(all_parcels))
         
 
     # Reduce emission model K and kappa
@@ -639,7 +639,7 @@ def reduce_model(new_model, new_parcels):
 
     return reduced_model
 
-def merge_model(fine_model, coarse_model, reduce_model=True):
+def merge_model(fine_model, coarse_model, reduce=True):
     """Merges the probabilities of a fine parcellation model according to a coarser model.
 
     Args:
@@ -682,14 +682,14 @@ def merge_model(fine_model, coarse_model, reduce_model=True):
     new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
 
     # If merged parcels are fewer than coarse parcels, create reduced model
-    if len(new_K_sym) < coarse_model.arrange.K and reduce_model:
+    if len(new_K_sym) < coarse_model.arrange.K and reduce:
         new_model = reduce_model(new_model, new_parcels)
 
     K = len(new_K_sym)*2
     return new_model, K
 
 
-def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True):
+def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
@@ -709,7 +709,7 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True):
     split_mn = fileparts[-1].split('_')
     cinfo,cmodel = load_batch_best(mname_coarse)
 
-    merged_model, K = merge_model(fmodel, cmodel, reduce_model=reduce_model)
+    merged_model, K = merge_model(fmodel, cmodel, reduce=reduce)
     mname_merged = f'{mname_fine}_merged_K-{K}'
 
     # save new model
@@ -717,6 +717,8 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True):
         pickle.dump(merged_model, file)
 
     # save new info
+    finfo['K_original'] = int(finfo.K)
+    finfo['K'] = int(K)
     finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
 
     return merged_model, mname_merged
@@ -734,7 +736,7 @@ if __name__ == "__main__":
         # mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
         
         # merge model
-        merged_model, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce_model=True)
+        _, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True)
         merged_models.append(mname_merged)
 
     # export the merged model
@@ -746,10 +748,10 @@ if __name__ == "__main__":
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
     # --- Show Merged Parcellation at K=20, K=34, K=40--- 
-    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    for mname_merged in merged_models:
-        Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
+    # for mname_merged in merged_models:
+    #     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
     
 
     # # Show MNISymC2 Parcellation
