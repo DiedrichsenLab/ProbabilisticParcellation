@@ -9,6 +9,7 @@ import torch as pt
 import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
+import generativeMRF.full_model as fm
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
@@ -17,7 +18,9 @@ if not Path(model_dir).exists():
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    raise(NameError('Could not find model_dir'))
+    model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(model_dir).exists():
+    raise (NameError('Could not find model_dir'))
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -25,7 +28,10 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
+    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(base_dir).exists():
+    raise (NameError('Could not find base_dir'))
+
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target
@@ -57,7 +63,7 @@ def load_batch_fit(fname):
         info: Data Frame with information 
         models: List of models
     """
-    wdir = model_dir + '/Models/'
+    wdir = model_dir + '/Models/'       
     info = pd.read_csv(wdir + fname + '.tsv',sep='\t')
     with open(wdir + fname + '.pickle','rb') as file:
         models = pickle.load(file)
@@ -78,14 +84,39 @@ def clear_batch(fname):
     with open(wdir + fname + '.pickle','wb') as file:
         pickle.dump(models,file)
 
-def load_batch_best(fname):
+def move_batch_to_device(fname, device='cpu'):
+    """Overwrite all tensors in the batch fitted models
+       from torch.cuda to the normal torch.Tensor for
+       people who cannot use cuda.
+    Args:
+        fname (): filename
+        device: the target device to store tensors
+    """
+    wdir = model_dir + '/Models/'
+    with open(wdir + fname + '.pickle', 'rb') as file:
+        models = pickle.load(file)
+
+    # Recursively tensors to device
+    for m in models:
+        m.move_to(device=device)
+
+    with open(wdir + fname + '.pickle', 'wb') as file:
+        pickle.dump(models, file)
+
+def load_batch_best(fname, device=None):
     """ Loads a batch of model fits and selects the best one
     Args:
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
     j = info.loglik.argmax()
-    return info.iloc[j],models[j]
+
+    best_model = models[j]
+    if device is not None:
+        best_model.move_to(device)
+    
+    info_reduced = info.iloc[j]
+    return info_reduced, best_model
 
 def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     """ Makes a color map from a *.lut file 
@@ -219,7 +250,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
         Prob = ev.extract_marginal_prob(models)
 
     if type(Prob) is pt.Tensor:
-        if pt.cuda.is_available():
+        if pt.cuda.is_available() or pt.backends.mps.is_built():
             Prob = Prob.cpu().numpy()
         else:
             Prob = Prob.numpy()
@@ -372,7 +403,7 @@ def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
 
     parcel = nb.load(atl_dir + '/%s/atl-%s_space-%s_dseg.nii'
                      % (ainf['dir'], parcel_name, ainf['space']))
-    suit_atlas = am.get_atlas(atlas, atl_dir)
+    suit_atlas, _ = am.get_atlas(atlas, atl_dir)
 
     data = suit.reslice.sample_image(parcel,
             suit_atlas.world[0],
@@ -387,8 +418,7 @@ def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
     ########################################################
     color_file = atl_dir + f'/tpl-SUIT/atl-{parcel_name}.lut'
     color_info = pd.read_csv(color_file, sep = ' ',header=None)
-    colors = np.zeros((11,3))
-    colors[1:11,:]  = color_info.iloc[:,1:4].to_numpy()
+    colors = color_info.iloc[:,1:4].to_numpy()
 
     # Map Plot if requested (for a check)
     if do_plot:
