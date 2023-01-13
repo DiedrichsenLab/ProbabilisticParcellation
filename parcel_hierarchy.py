@@ -586,7 +586,12 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
         fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
 
     """
+    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+
     fine_parcellation = fine_probabilities.argmax(axis=0)
+    coarse_parcellation = coarse_probabilities.argmax(axis=0)
+
+    print(f'\n Fine Model: \t{np.unique(fine_parcellation).shape[0]} WTA Parcels \n Coarse Model: \t{np.unique(coarse_parcellation).shape[0]} WTA Parcels')
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0])
     for fine_parcel in (fine_parcellation).unique():
@@ -599,6 +604,7 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
         # assign coarse parcel winner to fine parcel
         fine_coarse_mapping[fine_parcel] = winner.item()
     
+    print(f'\n Merged Model: \t{np.unique(fine_coarse_mapping).shape[0]} WTA Parcels \n')
     return fine_coarse_mapping
 
 def reduce_model(new_model, new_parcels):
@@ -656,7 +662,7 @@ def merge_model(fine_model, coarse_model, reduce=True):
 
     # Get probabilities of coarse model
     coarse_probabilities = pt.softmax(coarse_model.arrange.logpi,dim=0)
-
+    
     # Get mapping between fine parcels and coarse parcels
     mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
     new_K_sym = np.unique(mapping)
@@ -664,6 +670,8 @@ def merge_model(fine_model, coarse_model, reduce=True):
     # -- Make new model --    
     # Initiliaze new probabilities
     new_probabilities = np.zeros(coarse_probabilities.shape)
+
+    # # Initiliaze new probabilities with small prob instead of zero
     # min_val = float("1e-30")
     # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
 
@@ -687,7 +695,7 @@ def merge_model(fine_model, coarse_model, reduce=True):
         new_model = reduce_model(new_model, new_parcels)
 
     K = len(new_K_sym)*2
-    return new_model, K
+    return new_model, K, mapping
 
 
 def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
@@ -710,8 +718,9 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
     split_mn = fileparts[-1].split('_')
     cinfo,cmodel = load_batch_best(mname_coarse)
 
-    merged_model, K = merge_model(fmodel, cmodel, reduce=reduce)
-    mname_merged = f'{mname_fine}_merged_K-{K}'
+    K_coarse = split_mn[-1].split('-')[1]
+    merged_model, K_new, mapping = merge_model(fmodel, cmodel, reduce=reduce)
+    mname_merged = f'{mname_fine}_merged_{K_coarse}'
 
     # save new model
     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
@@ -719,7 +728,8 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
 
     # save new info
     finfo['K_original'] = int(finfo.K)
-    finfo['K'] = int(K)
+    finfo['K'] = int(K_new)
+    finfo['K_coarse'] = int(K_coarse)
     finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
 
     return merged_model, mname_merged
@@ -730,11 +740,15 @@ if __name__ == "__main__":
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
-    for k in [40, 34, 20, 10]:
+    # for k in [10, 14, 20, 28, 34, 40]:
+    for k in [10, 20, 34, 40]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
-        # mname_merged = f"{mname_fine}_merged_{mname_coarse.split('_')[-1]}"
+
+
+        # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
+        # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
         # merge model
         _, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True)
@@ -745,8 +759,8 @@ if __name__ == "__main__":
     # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
     
     # # Plot fine, coarse and merged model
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
     # --- Show Merged Parcellation at K=20, K=34, K=40--- 
     # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
