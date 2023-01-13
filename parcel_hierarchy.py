@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
-from util import *
+from ProbabilisticParcellation.util import *
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -485,7 +485,7 @@ def resample_atlas(base_name):
     nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
     nb.save(dsuit1,suit_dir + f'/{base_name}_space-SUIT_dseg.nii')
 
-def make_asymmetry_map(mname):
+def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
@@ -513,9 +513,10 @@ def make_asymmetry_map(mname):
                 render='matplotlib',
                 overlay_type='func',
                 colorbar=True,
-                cscale=[0.3,1])
+                cscale=cscale,
+                cmap=cmap)
     # ax.show()
-    pass
+    return sym_score
 
 
 def analyze_parcel(mname, load_best=True, sym=True):
