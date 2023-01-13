@@ -279,7 +279,6 @@ def batch_fit(datasets, sess,
             first_iter=first_iter)
         info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         m.clear()
-        models.append(m)
 
         # Align group priors
         if i == 0:
@@ -301,6 +300,10 @@ def batch_fit(datasets, sess,
         num_rep = sum(sim < 0.02 for sim in this_similarity)
         print(num_rep)
 
+        # Move to CPU device before storing
+        m.move_to(device='cpu')
+        models.append(m)
+
         # Convergence: 1. must run enough repetitions (50);
         #              2. num_rep greater than threshold (10% of max_iter)
         if (i>50) and (num_rep >= int(n_fits*0.1)):
@@ -308,11 +311,7 @@ def batch_fit(datasets, sess,
         iter_toc = time.perf_counter()
         print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
-    # Align the different models
-    for m in models:
-        m.move_to(device='cpu')
     models = np.array(models, dtype=object)
-    # ev.align_models(models)
 
     return info, models
 
@@ -567,9 +566,9 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
         with open(wdir + '/IBC_sessFusion' + fname + '.pickle', 'wb') as file:
             pickle.dump(models, file)
 
-def fit_all_datasets():
-    space = 'MNISymC3' # Set atlas space
-    msym = 'sym' # Set model symmetry
+def fit_all_datasets(space = 'MNISymC2', 
+                    msym = 'sym',
+                    K=[68]):
     if msym == 'sym':
         s = 1
     elif msym == 'asym':
@@ -577,13 +576,13 @@ def fit_all_datasets():
 
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
-    datasets_list = [[0, 1, 2, 3, 4, 5, 6, 7]]
+    datasets_list = [[0, 1, 2, 3, 4, 5, 6]]
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
     for datasets in datasets_list:
-        for k in [10, 20, 34, 40, 68, 80]:
+        for k in K:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
@@ -601,7 +600,8 @@ def fit_all_datasets():
 
 
 if __name__ == "__main__":
-    # fit_all_datasets()
+    fit_all_datasets()
+    pass
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
