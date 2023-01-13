@@ -351,26 +351,29 @@ def plot_colormap(rgb):
     return m,l,V
 
 
-def colormap_mds(W,target=None,scale=False,clusters=None,gamma=0.3):
-    """Map the simularity structure of MDS to a colormap
+def colormap_mds(W,target=None,clusters=None,gamma=0.3):
+    """Map the similarity structure of MDS to a colormap
     Args:
-        W (_type_): _description_
-        plot (str, optional): _description_. Defaults to '2d'.
-        type (str, optional): _description_. Defaults to 'hsv'.
-        target (stg or )
+        W (ndarray): N x 3 array of original multidimensional scaling
+        target (tuple): Target origin [0] directions[1] of the desired map
+        clusters (ndarray): distorts color towards cluster mean
+        gamma (float): Strength of cluster mean 
     Returns:
-        colormap: _description_
+        colormap (Listed Colormap): 
     """
     N = W.shape[0]
     if target is not None:
         tm=target[0]
-        tl=target[1]
-        tV = target[2]
+        tV = target[1]
+
+        # Get the eigenvalues of W around the origin. 
         m=np.mean(W[:,:3],axis=0)
         A=W-m
+        # Get the eigenvalues in ascending order 
         l,V=eigh(A.T@A)
         l = np.flip(l,axis=0)
         V = np.flip(V,axis=1)
+        # Rotate and shift the color space towards the target 
         Wm = A @ V @ tV.T
         Wm += tm
     # rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
@@ -544,17 +547,21 @@ def analyze_parcel(mname, load_best=True, sym=True):
     # Make a colormap
     w_cos_sim,_,_ = parcel_similarity(model,plot=False)
     W = calc_mds(w_cos_sim,center=True)
+
+    # Define color anchors
+    m = np.array([0.65,0.65,0.65])
+
+
+
+    # Desired orientation of the eigenvectors of MDS in colorspace
     V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
     V=make_orthonormal(V)
-    m = np.array([0.65,0.65,0.65])
-    l = np.array([1.0,1.0,1.0])
-    cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
+
+    cmap = colormap_mds(W,target=(m,V),clusters=clusters,gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map 
     agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
     plot_colormap(cmap(np.arange(model.K)))
-
-
 
     # Plot the parcellation
     Prob = np.array(model.marginal_prob())
@@ -725,8 +732,7 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
     return merged_model, mname_merged
 
 
-if __name__ == "__main__":
-
+def merge_clusters():
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
@@ -739,6 +745,14 @@ if __name__ == "__main__":
         # merge model
         _, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True)
         merged_models.append(mname_merged)
+
+
+
+if __name__ == "__main__":
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-10'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    pass
+
 
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
