@@ -720,7 +720,7 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
 
     K_coarse = split_mn[-1].split('-')[1]
     merged_model, K_new, mapping = merge_model(fmodel, cmodel, reduce=reduce)
-    mname_merged = f'{mname_fine}_merged_{K_coarse}'
+    mname_merged = f'{mname_fine}_merged-{K_coarse}'
 
     # save new model
     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
@@ -737,11 +737,16 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
 
 if __name__ == "__main__":
 
+    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fmodel = load_batch_best(mname_fine)
+
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
     # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [10, 20, 34, 40]:
+    for k in [10]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
