@@ -370,28 +370,26 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     # Generate a dataname from first two letters of each training data set
     dataname = ''.join(T.two_letter_code[set_ind])
 
-    # for i in sym_type:
-    # ugly but temporary fix of the atlas situation
-    i=1
-    tic = time.perf_counter()
-    name = mname[i] + '_' + ''.join(dataname)
-    info, models = batch_fit(datasets[set_ind],
-                                sess=sess[set_ind],
-                                type=type[set_ind],
-                                cond_ind=cond_ind[set_ind],
-                                part_ind=part_ind[set_ind],
-                                subj=subj_list,
-                                atlas=atlasses[1],
-                                K=K,
-                                name=name,
-                                n_inits=50,
-                                n_iter=200,
-                                n_rep=repeats,
-                                first_iter=30,
-                                join_sess=join_sess,
-                                join_sess_part=join_sess_part,
-                                uniform_kappa=uniform_kappa,
-                                weighting=weighting)
+    for i in sym_type:
+        tic = time.perf_counter()
+        name = mname[i] + '_' + ''.join(dataname)
+        info, models = batch_fit(datasets[set_ind],
+                                 sess=sess[set_ind],
+                                 type=type[set_ind],
+                                 cond_ind=cond_ind[set_ind],
+                                 part_ind=part_ind[set_ind],
+                                 subj=subj_list,
+                                 atlas=atlasses[i],
+                                 K=K,
+                                 name=name,
+                                 n_inits=50,
+                                 n_iter=200,
+                                 n_rep=repeats,
+                                 first_iter=30,
+                                 join_sess=join_sess,
+                                 join_sess_part=join_sess_part,
+                                 uniform_kappa=uniform_kappa,
+                                 weighting=weighting)
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
@@ -661,6 +659,7 @@ if __name__ == "__main__":
     # plt.savefig('ib_k-20_allsess.png', format='png')
     # plt.show()
 
+    
     # ########## Higher K ##########
     space = 'MNISymC3' # Set atlas space
     # space = 'MNISymC2' # Set atlas space
