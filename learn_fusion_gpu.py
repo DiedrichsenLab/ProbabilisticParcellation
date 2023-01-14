@@ -666,7 +666,7 @@ if __name__ == "__main__":
     # space = 'MNISymC2' # Set atlas space
     msym = 'sym' # Set model symmetry
     # ks = [10, 20, 34]
-    ks = [14, 28, 56, 60]
+    ks = [14, 28, 48, 56, 60]
     # ks = [34, 40, 68, 80]
     # ks=[80]
     if msym == 'sym':
