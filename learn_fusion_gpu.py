@@ -659,11 +659,14 @@ if __name__ == "__main__":
     # plt.savefig('ib_k-20_allsess.png', format='png')
     # plt.show()
 
+    
     # ########## Higher K ##########
-    space = 'MNISymC2' # Set atlas space
+    space = 'MNISymC3' # Set atlas space
+    # space = 'MNISymC2' # Set atlas space
     msym = 'sym' # Set model symmetry
     # ks = [10, 20, 34]
-    ks = [34, 40, 68, 80]
+    ks = [14, 28, 48, 56, 60]
+    # ks = [34, 40, 68, 80]
     # ks=[80]
     if msym == 'sym':
         s = 1
@@ -684,7 +687,7 @@ if __name__ == "__main__":
     
     
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for t in ['03','04']:
+    for t in ['03']:
         for datasets in dataset_list:
             for k in ks:           
                 datanames = ''.join(T.two_letter_code[datasets])
