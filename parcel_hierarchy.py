@@ -646,17 +646,36 @@ def reduce_model(new_model, new_parcels):
 
     return reduced_model
 
-def merge_model(fine_model, coarse_model, reduce=True):
-    """Merges the probabilities of a fine parcellation model according to a coarser model.
+def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
-        fine_model: Probabilstic parcellation to merge (fine parcellation)
-        coarse_model: Probabilstic parcellation that determines how to merge (coarse parcellation)
+        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
+        sym:            Boolean indicating if model is symmetric. Defaults to True.
+        reduce:         Boolean indicating if model should be reduced (empty parcels removed). Defaults to True.
 
     Returns:
-        new_model: Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        mname_merged:   Name of merged model
+        mapping:        Mapping of fine parcels to coarse parcels.
 
     """
+    # -- Import models --    
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fine_model = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo,coarse_model = load_batch_best(mname_coarse)
+
+    # -- Cluster fine model --    
+    K_coarse = split_mn[-1].split('-')[1]
+    mname_merged = f'{mname_fine}_merged-{K_coarse}'
+
     # Get winner take all assignment for fine model
     fine_probabilities = pt.softmax(fine_model.arrange.logpi,dim=0)
 
@@ -694,37 +713,12 @@ def merge_model(fine_model, coarse_model, reduce=True):
     if len(new_K_sym) < coarse_model.arrange.K and reduce:
         new_model = reduce_model(new_model, new_parcels)
 
-    K = len(new_K_sym)*2
-    return new_model, K, mapping
+    K_new = len(new_K_sym)*2
 
-
-def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
-    """Merges the parcels of a fine parcellation model according to a coarser model.
-
-    Args:
-        mname_fine: Probabilstic parcellation to merge (fine parcellation)
-        mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
-        merge: Vector that indicates cluster assignment
-        
-    """
-    
-    # Import fine model
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    finfo,fmodel = load_batch_best(mname_fine)
-
-    # Import coarse model
-    fileparts = mname_coarse.split('/')
-    split_mn = fileparts[-1].split('_')
-    cinfo,cmodel = load_batch_best(mname_coarse)
-
-    K_coarse = split_mn[-1].split('-')[1]
-    merged_model, K_new, mapping = merge_model(fmodel, cmodel, reduce=reduce)
-    mname_merged = f'{mname_fine}_merged-{K_coarse}'
-
+    # -- Save model --    
     # save new model
     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
-        pickle.dump(merged_model, file)
+        pickle.dump(new_model, file)
 
     # save new info
     finfo['K_original'] = int(finfo.K)
@@ -732,21 +726,60 @@ def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
     finfo['K_coarse'] = int(K_coarse)
     finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
 
-    return merged_model, mname_merged
+    return new_model, mname_merged, mapping
+
+
+# def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
+#     """Merges the parcels of a fine parcellation model according to a coarser model.
+
+#     Args:
+#         mname_fine: Probabilstic parcellation to merge (fine parcellation)
+#         mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
+#         merge: Vector that indicates cluster assignment
+        
+#     """
+    
+#     # Import fine model
+#     fileparts = mname_fine.split('/')
+#     split_mn = fileparts[-1].split('_')
+#     finfo,fmodel = load_batch_best(mname_fine)
+
+#     # Import coarse model
+#     fileparts = mname_coarse.split('/')
+#     split_mn = fileparts[-1].split('_')
+#     cinfo,cmodel = load_batch_best(mname_coarse)
+
+#     K_coarse = split_mn[-1].split('-')[1]
+#     merged_model, K_new, mapping = merge_model(fmodel, cmodel, reduce=reduce)
+#     mname_merged = f'{mname_fine}_merged-{K_coarse}'
+
+#     # save new model
+#     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+#         pickle.dump(merged_model, file)
+
+#     # save new info
+#     finfo['K_original'] = int(finfo.K)
+#     finfo['K'] = int(K_new)
+#     finfo['K_coarse'] = int(K_coarse)
+#     finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
+
+#     return merged_model, mname_merged
 
 
 if __name__ == "__main__":
 
-    mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    finfo,fmodel = load_batch_best(mname_fine)
+    # # Load model to check type
+    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
+    # fileparts = mname_fine.split('/')
+    # split_mn = fileparts[-1].split('_')
+    # finfo,fmodel = load_batch_best(mname_fine)
+    # type(fmodel)
 
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
     # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [10]:
+    for k in [14]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
@@ -756,7 +789,7 @@ if __name__ == "__main__":
         # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
         # merge model
-        _, mname_merged = get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True)
+        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
         merged_models.append(mname_merged)
 
     # export the merged model
