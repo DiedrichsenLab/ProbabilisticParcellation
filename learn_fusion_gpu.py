@@ -192,9 +192,10 @@ def batch_fit(datasets, sess,
 
     if arrange == 'independent':
         if sym_type == 'sym':
-            ar_model = ar.ArrangeIndependentSymmetric(K, atlas.P,
-                            atlas.indx_full, atlas.indx_reduced,
-                            same_parcels=False
+            ar_model = ar.ArrangeIndependentSymmetric(K, 
+                            atlas.indx_full, 
+                            atlas.indx_reduced,
+                            same_parcels=False,
                             spatial_specific=True,
                             remove_redundancy=False)
         elif sym_type == 'asym':
@@ -548,10 +549,11 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
 
 def fit_all_datasets(space = 'MNISymC2',
                     msym = 'sym',
-                    K=[68]):
+                    K=[68],
+                    datasets_list = [[0, 1, 2, 3, 4, 5, 6]]):
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
-    datasets_list = [[0, 1, 2, 3, 4, 5, 6]]
+    
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
@@ -575,7 +577,7 @@ def fit_all_datasets(space = 'MNISymC2',
 
 
 if __name__ == "__main__":
-    fit_all_datasets()
+    fit_all_datasets(space='MNISymC3',msym='sym',K=[40],datasets_list=[[0,1]])
     pass
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
