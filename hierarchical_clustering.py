@@ -1,0 +1,193 @@
+"""
+Hierarchical Clustering
+
+"""
+
+import pandas as pd
+import numpy as np
+import Functional_Fusion.atlas_map as am
+import Functional_Fusion.matrix as matrix
+from Functional_Fusion.dataset import *
+import generativeMRF.emissions as em
+import generativeMRF.arrangements as ar
+import generativeMRF.full_model as fm
+import generativeMRF.evaluation as ev
+from scipy.linalg import block_diag
+import PcmPy as pcm
+import nibabel as nb
+import nibabel.processing as ns
+import SUITPy as suit
+import torch as pt
+import matplotlib.pyplot as plt
+import seaborn as sb
+import sys
+import pickle
+from ProbabilisticParcellation.util import *
+import torch as pt
+from matplotlib import pyplot as plt
+from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.spatial.distance import squareform
+from numpy.linalg import eigh, norm
+import matplotlib as mpl
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Rectangle
+from copy import deepcopy
+
+base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = 'Y:\data\FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(base_dir).exists():
+    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(base_dir).exists():
+    raise(NameError('Could not find base_dir'))
+
+
+def parcel_similarity(model,plot=False,sym=False, weighting=None):
+    n_sets = len(model.emissions)
+    if sym:
+        K = int(model.emissions[0].K/2)
+    else:
+        K = model.emissions[0].K
+    cos_sim = np.empty((n_sets,K,K))
+    if model.emissions[0].uniform_kappa:
+        kappa = np.empty((n_sets,))
+    else:
+        kappa = np.empty((n_sets,K))
+    n_subj = np.empty((n_sets,))
+
+    V = []
+    for i,em in enumerate(model.emissions):
+        if sym:
+            V.append(em.V[:,:K]+em.V[:,K:]) # Average the two sides for clustering
+            V[-1] = V[-1]/np.sqrt((V[-1]**2).sum(axis=0))
+            if model.emissions[0].uniform_kappa:
+                kappa[i] = em.kappa
+            else:
+                kappa[i] = (em.kappa[:K]+em.kappa[K:])/2
+        else:
+            V.append(em.V)
+            kappa[i] = em.kappa
+        cos_sim[i]=V[-1].T @ V[-1]
+
+        # V is weighted by Kappa and number of subjects
+        V[-1] = V[-1] * np.sqrt(kappa[i] * em.num_subj)
+        if weighting is not None:
+            V[-1] = V[-1] * np.sqrt(weighting[i])
+
+    # Combine all Vs and renormalize
+    Vall = np.vstack(V)
+    Vall = Vall/np.sqrt((Vall**2).sum(axis=0))
+    w_cos_sim = Vall.T @ Vall
+
+    # Integrated parcel similarity with kappa
+    if plot is True:
+        plt.figure()
+        grid = int(np.ceil(np.sqrt(n_sets+1)))
+        for i in range(n_sets):
+            plt.subplot(grid,grid,i+1)
+            plt.imshow(cos_sim[i,:,:],vmin=-1,vmax=1)
+            plt.title(f"Dataset {i+1}")
+        plt.subplot(grid,grid,n_sets+1)
+        plt.imshow(w_cos_sim,vmin=-1,vmax=1)
+        plt.title(f"Merged")
+
+    return w_cos_sim,cos_sim,kappa
+
+
+def get_clusters(Z,K,num_cluster):
+    cluster = np.zeros((K+Z.shape[0]),dtype=int)
+    next_cluster = 1
+    for i in np.arange(Z.shape[0]-num_cluster,-1,-1):
+        indx = Z[i,0:2].astype(int)
+        # New cluster number
+        if (cluster[i+K]==0):
+            cluster[i+K]  = next_cluster
+            cluster[indx] = next_cluster
+            next_cluster += 1
+        # Cluster already assigned - just pass down
+        else:
+            cluster[indx]=cluster[i+K]
+    return cluster[:K],cluster[K:]
+
+def agglomative_clustering(similarity,
+                        sym=False,
+                        num_clusters=5,
+                        method = 'ward',
+                        plot=True,
+                        groups = ['0','A','B','C','D','E','F','G'],
+                        cmap=None):
+    # setting distance_threshold=0 ensures we compute the full tree.
+    # plot the top three levels of the dendrogram
+    K = similarity.shape[0]
+    sym_sim=(similarity+similarity.T)/2
+    dist = squareform(1-sym_sim.round(5))
+    Z = linkage(dist,method)
+    cleaves,clinks = get_clusters(Z,K,num_clusters)
+
+    if plot:
+        plt.figure()
+        ax=plt.gca()
+
+    R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
+    leaves = R['leaves']
+    # make the labels for the dendrogram
+    labels = np.empty((K,),dtype=object)
+
+    current = -1
+    for i,l in enumerate(leaves):
+        if cleaves[l]!=current:
+            num=1
+            current = cleaves[l]
+        labels[i]=f"{groups[cleaves[l]]}{num}"
+        num+=1
+
+    # Make labels for mapping
+    current = -1
+    if sym:
+        labels_map = np.empty((K*2+1,),dtype=object)
+        clusters = np.zeros((K*2,),dtype=int)
+        labels_map[0] = '0'
+        for i,l in enumerate(leaves):
+            if cleaves[l]!=current:
+                num=1
+                current = cleaves[l]
+            labels_map[l+1]   = f"{groups[cleaves[l]]}{num}L"
+            labels_map[l+K+1] = f"{groups[cleaves[l]]}{num}R"
+            clusters[l] = cleaves[l]
+            clusters[l+K] = cleaves[l]
+            num+=1
+    else:
+        labels_map = np.empty((K+1,),dtype=object)
+        clusters = np.zeros((K,),dtype=int)
+        labels_map[0] = '0'
+        for i,l in enumerate(leaves):
+            labels_map[l+1]   = labels[i]
+            clusters[l] = cleaves[l]
+    if plot & (cmap is not None):
+        ax.set_xticklabels(labels)
+        ax.set_ylim((-0.2,1.5))
+        draw_cmap(ax,cmap,leaves,sym)
+    return labels_map,clusters,leaves
+
+def draw_cmap(ax,cmap,leaves,sym):
+    """ Draws the color map on the dendrogram"""
+    K = len(leaves)
+    for k in range(K):
+        rect = Rectangle((k*10, -0.05), 10,0.05,
+        facecolor=cmap(leaves[k]+1),
+        fill=True,
+        edgecolor=(0,0,0,1))
+        ax.add_patch(rect)
+    if sym:
+        for k in range(K):
+            # Left:
+            rect = Rectangle((k*10, -0.1), 10,0.05,
+            facecolor=cmap(leaves[k]+1+K),
+            fill=True,
+            edgecolor=(0,0,0,1))
+            ax.add_patch(rect)
+
