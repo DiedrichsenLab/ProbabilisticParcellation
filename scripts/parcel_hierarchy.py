@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # for k in [10, 14, 20, 28, 34, 40]:
     for k in [14]:
 
-        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
+        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
 

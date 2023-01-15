@@ -23,6 +23,7 @@ import seaborn as sb
 import sys
 import pickle
 from ProbabilisticParcellation.util import *
+from ProbabilisticParcellation.learn_fusion_gpu import build_data_list
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -32,6 +33,7 @@ import matplotlib as mpl
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
 from copy import deepcopy
+
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -45,6 +47,7 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
+atlas_dir = base_dir + '/Atlases'
 
 def parcel_similarity(model,plot=False,sym=False, weighting=None):
     n_sets = len(model.emissions)
@@ -235,7 +238,7 @@ def map_fine2coarse(fine_probabilities, coarse_probabilities):
         fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
 
     """
-    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+    
 
     fine_parcellation = fine_probabilities.argmax(axis=0)
     coarse_parcellation = coarse_probabilities.argmax(axis=0)
@@ -270,7 +273,7 @@ def reduce_model(new_model, new_info, new_parcels):
     """
     new_model = deepcopy(new_model)
 
-    if hasattr(new_model, 'K_sym'):
+    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
         new_model.K_sym = int(len(new_parcels))
         all_parcels = [*new_parcels, *new_parcels]
     else:
@@ -284,17 +287,15 @@ def reduce_model(new_model, new_info, new_parcels):
     print(f'Freezing arrangement model and fitting emission models...')    
 
     for e, em in enumerate(new_model.emissions):
-        # new_model.emissions[e].V = em.V[:, all_parcels]
         new_model.emissions[e].K = int(len(all_parcels))
         new_model.emissions[e].nparams = em.V.shape[0] * em.K
+        new_model.emissions[e].param_offset = [new_model.emissions[e].param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0]+1]
 
-    if hasattr(new_model, 'K_sym'):
+    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
         atlas, _ = am.get_atlas(new_info.atlas, atlas_dir, sym=True)
-        M = fm.FullMultiModelSymmetric(new_model.arrange, new_model.emissions,
-                                       atlas.indx_full, atlas.indx_reduced,
-                                       same_parcels=False)
+        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
     else:
-        M = fm.FullMultiModel(ar_model, em_models)
+        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
 
     
     model_settings = {'Models_01': [True, True, False],
@@ -367,6 +368,7 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     # Get probabilities of coarse model
     coarse_probabilities = pt.softmax(coarse_model.arrange.logpi,dim=0)
     
+    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
     # Get mapping between fine parcels and coarse parcels
     mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
     new_K_sym = np.unique(mapping)
