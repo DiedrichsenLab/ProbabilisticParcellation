@@ -580,7 +580,7 @@ def fit_all_datasets(space = 'MNISymC2',
 
 
 if __name__ == "__main__":
-    datasets_list=[0,1,2] # [0,1,2,3,4,5,6]
+    datasets_list=[0,1,2,3,4,5,6]
     K = 68
     sym_type = ['asym']
     model_type = '03'
