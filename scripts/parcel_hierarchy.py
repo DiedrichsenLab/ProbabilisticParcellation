@@ -1,35 +1,22 @@
-"""Build a hierarchie of parcels from a parcelation
+"""
+Script to analyze parcels using clustering and colormaps
 """
 
 import pandas as pd
 import numpy as np
-import Functional_Fusion.atlas_map as am
-import Functional_Fusion.matrix as matrix
 from Functional_Fusion.dataset import *
-import generativeMRF.emissions as em
-import generativeMRF.arrangements as ar
-import generativeMRF.full_model as fm
-import generativeMRF.evaluation as ev
 from scipy.linalg import block_diag
-import PcmPy as pcm
-import nibabel as nb
-import nibabel.processing as ns
-import SUITPy as suit
 import torch as pt
 import matplotlib.pyplot as plt
-import seaborn as sb
-import sys
-import pickle
 from ProbabilisticParcellation.util import *
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
-from numpy.linalg import eigh, norm
-import matplotlib as mpl
-from matplotlib.colors import ListedColormap
-from matplotlib.patches import Rectangle
 from copy import deepcopy
+import ProbabilisticParcellation.hierarchical_clustering as cl
+import ProbabilisticParcellation.similarity_colormap as sc
+import ProbabilisticParcellation.export_atlas as ea
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -57,32 +44,32 @@ def analyze_parcel(mname, load_best=True, sym=True):
         info,model = load_batch_fit(mname)
 
     # Get parcel similarity:
-    w_cos_sym,_,_ = parcel_similarity(model,plot=True,sym=sym)
+    w_cos_sym,_,_ = cl.parcel_similarity(model,plot=True,sym=sym)
 
     # groups=['I','L','W','A','O','D','M']
     # Do Clustering:
     num_clusters = 7
     if num_clusters > model.arrange.K:
         num_clusters = model.arrange.K-1
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
+    labels,clusters,leaves = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
     ax = plt.gca()
 
     # Make a colormap
-    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
-    W = calc_mds(w_cos_sim,center=True)
+    w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False)
+    W = sc.calc_mds(w_cos_sim,center=True)
 
     # Define color anchors
     m = np.array([0.65,0.65,0.65])
 
     # Desired orientation of the eigenvectors of MDS in colorspace
     V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
-    V=make_orthonormal(V)
+    V=sc.make_orthonormal(V)
 
-    cmap = colormap_mds(W,target=(m,V),clusters=clusters,gamma=0)
+    cmap = sc.colormap_mds(W,target=(m,V),clusters=clusters,gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map
-    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
-    plot_colormap(cmap(np.arange(model.K)))
+    cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
+    sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
     Prob = np.array(model.marginal_prob())
@@ -100,8 +87,8 @@ def make_sfn_atlas():
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # Quick hack - hard-code the labels:
     labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
-    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    resample_atlas('atl-NettekovenSym34')
+    ea.export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    ea.resample_atlas('atl-NettekovenSym34')
 
 
 
@@ -116,14 +103,14 @@ def merge_clusters():
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
         # merge model
-        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
+        _, mname_merged, mapping = cl.cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
         merged_models.append(mname_merged)
 
 
 
 if __name__ == "__main__":
     
-    mname = 'Models_03/sym_MdPo_space-MNISymC3_K-40'
+    mname = 'Models_03/sym_De_space-MNISymC2_K-10'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     pass
 
