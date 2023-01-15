@@ -1,3 +1,28 @@
+import numpy as np
+import pandas as pd
+import numpy as np
+import Functional_Fusion.atlas_map as am
+from Functional_Fusion.dataset import *
+from scipy.linalg import block_diag
+import nibabel as nb
+import nibabel.processing as ns
+import SUITPy as suit
+from ProbabilisticParcellation.util import *
+from copy import deepcopy
+
+base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = 'Y:\data\FunctionalFusion'
+if not Path(base_dir).exists():
+    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(base_dir).exists():
+    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(base_dir).exists():
+    raise(NameError('Could not find base_dir'))
+
+
 """ Export_atlas
 Functionality to go from fitted model to a sharable atlas (nifti/gift)
 
