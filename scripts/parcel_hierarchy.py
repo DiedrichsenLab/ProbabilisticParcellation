@@ -17,6 +17,7 @@ from copy import deepcopy
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
+from ProbabilisticParcellation.hierarchical_clustering import cluster_model
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -110,25 +111,44 @@ def merge_clusters():
 
 if __name__ == "__main__":
     
-    mname = 'Models_03/sym_De_space-MNISymC2_K-10'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    pass
+    # # Load model to check type
+    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
+    # fileparts = mname_fine.split('/')
+    # split_mn = fileparts[-1].split('_')
+    # finfo,fmodel = load_batch_best(mname_fine)
+    # type(fmodel)
 
+    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+    # --- Merge parcels at K=20, 34 & 40 ---
+    merged_models = []
+    # for k in [10, 14, 20, 28, 34, 40]:
+    for k in [14]:
+
+        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34'
+        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+
+
+        # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
+        # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
+        
+        # merge model
+        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True)
+        merged_models.append(mname_merged)
 
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
     # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
-
+    
     # # Plot fine, coarse and merged model
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
-    # --- Show Merged Parcellation at K=20, K=34, K=40---
+    # --- Show Merged Parcellation at K=20, K=34, K=40--- 
     # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     # for mname_merged in merged_models:
     #     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
-
+    
 
     # # Show MNISymC2 Parcellation
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-10'
@@ -160,4 +180,3 @@ if __name__ == "__main__":
     # rgb=cmap(np.arange(20))
     # plot_colormap(rgb)
     pass
-
