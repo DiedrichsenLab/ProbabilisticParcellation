@@ -624,23 +624,23 @@ def reduce_model(new_model, new_info, new_parcels):
     """
     new_model = deepcopy(new_model)
 
-    new_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
-    
     if hasattr(new_model, 'K_sym'):
         new_model.K_sym = int(len(new_parcels))
         all_parcels = [*new_parcels, *new_parcels]
     else:
         all_parcels = new_parcels
-    
-    new_model.K = int(len(all_parcels))
+        
     new_model.arrange.K = int(len(new_parcels))
+    new_model.arrange.nparams = new_model.P * new_model.arrange.K
+    new_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
 
     # Refit emission models
     print(f'Freezing arrangement model and fitting emission models...')    
 
     for e, em in enumerate(new_model.emissions):
-        new_model.emissions[e].V = em.V[:, all_parcels]
+        # new_model.emissions[e].V = em.V[:, all_parcels]
         new_model.emissions[e].K = int(len(all_parcels))
+        new_model.emissions[e].nparams = em.V.shape[0] * em.K
 
     if hasattr(new_model, 'K_sym'):
         atlas, _ = am.get_atlas(new_info.atlas, atlas_dir, sym=True)
@@ -649,6 +649,7 @@ def reduce_model(new_model, new_info, new_parcels):
                                        same_parcels=False)
     else:
         M = fm.FullMultiModel(ar_model, em_models)
+
     
     model_settings = {'Models_01': [True, True, False],
                       'Models_02': [False, True, False],
@@ -671,22 +672,7 @@ def reduce_model(new_model, new_info, new_parcels):
                                                          join_sess=join_sess,
                                                          join_sess_part=join_sess_part)
 
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
-    # type = T.default_type.to_numpy()
-    # cond_ind = T.default_cond_ind.to_numpy()
-    # part_ind = np.array(['half'] * len(T), dtype=object)
-
-    # data, cond_vec, part_vec, subj_ind = build_data_list(new_info.datasets,
-    #                                                      atlas=new_info.atlas,
-    #                                                      sess=new_info.sess,
-    #                                                      cond_ind=new_info,
-    #                                                      type=new_info.type,
-    #                                                      part_ind=part_ind,
-    #                                                      join_sess=join_sess,
-    #                                                      uniform_kappa=uniform_kappa,
-    #                                                      join_sess_part=join_sess_part)
-
-    # Copy the obejct (without data)
+    # Copy the object (without data)
     m = deepcopy(M)
     # Attach the data
     m.initialize(data, subj_ind=subj_ind)
@@ -697,20 +683,9 @@ def reduce_model(new_model, new_info, new_parcels):
             fit_emission=True,
             fit_arrangement=False)
 
-    
+    return m
 
-
-
-    # Reduce emission model K and kappa
-    if hasattr(new_model, 'K_sym'):
-        for e, em in enumerate(new_model.emissions):
-            if not em.uniform_kappa:
-                raise NotImplementedError('Reducing of nonuniform kappa models not implemented yet.')
-                # new_model.emissions[e] = em.V[:, all_parcels]   
-
-    return new_model
-
-def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
+def cluster_model(mname_fine, mname_coarse, sym=True):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
@@ -781,9 +756,8 @@ def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
     new_info['K_coarse'] = int(K_coarse)
     new_info['model_type'] = mname_fine.split('/')[0]
 
-    # If merged parcels are fewer than coarse parcels, create reduced model
-    if len(new_K_sym) < coarse_model.arrange.K and reduce:
-        new_model = reduce_model(new_model, new_info, new_parcels)
+    # Create reduced model
+    new_model = reduce_model(new_model, new_info, new_parcels)
 
     # -- Save model --    
     # save new model
@@ -820,7 +794,7 @@ if __name__ == "__main__":
         # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
         # merge model
-        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
+        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True)
         merged_models.append(mname_merged)
 
     # export the merged model
