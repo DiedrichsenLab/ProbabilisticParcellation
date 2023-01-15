@@ -2,7 +2,6 @@ import numpy as np
 import nibabel as nb
 import SUITPy as suit
 import pickle
-from pathlib import Path
 import Functional_Fusion.atlas_map as am
 import pandas as pd
 import torch as pt
@@ -10,8 +9,10 @@ import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 import generativeMRF.full_model as fm
+from pathlib import Path
 
-# Find model directory to save model fitting results
+# Set directories for the entire project - just set here and import everywhere 
+# else  
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
@@ -35,6 +36,8 @@ if not Path(base_dir).exists():
     base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
+
+atlas_dir = base_dir + f'/Atlases'
 
 
 def cal_corr(Y_target, Y_source):
