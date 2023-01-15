@@ -1,7 +1,11 @@
-# Evaluate cerebellar parcellations
+"""
+Scripts to update models from GPU -> CPU 
+old symmetric -> new symmetric
+"""
 from time import gmtime
 from pathlib import Path
 from ProbabilisticParcellation.util import *
+import generativeMRF.full_model as fm
 import glob
 
 pt.set_default_tensor_type(pt.cuda.FloatTensor
@@ -17,17 +21,7 @@ if not Path(model_dir).exists():
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
-# Ks = [34]
-# for K in Ks:
-
-    
-# # Evaluate DCBC
-# eval_all_dcbc(model_type=model_type,prefix=sym,K=K,space = 'MNISymC3', models=hcp_models, fname_suffix=fname_suffix)
-
-# Concat DCBC
-# concat_all_prederror(model_type=model_type,prefix=sym,K=Ks,outfile=fname_suffix)
-
-if __name__=='__main__':
+def move_to_cpu():
     fname = glob.glob(model_dir + '/Models/Models_04/*.pickle')
     for f in fname:
         print(f)
@@ -41,9 +35,6 @@ if __name__=='__main__':
         with open(f, 'wb') as file:
             pickle.dump(models, file)
 
-<<<<<<< Updated upstream
-    # move_batch_to_device('Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34','cpu')
-=======
 def update_symmetric():
     fname = glob.glob(model_dir + '/Models/Models_03/sym_MdPoNiIbWmDeSo*.pickle')
     for f in fname:
@@ -63,5 +54,4 @@ def update_symmetric():
 
 if __name__=='__main__':
     update_symmetric()
->>>>>>> Stashed changes
     pass
