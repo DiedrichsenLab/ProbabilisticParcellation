@@ -16,7 +16,7 @@ import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
 from ProbabilisticParcellation.util import *
 import torch as pt
-from learn_mdtb import get_mdtb_parcel
+from depreciated.learn_mdtb import get_mdtb_parcel
 import matplotlib.pyplot as plt
 import seaborn as sb
 import sys

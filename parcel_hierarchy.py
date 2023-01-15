@@ -39,6 +39,8 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(base_dir).exists():
+    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(base_dir).exists():
     raise(NameError('Could not find base_dir'))
 
 pt.set_default_tensor_type(pt.FloatTensor)
@@ -205,7 +207,7 @@ def agglomative_clustering(similarity,
     cleaves,clinks = get_clusters(Z,K,num_clusters)
 
     if plot:
-        plt.figure()    
+        plt.figure()
         ax=plt.gca()
 
     R = dendrogram(Z,color_threshold=-1,no_plot=not plot) # truncate_mode="level", p=3)
@@ -351,26 +353,29 @@ def plot_colormap(rgb):
     return m,l,V
 
 
-def colormap_mds(W,target=None,scale=False,clusters=None,gamma=0.3):
-    """Map the simularity structure of MDS to a colormap
+def colormap_mds(W,target=None,clusters=None,gamma=0.3):
+    """Map the similarity structure of MDS to a colormap
     Args:
-        W (_type_): _description_
-        plot (str, optional): _description_. Defaults to '2d'.
-        type (str, optional): _description_. Defaults to 'hsv'.
-        target (stg or )
+        W (ndarray): N x 3 array of original multidimensional scaling
+        target (tuple): Target origin [0] directions[1] of the desired map
+        clusters (ndarray): distorts color towards cluster mean
+        gamma (float): Strength of cluster mean
     Returns:
-        colormap: _description_
+        colormap (Listed Colormap):
     """
     N = W.shape[0]
     if target is not None:
         tm=target[0]
-        tl=target[1]
-        tV = target[2]
+        tV = target[1]
+
+        # Get the eigenvalues of W around the origin.
         m=np.mean(W[:,:3],axis=0)
         A=W-m
+        # Get the eigenvalues in ascending order
         l,V=eigh(A.T@A)
         l = np.flip(l,axis=0)
         V = np.flip(V,axis=1)
+        # Rotate and shift the color space towards the target
         Wm = A @ V @ tV.T
         Wm += tm
     # rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
@@ -518,63 +523,6 @@ def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     # ax.show()
     return sym_score
 
-
-def analyze_parcel(mname, load_best=True, sym=True):
-    
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
-    if load_best:
-        info,model = load_batch_best(mname)
-    else:
-        info,model = load_batch_fit(mname)
-
-    # model.move_to('cpu')
-
-    # Get parcel similarity:
-    w_cos_sym,_,_ = parcel_similarity(model,plot=True,sym=sym)
-
-    # groups=['I','L','W','A','O','D','M']
-    # Do Clustering: 
-    num_clusters = 7
-    if num_clusters > model.arrange.K:
-        num_clusters = model.arrange.K-1
-    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
-    ax = plt.gca()
-
-    # Make a colormap
-    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
-    W = calc_mds(w_cos_sim,center=True)
-    V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
-    V=make_orthonormal(V)
-    m = np.array([0.65,0.65,0.65])
-    l = np.array([1.0,1.0,1.0])
-    cmap = colormap_mds(W,target=(m,l,V),clusters=clusters,gamma=0)
-
-    # Replot the Clustering dendrogram, this time with the correct color map 
-    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
-    plot_colormap(cmap(np.arange(model.K)))
-
-
-
-    # Plot the parcellation
-    Prob = np.array(model.marginal_prob())
-    parcel = Prob.argmax(axis=0)+1
-    atlas = split_mn[2][6:]
-    ax = plot_data_flat(parcel,atlas,cmap = cmap,
-                    dtype='label',
-                    labels=labels,
-                    render='plotly')
-    ax.show()
-
-    return Prob,parcel,atlas,labels,cmap
-
-def make_sfn_atlas():
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # Quick hack - hard-code the labels:
-    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
-    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    resample_atlas('atl-NettekovenSym34')
-
 def map_fine2coarse(fine_probabilities, coarse_probabilities):
     """Maps parcels of a fine parcellation to parcels of a coarse parcellation.
 
@@ -621,13 +569,13 @@ def reduce_model(new_model, new_parcels):
     reduced_model = deepcopy(new_model)
 
     reduced_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
-    
+
     if hasattr(new_model, 'K_sym'):
         reduced_model.K_sym = int(len(new_parcels))
         all_parcels = [*new_parcels, *new_parcels + new_model.K_sym]
     else:
         all_parcels = new_parcels
-    
+
     reduced_model.K = int(len(all_parcels))
     reduced_model.arrange.K = int(len(all_parcels))
 
@@ -635,14 +583,14 @@ def reduce_model(new_model, new_parcels):
     for e, em in enumerate(new_model.emissions):
         reduced_model.emissions[e].V = em.V[:, all_parcels]
         reduced_model.emissions[e].K = int(len(all_parcels))
-        
+
 
     # Reduce emission model K and kappa
     if hasattr(new_model, 'K_sym'):
         for e, em in enumerate(new_model.emissions):
             if not em.uniform_kappa:
                 raise NotImplementedError('Reducing of nonuniform kappa models not implemented yet.')
-                # reduced_model.emissions[e] = em.V[:, all_parcels]   
+                # reduced_model.emissions[e] = em.V[:, all_parcels]
 
     return reduced_model
 
@@ -686,7 +634,7 @@ def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
     mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
     new_K_sym = np.unique(mapping)
 
-    # -- Make new model --    
+    # -- Make new model --
     # Initiliaze new probabilities
     new_probabilities = np.zeros(coarse_probabilities.shape)
 
@@ -702,9 +650,9 @@ def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
     new_parcels = [int(k) for k in new_K_sym]
     merged_probabilities_sorted = np.array([x for _,x in sorted(zip(new_parcels,merged_probabilities))])
     new_probabilities[new_parcels] = merged_probabilities_sorted
-    
+
     # Create new, clustered model
-    new_model = deepcopy(coarse_model)    
+    new_model = deepcopy(coarse_model)
 
     # fill new probabilities
     new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
@@ -713,7 +661,32 @@ def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
     if len(new_K_sym) < coarse_model.arrange.K and reduce:
         new_model = reduce_model(new_model, new_parcels)
 
-    K_new = len(new_K_sym)*2
+    K = len(new_K_sym)*2
+    return new_model, K
+
+
+def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
+
+    Args:
+        mname_fine: Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
+        merge: Vector that indicates cluster assignment
+
+    """
+
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fmodel = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo,cmodel = load_batch_best(mname_coarse)
+
+    merged_model, K = merge_model(fmodel, cmodel, reduce=reduce)
+    mname_merged = f'{mname_fine}_merged_K-{K}'
 
     # -- Save model --    
     # save new model
@@ -766,15 +739,65 @@ def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
 #     return merged_model, mname_merged
 
 
-if __name__ == "__main__":
+def analyze_parcel(mname, load_best=True, sym=True):
 
-    # # Load model to check type
-    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
-    # fileparts = mname_fine.split('/')
-    # split_mn = fileparts[-1].split('_')
-    # finfo,fmodel = load_batch_best(mname_fine)
-    # type(fmodel)
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    if load_best:
+        info,model = load_batch_best(mname)
+    else:
+        info,model = load_batch_fit(mname)
 
+    # Get parcel similarity:
+    w_cos_sym,_,_ = parcel_similarity(model,plot=True,sym=sym)
+
+    # groups=['I','L','W','A','O','D','M']
+    # Do Clustering:
+    num_clusters = 7
+    if num_clusters > model.arrange.K:
+        num_clusters = model.arrange.K-1
+    labels,clusters,leaves = agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
+    ax = plt.gca()
+
+    # Make a colormap
+    w_cos_sim,_,_ = parcel_similarity(model,plot=False)
+    W = calc_mds(w_cos_sim,center=True)
+
+    # Define color anchors
+    m = np.array([0.65,0.65,0.65])
+
+    # Desired orientation of the eigenvectors of MDS in colorspace
+    V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
+    V=make_orthonormal(V)
+
+    cmap = colormap_mds(W,target=(m,V),clusters=clusters,gamma=0)
+
+    # Replot the Clustering dendrogram, this time with the correct color map
+    agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
+    plot_colormap(cmap(np.arange(model.K)))
+
+    # Plot the parcellation
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
+    atlas = split_mn[2][6:]
+    ax = plot_data_flat(parcel,atlas,cmap = cmap,
+                    dtype='label',
+                    labels=labels,
+                    render='plotly')
+    ax.show()
+
+    return Prob,parcel,atlas,labels,cmap
+
+def make_sfn_atlas():
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # Quick hack - hard-code the labels:
+    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
+    export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    resample_atlas('atl-NettekovenSym34')
+
+
+
+def merge_clusters():
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
@@ -784,28 +807,33 @@ if __name__ == "__main__":
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
-
-        # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
-        # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
-        
         # merge model
         _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
         merged_models.append(mname_merged)
 
+
+
+if __name__ == "__main__":
+    
+    mname = 'Models_03/sym_MdPo_space-MNISymC3_K-40'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    pass
+
+
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
     # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
-    
+
     # # Plot fine, coarse and merged model
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
-    # --- Show Merged Parcellation at K=20, K=34, K=40--- 
+    # --- Show Merged Parcellation at K=20, K=34, K=40---
     # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     # for mname_merged in merged_models:
     #     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
-    
+
 
     # # Show MNISymC2 Parcellation
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-10'

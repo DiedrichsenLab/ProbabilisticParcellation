@@ -29,9 +29,6 @@ from ProbabilisticParcellation.util import *
 # from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
 # pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
@@ -282,9 +279,9 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['session'] = model_name.split('ses-')[1]
+            this_res['test_sess'] = model_name.split('ses-')[1]
         else:
-            this_res['session'] = 'all'
+            this_res['test_sess'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
@@ -486,9 +483,9 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['session'] = model_name.split('ses-')[1]
+            this_res['test_sess'] = model_name.split('ses-')[1]
         else:
-            this_res['session'] = 'all'
+            this_res['tess_sess'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
