@@ -224,6 +224,7 @@ def batch_fit(datasets, sess,
         em_models.append(em_model)
 
     M = fm.FullMultiModel(ar_model, em_models)
+    fm.report_cuda_memory()
 
     # Step 5: Estimate the parameter thetas to fit the new model using EM
     # Somewhat hacky: Weight different datasets differently
@@ -250,11 +251,13 @@ def batch_fit(datasets, sess,
     prior = pt.zeros((n_fits, K, atlas.P))
     for i in range(n_fits):
         print(f'Start fit: repetition {i} - {name}')
+
         iter_tic = time.perf_counter()
-        # Copy the obejct (without data)
+        # Copy the object (without data)
         m = deepcopy(M)
         # Attach the data
         m.initialize(data, subj_ind=subj_ind)
+        fm.report_cuda_memory()
 
         m, ll, theta, U_hat, ll_init = m.fit_em_ninits(
             iter=n_iter,
@@ -388,7 +391,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             pickle.dump(models, file)
 
         toc = time.perf_counter()
-        print(f'Done Model fitting - {mname[i]}. Used {toc - tic:0.4f} seconds!')
+        print(f'Done Model fitting - {mname}. Used {toc - tic:0.4f} seconds!')
 
 
 def clear_models(K, model_type='04'):
@@ -577,8 +580,16 @@ def fit_all_datasets(space = 'MNISymC2',
 
 
 if __name__ == "__main__":
-    fit_all_datasets(space='MNISymC3',msym='sym',K=[40],datasets_list=[[0,1]])
-    pass
+    datasets_list=[0,1,2] # [0,1,2,3,4,5,6]
+    K = 68
+    sym_type = ['asym']
+    model_type = '03'
+    space = 'MNISymC2'
+
+    fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
+            sym_type=['sym'], space='MNISymC2')
+
+
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
