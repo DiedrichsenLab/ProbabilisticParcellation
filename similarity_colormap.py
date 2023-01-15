@@ -86,7 +86,7 @@ def make_orthonormal(U):
         V[:,i] /= norm(V[:,i])
     return V
 
-def plot_colormap(rgb):
+def plot_colorspace(rgb):
     N,a = rgb.shape
     if a==3:
         rgb = np.c_[rgb,np.ones((N,))]
