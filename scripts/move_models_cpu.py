@@ -41,5 +41,27 @@ if __name__=='__main__':
         with open(f, 'wb') as file:
             pickle.dump(models, file)
 
+<<<<<<< Updated upstream
     # move_batch_to_device('Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34','cpu')
+=======
+def update_symmetric():
+    fname = glob.glob(model_dir + '/Models/Models_03/sym_MdPoNiIbWmDeSo*.pickle')
+    for f in fname:
+        print(f)
+        with open(f, 'rb') as file:
+            models = pickle.load(file)
+
+        # Recursively update the models 
+        new_models = []
+        for m in models:
+            nm = fm.update_symmetric_model(m)
+            new_models.append(nm)
+
+        with open(f, 'wb') as file:
+            pickle.dump(new_models, file)
+    pass
+
+if __name__=='__main__':
+    update_symmetric()
+>>>>>>> Stashed changes
     pass
