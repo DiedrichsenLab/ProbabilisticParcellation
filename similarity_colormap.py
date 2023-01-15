@@ -1,31 +1,10 @@
-import pandas as pd
 import numpy as np
-import Functional_Fusion.atlas_map as am
-import Functional_Fusion.matrix as matrix
-from Functional_Fusion.dataset import *
-import generativeMRF.emissions as em
-import generativeMRF.arrangements as ar
-import generativeMRF.full_model as fm
-import generativeMRF.evaluation as ev
-from scipy.linalg import block_diag
-import PcmPy as pcm
-import nibabel as nb
-import nibabel.processing as ns
-import SUITPy as suit
-import torch as pt
-import matplotlib.pyplot as plt
-import seaborn as sb
-import sys
-import pickle
-from ProbabilisticParcellation.util import *
-import torch as pt
-from matplotlib import pyplot as plt
-from scipy.cluster.hierarchy import dendrogram, linkage
-from scipy.spatial.distance import squareform
 from numpy.linalg import eigh, norm
+import matplotlib.pyplot as plt
+from ProbabilisticParcellation.util import *
+from matplotlib import pyplot as plt
 import matplotlib as mpl
 from matplotlib.colors import ListedColormap
-from matplotlib.patches import Rectangle
 from copy import deepcopy
 
 
