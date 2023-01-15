@@ -191,3 +191,250 @@ def draw_cmap(ax,cmap,leaves,sym):
             edgecolor=(0,0,0,1))
             ax.add_patch(rect)
 
+def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info,model = load_batch_best(mname)
+
+    # Get winner take-all
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
+
+    # Get similarity
+    w_cos,_,_ = parcel_similarity(model,plot=False,sym=False)
+    indx1 = np.arange(model.K)
+    v = np.arange(model.K_sym)
+    indx2 = np.concatenate([v+model.K_sym,v])
+    sym_score = w_cos[indx1,indx2]
+
+    suit_atlas, _ = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    Nifti = suit_atlas.data_to_nifti(parcel)
+    surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
+            space='MNISymC',ignore_zeros=True)
+    surf_parcel = np.nan_to_num(surf_parcel,copy=False).astype(int)
+    sym_map = np.zeros(surf_parcel.shape)*np.nan
+    sym_map[surf_parcel>0] = sym_score[surf_parcel[surf_parcel>0]-1]
+
+    ax = suit.flatmap.plot(sym_map,
+                render='matplotlib',
+                overlay_type='func',
+                colorbar=True,
+                cscale=cscale,
+                cmap=cmap)
+    # ax.show()
+    return sym_score
+
+def map_fine2coarse(fine_probabilities, coarse_probabilities):
+    """Maps parcels of a fine parcellation to parcels of a coarse parcellation.
+
+    Args:
+        fine_probabilities: Probabilstic parcellation of a fine model (fine parcellation)
+        coarse_probabilities: Probabilstic parcellation of a coarse model (coarse parcellation)
+
+    Returns:
+        fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
+
+    """
+    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+
+    fine_parcellation = fine_probabilities.argmax(axis=0)
+    coarse_parcellation = coarse_probabilities.argmax(axis=0)
+
+    print(f'\n Fine Model: \t{np.unique(fine_parcellation).shape[0]} WTA Parcels \n Coarse Model: \t{np.unique(coarse_parcellation).shape[0]} WTA Parcels')
+
+    fine_coarse_mapping = np.zeros(fine_probabilities.shape[0])
+    for fine_parcel in (fine_parcellation).unique():
+        # find voxels belonging to fine parcel
+        fine_voxels = (fine_parcellation == fine_parcel)
+        # get probabilities of voxels belonging to each coarse parcel
+        fine_coarse_prob = coarse_probabilities[:,fine_voxels]
+        # get winner take all assignment for mapping fine parcel to coarse parcel by adding within-fine-parcel voxel probabilities and assigning winner
+        winner = fine_coarse_prob.sum(axis=1).argmax()
+        # assign coarse parcel winner to fine parcel
+        fine_coarse_mapping[fine_parcel] = winner.item()
+    
+    print(f'\n Merged Model: \t{np.unique(fine_coarse_mapping).shape[0]} WTA Parcels \n')
+    return fine_coarse_mapping
+
+def reduce_model(new_model, new_parcels):
+    """Reduces model to effective K.
+
+    Args:
+        new_model: Coarse model containing voxel probabilities of fine model (Clustered model)
+        new_parcels: Vector of new parcels
+
+    Returns:
+        reduced_model: Reduced model with empty parcels removed (Clustered fine model with effective K)
+
+    """
+    reduced_model = deepcopy(new_model)
+
+    reduced_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
+
+    if hasattr(new_model, 'K_sym'):
+        reduced_model.K_sym = int(len(new_parcels))
+        all_parcels = [*new_parcels, *new_parcels + new_model.K_sym]
+    else:
+        all_parcels = new_parcels
+
+    reduced_model.K = int(len(all_parcels))
+    reduced_model.arrange.K = int(len(all_parcels))
+
+    # Reduce emission models
+    for e, em in enumerate(new_model.emissions):
+        reduced_model.emissions[e].V = em.V[:, all_parcels]
+        reduced_model.emissions[e].K = int(len(all_parcels))
+
+
+    # Reduce emission model K and kappa
+    if hasattr(new_model, 'K_sym'):
+        for e, em in enumerate(new_model.emissions):
+            if not em.uniform_kappa:
+                raise NotImplementedError('Reducing of nonuniform kappa models not implemented yet.')
+                # reduced_model.emissions[e] = em.V[:, all_parcels]
+
+    return reduced_model
+
+def cluster_model(mname_fine, mname_coarse, sym=True, reduce=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
+
+    Args:
+        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
+        sym:            Boolean indicating if model is symmetric. Defaults to True.
+        reduce:         Boolean indicating if model should be reduced (empty parcels removed). Defaults to True.
+
+    Returns:
+        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        mname_merged:   Name of merged model
+        mapping:        Mapping of fine parcels to coarse parcels.
+
+    """
+    # -- Import models --    
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fine_model = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo,coarse_model = load_batch_best(mname_coarse)
+
+    # -- Cluster fine model --    
+    K_coarse = split_mn[-1].split('-')[1]
+    mname_merged = f'{mname_fine}_merged-{K_coarse}'
+
+    # Get winner take all assignment for fine model
+    fine_probabilities = pt.softmax(fine_model.arrange.logpi,dim=0)
+
+    # Get probabilities of coarse model
+    coarse_probabilities = pt.softmax(coarse_model.arrange.logpi,dim=0)
+    
+    # Get mapping between fine parcels and coarse parcels
+    mapping = map_fine2coarse(fine_probabilities, coarse_probabilities)
+    new_K_sym = np.unique(mapping)
+
+    # -- Make new model --
+    # Initiliaze new probabilities
+    new_probabilities = np.zeros(coarse_probabilities.shape)
+
+    # # Initiliaze new probabilities with small prob instead of zero
+    # min_val = float("1e-30")
+    # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
+
+    # get new probabilities
+    indicator = pcm.matrix.indicator(mapping)
+    merged_probabilities = np.dot(indicator.T, (fine_probabilities))
+
+    # sort probabilities according to original coarse parcels
+    new_parcels = [int(k) for k in new_K_sym]
+    merged_probabilities_sorted = np.array([x for _,x in sorted(zip(new_parcels,merged_probabilities))])
+    new_probabilities[new_parcels] = merged_probabilities_sorted
+
+    # Create new, clustered model
+    new_model = deepcopy(coarse_model)
+
+    # fill new probabilities
+    new_model.arrange.logpi = pt.log(pt.tensor(new_probabilities, dtype=pt.float32))
+
+    # If merged parcels are fewer than coarse parcels, create reduced model
+    if len(new_K_sym) < coarse_model.arrange.K and reduce:
+        new_model = reduce_model(new_model, new_parcels)
+
+    K = len(new_K_sym)*2
+    return new_model, K
+
+
+def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
+
+    Args:
+        mname_fine: Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
+        merge: Vector that indicates cluster assignment
+
+    """
+
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo,fmodel = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo,cmodel = load_batch_best(mname_coarse)
+
+    merged_model, K = merge_model(fmodel, cmodel, reduce=reduce)
+    mname_merged = f'{mname_fine}_merged_K-{K}'
+
+    # -- Save model --    
+    # save new model
+    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+        pickle.dump(new_model, file)
+
+    # save new info
+    finfo['K_original'] = int(finfo.K)
+    finfo['K'] = int(K_new)
+    finfo['K_coarse'] = int(K_coarse)
+    finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
+
+    return new_model, mname_merged, mapping
+
+
+# def get_clustered_model(mname_fine, mname_coarse, sym=True, reduce=True):
+#     """Merges the parcels of a fine parcellation model according to a coarser model.
+
+#     Args:
+#         mname_fine: Probabilstic parcellation to merge (fine parcellation)
+#         mname_caorse: Probabilstic parcellation that determines how to merge (coarse parcellation)
+#         merge: Vector that indicates cluster assignment
+        
+#     """
+    
+#     # Import fine model
+#     fileparts = mname_fine.split('/')
+#     split_mn = fileparts[-1].split('_')
+#     finfo,fmodel = load_batch_best(mname_fine)
+
+#     # Import coarse model
+#     fileparts = mname_coarse.split('/')
+#     split_mn = fileparts[-1].split('_')
+#     cinfo,cmodel = load_batch_best(mname_coarse)
+
+#     K_coarse = split_mn[-1].split('-')[1]
+#     merged_model, K_new, mapping = merge_model(fmodel, cmodel, reduce=reduce)
+#     mname_merged = f'{mname_fine}_merged-{K_coarse}'
+
+#     # save new model
+#     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+#         pickle.dump(merged_model, file)
+
+#     # save new info
+#     finfo['K_original'] = int(finfo.K)
+#     finfo['K'] = int(K_new)
+#     finfo['K_coarse'] = int(K_coarse)
+#     finfo.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
+
+#     return merged_model, mname_merged
