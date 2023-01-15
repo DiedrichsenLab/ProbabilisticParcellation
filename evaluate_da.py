@@ -77,7 +77,7 @@ def eval_generative_SNMF(model_names = ['asym_Md_space-SUIT3_K-10']):
     atlas = am.AtlasVolumetric('SUIT3', mask_img=mask)
 
     # get original mdtb parcels (nmf)
-    from learn_mdtb import get_mdtb_parcel
+    from depreciated.learn_mdtb import get_mdtb_parcel
     mdtb_par, _ = get_mdtb_parcel(do_plot=False)
     mdtb_par = np.where(mdtb_par == 0, np.nan, mdtb_par)
 
@@ -887,14 +887,14 @@ if __name__ == "__main__":
     #                 'Models_05/asym_Ib_space-MNISymC3_K-10']
 
 
-    
+
     ############# Result 6: Clustered models #############
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     D = pd.DataFrame()
     datasets = [0, 1, 2, 3, 4, 5, 6]
     datanames = T.two_letter_code[datasets].to_list()
-    
-    for i in range(7):        
+
+    for i in range(7):
         for k_merged in [10,18,22,26]:
             res = result_5_eval(K=68, symmetric='sym', model_type=['03'],
                                 model_name=['MdPoNiIbWmDeSo'], t_datasets=[T.name[i]],
