@@ -40,6 +40,8 @@ def make_highres_model(info,model, new_space = 'MNISymC2'):
     M = lf.build_model(model.K,info.arrange,split_mn[0],info.emission,atlas,
             cond_vec,part_vec,
             model.emissions[0].uniform_kappa)
+    ## Copy over parameters
+    
     M.initialize(data, subj_ind=subj_ind)
     return M
 
