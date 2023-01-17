@@ -48,15 +48,15 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
     M = make_highres_model(info,model,new_space)
-    M, ll1, theta, Uhat = M.fit_em(iter=10, tol=0.01, 
+    M, ll1, theta, Uhat = M.fit_em(iter=100, tol=0.01, 
             fit_emission=False,
             fit_arrangement=True,
             first_evidence=True)
-    M, ll2, theta, Uhat = M.fit_em(iter=10, tol=0.01, 
+    M, ll2, theta, Uhat = M.fit_em(iter=100, tol=0.01, 
             fit_emission=True,
             fit_arrangement=False,
             first_evidence=True)
-    M, ll3, theta, Uhat = M.fit_em(iter=10, tol=0.01, 
+    M, ll3, theta, Uhat = M.fit_em(iter=100, tol=0.01, 
             fit_emission=True,
             fit_arrangement=True,
             first_evidence=True)
