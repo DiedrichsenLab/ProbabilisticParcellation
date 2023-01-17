@@ -41,7 +41,9 @@ def make_highres_model(info,model, new_space = 'MNISymC2'):
             cond_vec,part_vec,
             model.emissions[0].uniform_kappa)
     ## Copy over parameters
-    
+    for i,em in enumerate(model.emissions):
+        for param in em.param_list:
+                setattr(M.emissions[i],param,getattr(em,param))
     M.initialize(data, subj_ind=subj_ind)
     return M
 
