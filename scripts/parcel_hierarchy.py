@@ -108,6 +108,96 @@ def merge_clusters():
         merged_models.append(mname_merged)
 
 
+def cluster_model(mname_fine, mname_coarse, sym=True):
+    """Merges the parcels of a fine parcellation model according to a coarser model.
+
+    Args:
+        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
+        mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
+        sym:            Boolean indicating if model is symmetric. Defaults to True.
+        reduce:         Boolean indicating if model should be reduced (empty parcels removed). Defaults to True.
+
+    Returns:
+        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        mname_merged:   Name of merged model
+        mapping:        Mapping of fine parcels to coarse parcels.
+
+    """
+    # -- Import models --
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo, fine_model = load_batch_best(mname_fine)
+
+    # Import coarse model
+    fileparts = mname_coarse.split('/')
+    split_mn = fileparts[-1].split('_')
+    cinfo, coarse_model = load_batch_best(mname_coarse)
+
+    # -- Cluster fine model --
+    K_coarse = split_mn[-1].split('-')[1]
+    mname_merged = f'{mname_fine}_merged-{K_coarse}'
+
+    # Get winner take all assignment for fine model
+    fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
+
+    # Get probabilities of coarse model
+    coarse_probabilities = pt.softmax(coarse_model.arrange.logpi, dim=0)
+
+    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+    # Get mapping between fine parcels and coarse parcels
+    mapping = guided_clustering(fine_probabilities, coarse_probabilities)
+    new_K_sym = np.unique(mapping)
+
+    # -- Make new model --
+    # Initiliaze new probabilities
+    new_probabilities = np.zeros(coarse_probabilities.shape)
+
+    # # Initiliaze new probabilities with small prob instead of zero
+    # min_val = float("1e-30")
+    # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
+
+    # get new probabilities
+    indicator = pcm.matrix.indicator(mapping)
+    merged_probabilities = np.dot(indicator.T, (fine_probabilities))
+
+    # sort probabilities according to original coarse parcels
+    new_parcels = [int(k) for k in new_K_sym]
+    merged_probabilities_sorted = np.array(
+        [x for _, x in sorted(zip(new_parcels, merged_probabilities))])
+    new_probabilities[new_parcels] = merged_probabilities_sorted
+
+    # Create new, clustered model
+    new_model = deepcopy(coarse_model)
+
+    # fill new probabilities
+    new_model.arrange.logpi = pt.log(
+        pt.tensor(new_probabilities, dtype=pt.float32))
+
+    # Make new info
+    K_new = len(new_K_sym) * 2
+    new_info = deepcopy(finfo)
+    new_info['K_original'] = int(finfo.K)
+    new_info['K'] = int(K_new)
+    new_info['K_coarse'] = int(K_coarse)
+    new_info['model_type'] = mname_fine.split('/')[0]
+
+    # Create reduced model
+    new_model = reduce_model(new_model, new_info, new_parcels)
+    # Refit reduced model
+    new_model = refit_model(new_model, new_info)
+
+    # -- Save model --
+    # save new model
+    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+        pickle.dump([new_model], file)
+
+    # save new info
+    # TODO: Make sure this is a dataframe, not a series
+    raise ('Make this a df not a series')
+    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
+
+    return new_model, mname_merged, mapping
 
 if __name__ == "__main__":
     

@@ -579,6 +579,62 @@ def fit_all_datasets(space = 'MNISymC2',
                     print(f'model {t} with K={k} already fitted as {fname}')
 
 
+def refit_model(new_model, new_info):
+    """Refits model.
+
+    Args:
+        new_model:      Model to be refitted
+        new_info:       Information for new model
+
+    Returns:
+        new_model: Refitted model
+
+    """
+
+    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
+        atlas, _ = am.get_atlas(new_info.atlas, atlas_dir, sym=True)
+        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
+    else:
+        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
+
+    model_settings = {'Models_01': [True, True, False],
+                      'Models_02': [False, True, False],
+                      'Models_03': [True, False, False],
+                      'Models_04': [False, False, False],
+                      'Models_05': [False, True, True]}
+
+    uniform_kappa = model_settings[new_info.model_type][0]
+    join_sess = model_settings[new_info.model_type][1]
+    join_sess_part = model_settings[new_info.model_type][2]
+
+    datasets = new_info.datasets.strip("'[").strip("]'").split("' '")
+    sessions = new_info.sess.strip("'[").strip("]'").split("' '")
+    types = new_info.type.strip("'[").strip("]'").split("' '")
+
+    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
+                                                         atlas=new_info.atlas,
+                                                         sess=sessions,
+                                                         type=types,
+                                                         join_sess=join_sess,
+                                                         join_sess_part=join_sess_part)
+
+    # Copy the object (without data)
+    m = deepcopy(M)
+    # Attach the data
+    m.initialize()
+    m.initialize(data, subj_ind=subj_ind)
+
+    m.arrange.set_params_list()
+
+    m, ll, theta, U_hat, ll_init = m.fit_em(
+        iter=1,
+        tol=0.01,
+        fit_emission=True,
+        fit_arrangement=False)
+
+    return m
+
+
 if __name__ == "__main__":
     datasets_list=[0,1,2,3,4,5,6]
     K = 68
