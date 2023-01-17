@@ -114,11 +114,14 @@ def build_data_list(datasets,
         sub += n_subj
     return data, cond_vec, part_vec, subj_ind
 
-def build_model(arrange,sym_type,emission,atlas,weighting=None):
+def build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa = True,
+                weighting=None):
     """ Builds a Full model based on your specification"""
     if arrange == 'independent':
         if sym_type == 'sym':
-            ar_model = ar.ArrangeIndependentSymmetric(K, 
+             ar_model = ar.ArrangeIndependentSymmetric(K, 
                             atlas.indx_full, 
                             atlas.indx_reduced,
                             same_parcels=False,
@@ -133,7 +136,7 @@ def build_model(arrange,sym_type,emission,atlas,weighting=None):
 
     # Initialize emission models
     em_models = []
-    for j, ds in enumerate(data):
+    for j, ds in enumerate(cond_vec):
         if emission == 'VMF':
             em_model = em.MixVMF(K=K, P=atlas.P,
                                  X=matrix.indicator(cond_vec[j]),
@@ -208,7 +211,9 @@ def batch_fit(datasets, sess,
     n_sets = len(data)
 
     print(f'Building fullMultiModel {arrange} + {emission} for fitting...')
-    M = build_model(arrange,sym_type,emission,atlas,weighting)
+    M = build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa,weighting)
     fm.report_cuda_memory()
 
     # Initialize data frame for results
