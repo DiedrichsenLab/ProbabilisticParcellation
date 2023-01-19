@@ -1,3 +1,8 @@
+""" Export_atlas.py
+Functionality to go from fitted model to a sharable atlas (nifti/gifti) 
+and colormap 
+"""
+
 import numpy as np
 import pandas as pd
 import numpy as np
@@ -10,32 +15,15 @@ import SUITPy as suit
 from ProbabilisticParcellation.util import *
 from copy import deepcopy
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
-if not Path(base_dir).exists():
-    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
-if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
-
-
-""" Export_atlas
-Functionality to go from fitted model to a sharable atlas (nifti/gift)
-
-"""
 def export_map(data,atlas,cmap,labels,base_name):
     """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file.
 
     Args:
-        data (probabilities): Probabilstic parcellation to export
-        atlas (): FunctionalFusion atlas type (SUIT2,MNISym3)
-        cmap (): Colormap
+        data (probabilities): Marginal probabilities of the arrangement model 
+        atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3)
+        cmap (ListedColormap): Colormap
         labels (list): List of labels for fields
-        base_name (_type_): File basename for atlas
+        base_name (_type_): File directory + basename for atlas
     """
     # Transform cmap into numpy array
     if not isinstance(cmap,np.ndarray):
@@ -71,6 +59,15 @@ def export_map(data,atlas,cmap,labels,base_name):
     save_lut(np.arange(len(labels)),cmap[:,0:4],labels, base_name + '.lut')
 
 def save_lut(index,colors,labels,fname):
+    """Save a set of colors and labels as a LUT file 
+    Note: This should probably go into nitools 
+
+    Args:
+        index (_type_): _description_
+        colors (_type_): _description_
+        labels (_type_): _description_
+        fname (_type_): _description_
+    """
     L=pd.DataFrame({
             "key":index,
             "R":colors[:,0].round(4),
@@ -79,8 +76,17 @@ def save_lut(index,colors,labels,fname):
             "Name":labels})
     L.to_csv(fname,header=None,sep=' ',index=False)
 
-
 def renormalize_probseg(probseg):
+    """ Renormalizes a probsegmentation file 
+    after resampling, so that the probabilies add up to 1 
+
+    Args:
+        probseg (nifti_img): 
+
+    Returns:
+        probseg_img (NiftiImage): renormalize Prob segmentation 
+        dseg_img (NiftiImage): desementation file 
+    """
     X = probseg.get_fdata()
     xs = np.sum(X,axis=3)
     xs[xs<0.5]=np.nan
@@ -97,8 +103,9 @@ def renormalize_probseg(probseg):
     return probseg_img,dseg_img
 
 def resample_atlas(base_name):
-    """ Resamples probabilstic atlas into 1mm resolution and
+    """ Resamples probabilistic atlas into 1mm resolution and
     SUIT space
+    Note: Refactorize and make more universal 
     """
     mnisym_dir=base_dir + '/Atlases/tpl-MNI152NLin2000cSymC'
     suit_dir=base_dir + '/Atlases/tpl-SUIT'
