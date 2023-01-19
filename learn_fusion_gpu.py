@@ -561,6 +561,62 @@ def fit_all_datasets(space = 'MNISymC2',
                     print(f'model {t} with K={k} already fitted as {fname}')
 
 
+def refit_model(model, new_info):
+    """Refits model.
+
+    Args:
+        model:      Model to be refitted
+        new_info:       Information for new model
+
+    Returns:
+        model: Refitted model
+
+    """
+
+    if type(model.arrange) is ar.ArrangeIndependentSymmetric:
+        M = fm.FullMultiModel(model.arrange, model.emissions)
+    else:
+        M = fm.FullMultiModel(model.arrange, model.emissions)
+
+    model_settings = {'Models_01': [True, True, False],
+                      'Models_02': [False, True, False],
+                      'Models_03': [True, False, False],
+                      'Models_04': [False, False, False],
+                      'Models_05': [False, True, True]}
+
+    # uniform_kappa = model_settings[new_info.model_type][0]
+    join_sess = model_settings[new_info.model_type][1]
+    join_sess_part = model_settings[new_info.model_type][2]
+
+    datasets = new_info.datasets.strip("'[").strip("]'").split("' '")
+    sessions = new_info.sess.strip("'[").strip("]'").split("' '")
+    types = new_info.type.strip("'[").strip("]'").split("' '")
+
+    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
+                                                         atlas=new_info.atlas,
+                                                         sess=sessions,
+                                                         type=types,
+                                                         join_sess=join_sess,
+                                                         join_sess_part=join_sess_part)
+
+    # Attach the data
+    M.initialize(data, subj_ind=subj_ind)
+
+    # Refit emission models
+    print(f'Freezing arrangement model and fitting emission models...\n')
+
+    M, ll, _, _ = M.fit_em(iter=100, tol=0.01,
+                                            fit_emission=True,
+                                            fit_arrangement=False,
+                                            first_evidence=True)
+    
+    # make info from a Series back to a dataframe
+    new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    new_info['loglik'] = ll[-1].item()
+
+    return M, new_info
+
+
 if __name__ == "__main__":
     datasets_list=[0,1,2,3,4,5,6]
     K = 68
