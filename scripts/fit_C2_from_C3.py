@@ -52,6 +52,7 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
     split_mn = fileparts[-1].split('_')
     info,model = load_batch_best(mname)
     M = make_highres_model(info,model,new_space)
+    M.move_to(device = default_device)
     M, ll1, theta, Uhat = M.fit_em(iter=100, tol=0.01, 
             fit_emission=False,
             fit_arrangement=True,
@@ -64,10 +65,10 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
             fit_emission=True,
             fit_arrangement=True,
             first_evidence=True)
-
+ 
     # make info from a Series back to a dataframe
     info = pd.DataFrame(info.to_dict(),index=[0])
-    info['loglik']=ll3[-1].values()
+    info['loglik']=ll3[-1].item()
     info['atlas']=new_space
     wdir = model_dir + f'/Models/' + fileparts[-2]
     fname = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
@@ -77,5 +78,5 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
     refit_model_in_new_space(mname,new_space='MNISymC2')

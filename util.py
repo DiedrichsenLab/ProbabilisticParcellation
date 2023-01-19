@@ -39,6 +39,14 @@ if not Path(base_dir).exists():
 
 atlas_dir = base_dir + f'/Atlases'
 
+# pytorch cuda global flag
+if pt.cuda.is_available():
+    default_device = pt.device('cuda')
+    pt.set_default_tensor_type(pt.cuda.FloatTensor)
+else: 
+    default_device = pt.device('cpu')
+    pt.set_default_tensor_type(pt.FloatTensor)
+
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target

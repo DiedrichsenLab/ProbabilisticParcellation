@@ -25,10 +25,7 @@ import pickle
 from copy import deepcopy
 import time
 
-# pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
+
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
