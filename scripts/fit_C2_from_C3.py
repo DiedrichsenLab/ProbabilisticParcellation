@@ -73,9 +73,9 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
     fname = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
     info.to_csv(wdir + fname + '.tsv', sep='\t',index=False)
     with open(wdir + fname + '.pickle', 'wb') as file:
-            pickle.dump(M, file)
+            pickle.dump([M], file)
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     refit_model_in_new_space(mname,new_space='MNISymC2')
