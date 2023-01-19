@@ -67,7 +67,7 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
 
     # make info from a Series back to a dataframe
     info = pd.DataFrame(info.to_dict(),index=[0])
-    info['loglik']=ll3[-1]
+    info['loglik']=ll3[-1].values()
     info['atlas']=new_space
     wdir = model_dir + f'/Models/' + fileparts[-2]
     fname = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'

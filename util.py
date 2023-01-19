@@ -116,6 +116,9 @@ def load_batch_best(fname, device=None):
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
+    if not isinstance(models,list):
+        return info.iloc[0],models
+    
     j = info.loglik.argmax()
 
     best_model = models[j]

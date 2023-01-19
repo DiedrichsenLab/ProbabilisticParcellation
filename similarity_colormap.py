@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.linalg import eigh, norm
+from scipy.linalg import orthogonal_procrustes
 import matplotlib.pyplot as plt
 from ProbabilisticParcellation.util import *
 from matplotlib import pyplot as plt
@@ -21,26 +22,7 @@ def calc_mds(G,center=False):
 
     return W
 
-"""elif type=='hsv':
-        Sat=np.sqrt(W[:,0:1]**2)
-        Sat = Sat/Sat.max()
-        Hue=(np.arctan2(W[:,1],W[:,0])+np.pi)/(2*np.pi)
-        Val = (W[:,2]-W[:,2].min())/(W[:,2].max()-W[:,2].min())*0.5+0.4
-        rgb = mpl.colors.hsv_to_rgb(np.c_[Hue,Sat,Val])
-    elif type=='hsv2':
-        Sat=np.sqrt(V[:,0:1]**2)
-        Sat = Sat/Sat.max()
-        Hue=(np.arctan2(V[:,1],V[:,0])+np.pi)/(2*np.pi)
-        Val = (V[:,2]-V[:,2].min())/(V[:,2].max()-V[:,2].min())*0.5+0.4
-        rgb = mpl.colors.hsv_to_rgb(np.c_[Hue,Sat,Val])
-    elif type=='rgb_cluster':
-
-        rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
-    else:
-        raise(NameError(f'Unknown Type: {type}'))
-"""
-
-def get_target(cmap):
+def get_target_cmap(cmap):
     if isinstance(cmap,str):
         cmap = mpl.cm.get_cmap(cmap)
     rgb=cmap(np.arange(cmap.N))
@@ -51,6 +33,23 @@ def get_target(cmap):
     tl = np.flip(tl,axis=0)
     tV = np.flip(tV,axis=1)
     return tm,tl,tV
+
+def get_target_points(atlas,parcel):
+
+    m = np.array([0.65,0.65,0.65])
+    colors = np.array([[0.8,0.8,0.2],[0.8,0.8,0.2],
+                  [0,0.7,0.7],[0,0.7,0.7],
+                  [0.9,0.2,0.9],[0.9,0.2,0.9]])
+    points = np.array([[-29,-73,-38],[29,-73,-38],
+                       [-18,-53,-19],[18,-53,-19],
+                       [-36,-60,-30],[36,-60,-30]])
+    # Get closest voxel in atlas
+    region = np.zeros((points.shape[0],),dtype =int)
+    for i,p in enumerate(points):
+        d=np.sum((atlas.world-p.reshape(3,1))**2,axis=0)
+        region[i]=parcel[np.argmin(d)]-1
+    return m,region,colors
+
 
 def make_orthonormal(U):
     """Gram-Schmidt process to make
@@ -105,19 +104,17 @@ def colormap_mds(W,target=None,clusters=None,gamma=0.3):
     N = W.shape[0]
     if target is not None:
         tm=target[0]
-        tV = target[1]
+        reg = target[1]
+        colors = target[2]
 
-        # Get the eigenvalues of W around the origin.
+        # Do procrustes-alignment around the mean 
         m=np.mean(W[:,:3],axis=0)
-        A=W-m
-        # Get the eigenvalues in ascending order
-        l,V=eigh(A.T@A)
-        l = np.flip(l,axis=0)
-        V = np.flip(V,axis=1)
+        A = W[reg,:]-m
+        B = colors-tm
+        R,_ = orthogonal_procrustes(A,B) 
         # Rotate and shift the color space towards the target
-        Wm = A @ V @ tV.T
-        Wm += tm
-    # rgb = (W-W.min())/(W.max()-W.min()) # Scale between zero and 1
+        Wm = W @ R + tm 
+
     Wm[Wm<0]=0
     Wm[Wm>1]=1
     if clusters is not None:
@@ -130,3 +127,20 @@ def colormap_mds(W,target=None,clusters=None,gamma=0.3):
     colorsp = np.r_[np.zeros((1,4)),colors] # Add empty for the zero's color
     newcmp = ListedColormap(colorsp)
     return newcmp
+
+
+""" Old: eigenvector based colormap: depreciated
+        tm=target[0]
+        tV = target[1]
+
+        # Get the eigenvalues of W around the origin.
+        m=np.mean(W[:,:3],axis=0)
+        A=W-m
+        # Get the eigenvalues in ascending order
+        l,V=eigh(A.T@A)
+        l = np.flip(l,axis=0)
+        V = np.flip(V,axis=1)
+        # Rotate and shift the color space towards the target
+        Wm = A @ V @ tV.T
+        Wm += tm
+"""
