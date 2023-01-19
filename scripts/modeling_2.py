@@ -305,27 +305,27 @@ def plot_result(grid, MM, ylabels=["VMF, common",
     plt.show()
     plt.clf()
 
-def plot_diffK(fname, hue="dataset", style=None):
-    D = pd.read_csv(fname, delimiter='\t')
-    D = D.loc[D.common_kappa == True]
-    plt.figure(figsize=(15,12))
-    crits = ['ari_group','dcbc_group','coserr',
-             'ari_indiv','dcbc_indiv','wcoserr']
+def _plot_diffK(D, hue="dataset", style=None, title=None, save=False):
+    # D = D.loc[D.common_kappa == True]
+    plt.figure(figsize=(8, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
     for i, c in enumerate(crits):
-        plt.subplot(2, 3, i + 1)
+        plt.subplot(1, 2, i + 1)
         if style is not None:
-            sb.lineplot(data=D, x="K_fit", y=c, hue=hue, style=style,
-                        style_order=D[style].unique(),markers=True)
+            sb.lineplot(data=D, x="K_fit", y=c, hue=hue, hue_order=['D1', 'D2', 'D_fusion'],
+                        style=style,
+                        style_order=D[style].unique(), markers=True)
         else:
-            sb.lineplot(data=D, x="K_fit", y=c, hue=hue, markers=True)
-        # if i == len(crits)-1:
-        #     plt.legend(loc='upper left')
-        # else:
-        #     plt.legend('')
-        # plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
+            sb.lineplot(data=D, x="K_fit", y=c, hue=hue, hue_order=['D1', 'D2', 'D_fusion'],
+                        markers=True)
 
-    plt.suptitle(f'Two datasets fusion, diff K = {D.K_fit.unique()}')
+    if title is not None:
+        plt.suptitle(title)
+    else:
+        plt.suptitle(f'Two datasets fusion, diff K = {D.K_fit.unique()}')
     plt.tight_layout()
+    if save:
+        plt.savefig('sim_twoSess_fusion_diffK.pdf', format='pdf')
     plt.show()
 
 def _plot_maps(U, cmap='tab20', grid=None, offset=1, dim=(30, 30),
@@ -618,7 +618,7 @@ def do_sessFusion_diffK(K_true=10, K=5, M=np.array([5],dtype=int),
             res = pd.DataFrame({'model_type': [f'VMF_{common_kappa}'],
                                 'K_true': [K_true],
                                 'K_fit': [K],
-                                'common_kappa': [f'{common_kappa}'],
+                                'common_kappa': [common_kappa],
                                 'dataset': [fm_name],
                                 'sigma2': [sigma2],
                                 'low_signal': [low],
@@ -705,12 +705,10 @@ def simulation_3(K_true=10, K=6, width=30, nsub_list=np.array([10,10]),
 def cal_gradient(Y):
     """Calculate the functional gradients from data
        for simulation
-
     Args:
         Y: raw data. shape (width, height, N)
-
     Returns:
-
+        functional gradient map
     """
     from scipy import ndimage
     w,h,d = Y.shape
@@ -726,23 +724,190 @@ def cal_gradient(Y):
     #sobel = (sobel - sobel.min())/ (sobel.max()-sobel.min())
     return sobel
 
-if __name__ == '__main__':
-     # 3. simulation - session fusion (same subjects, different Ks)
-    conditions = [([0.5,0.8], 1.1, 1.1, True),
-                  ([0.2,0.5], 1.1, 1.1, True),
-                  ([0.2,0.2], 0.1, 1.1, False),
-                  ([0.8,0.8], 0.1, 1.1, False)]
-    for i, (noise_level,low,high,re) in enumerate(conditions):
-        D = pd.DataFrame()
-        for k in [5,10,20,30,40]:
-            res = simulation_3(K_true=20, K=k, width=50,
-                               nsub_list=np.array([10, 10]),
-                               M=np.array([40, 20], dtype=int),
-                               num_part=1, sigma2=noise_level,
-                               low=low, high=high,
-                               iter=100, relevant=re)
-            D = pd.concat([D, res], ignore_index=True)
-        D.to_csv(f'eval_Ktrue_20_Kfit_5to40_Fusion_{i}_merged_joint.tsv', index=False, sep='\t')
+def example_fusion_group(K_true=20, K=20, width=50, nsub_list=np.array([10,10]),
+                         M=np.array([10,10],dtype=int), num_part=2, sigma2=0.1,
+                         low=0.1, high=1.1, relevant=True):
+    results = pd.DataFrame()
+    grid, U, U_prior, U_indv, Props, kappas, res = do_sessFusion_diffK(K_true=K_true,
+                                                                       K=K, M=M,
+                                                                       nsubj_list=nsub_list,
+                                                                       num_part=num_part,
+                                                                       width=width,
+                                                                       low=low, high=high,
+                                                                       sigma2=sigma2,
+                                                                       plot_trueU=False,
+                                                                       relevant=relevant)
 
-    fname = 'eval_Ktrue_20_Kfit_5to40.tsv'
-    plot_diffK(fname, style='relevant')
+    # names = ["True", "Dataset 1", "Dataset 2", "Model_1", "Model_3"]
+    #
+    # true_group = pt.argmax(U_prior[0], dim=0)
+    #
+    # plt.figure(figsize=(12, 3))
+    # plt.subplot(1, 5, 1)
+    # grid.plot_maps(true_group)
+    # plt.title(names[0])
+    # plt.subplot(1, 5, 2)
+    # grid.plot_maps(pt.argmax(Props[0][0, :, :], dim=0))
+    # plt.title(names[1])
+    # plt.subplot(1, 5, 3)
+    # grid.plot_maps(pt.argmax(Props[0][1, :, :], dim=0))
+    # plt.title(names[2])
+    # plt.subplot(1, 5, 4)
+    # grid.plot_maps(pt.argmax(Props[0][3, :, :], dim=0))
+    # plt.title(names[3])
+    # plt.subplot(1, 5, 5)
+    # grid.plot_maps(pt.argmax(Props[0][2, :, :], dim=0))
+    # plt.title(names[4])
+
+    names = ["True", "Dataset 1", "Dataset 2", "Fusion", "Fusion_joint"]
+
+    plt.figure(figsize=(15, 6))
+    plt.subplot(2, 5, 1)
+    grid.plot_maps(pt.argmax(U_prior[0], dim=0))
+    plt.title(names[0])
+    plt.subplot(2, 5, 2)
+    grid.plot_maps(pt.argmax(Props[0][0, :, :], dim=0))
+    plt.title(names[1])
+    plt.subplot(2, 5, 3)
+    grid.plot_maps(pt.argmax(Props[0][1, :, :], dim=0))
+    plt.title(names[2])
+    plt.subplot(2, 5, 4)
+    grid.plot_maps(pt.argmax(Props[0][2, :, :], dim=0))
+    plt.title(names[3])
+    plt.subplot(2, 5, 5)
+    grid.plot_maps(pt.argmax(Props[0][3, :, :], dim=0))
+    plt.title(names[4])
+
+    plt.subplot(2, 5, 6)
+    grid.plot_maps(pt.argmax(U_prior[0], dim=0))
+    plt.subplot(2, 5, 7)
+    grid.plot_maps(pt.argmax(Props[1][0, :, :], dim=0))
+    plt.subplot(2, 5, 8)
+    grid.plot_maps(pt.argmax(Props[1][1, :, :], dim=0))
+    plt.subplot(2, 5, 9)
+    grid.plot_maps(pt.argmax(Props[1][2, :, :], dim=0))
+    plt.subplot(2, 5, 10)
+    grid.plot_maps(pt.argmax(Props[1][3, :, :], dim=0))
+
+    plt.savefig('example_model34.pdf', format='pdf')
+    plt.show()
+
+def compare_model_1_3(D, title=None):
+    D = D.replace(['D_fusion_joint'], ['Model_1'])
+    D = D.replace(['D_fusion'], ['Model_3'])
+    plt.figure(figsize=(8, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        sb.barplot(data=D, x="dataset", order=['D1','D2','Model_1','Model_3'], y=c,
+                   errorbar="se")
+        if c =='dcbc_group':
+            plt.ylim(0, 0.09)
+        elif c =='dcbc_indiv':
+            plt.ylim(0, 0.09)
+
+    if title is not None:
+        plt.suptitle(title)
+    else:
+        plt.suptitle(f'Two datasets fusion, averaged across K and relevancy')
+    plt.tight_layout()
+    plt.savefig('fig_sim_model13.pdf', format='pdf')
+    plt.show()
+
+def compare_model_3_4(D, title=None):
+    # D = D.replace(['D_fusion_joint'], ['Model_1'])
+    # D = D.replace(['D_fusion'], ['Model_3'])
+    # Fusion
+    # D.loc[(D['dataset'] == 'D_fusion_joint') & (D['common_kappa'] == True), 'dataset'] = 'Model_1'
+    # D.loc[(D['dataset'] == 'D_fusion') & (D['common_kappa'] == True), 'dataset'] = 'Model_3'
+    # D.loc[(D['dataset'] == 'D_fusion_joint') & (D['common_kappa'] == False), 'dataset'] = 'Model_2'
+    # D.loc[(D['dataset'] == 'D_fusion') & (D['common_kappa'] == False), 'dataset'] = 'Model_4'
+
+    plt.figure(figsize=(8, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        bar = sb.barplot(data=D, x="dataset", order=['D1', 'D2', 'D_fusion_joint', 'D_fusion'],
+                         y=c, hue='common_kappa', hue_order=[True, False], errorbar="se")
+        # sb.barplot(data=D, x="dataset", order=['D1','D2','Model_1','Model_3'], y=c,
+        #            errorbar="se")
+
+        if c =='dcbc_group':
+            plt.ylim(0, 0.09)
+        elif c =='dcbc_indiv':
+            plt.ylim(0, 0.09)
+
+    if title is not None:
+        plt.suptitle(title)
+    else:
+        plt.suptitle(f'Two datasets fusion, averaged across K and relevancy')
+    plt.tight_layout()
+    plt.savefig('fig_sim_model134_supp.pdf', format='pdf')
+    plt.show()
+
+def compare_diffK(generate_ck=False, save=False):
+    if generate_ck:
+        fname = model_dir + f'/Results/2.simulation/k_diff_simulation_heatmap_ck_aliMd.tsv'
+    else:
+        fname = model_dir + f'/Results/2.simulation/k_diff_simulation_heatmap_sk_aliMd.tsv'
+
+    res_plot = pd.read_csv(fname, delimiter='\t')
+    # 1. Plot evaluation results
+    plt.figure(figsize=(10, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        result = res_plot.pivot(index='K_true', columns='K_fit', values=c + '_dif')
+        rdgn = sb.color_palette("vlag", as_cmap=True)
+        # rdgn = sb.color_palette("Spectral", as_cmap=True)
+        sb.heatmap(result, annot=True, cmap=rdgn, center=0.00, fmt='.2g')
+        plt.title(c)
+
+    plt.suptitle(f'Simulation 4, different region signal strength, iter=100')
+    plt.tight_layout()
+
+    if save:
+        plt.savefig('diff_Ktrue20_Kfit5to40.pdf', format='pdf')
+    plt.show()
+
+if __name__ == '__main__':
+    ########## session fusion (same subjects, different Ks) ##########
+    # conditions = [([0.5,0.8], 1.1, 1.1, True),
+    #               ([0.2,0.5], 1.1, 1.1, True),
+    #               ([0.2,0.2], 0.1, 1.1, False),
+    #               ([0.8,0.8], 0.1, 1.1, False)]
+    # conditions = [([0.5,0.8], 0.8, 1.1, False)]
+    # for i, (noise_level,low,high,re) in enumerate(conditions):
+    #     D = pd.DataFrame()
+    #     for k in [20]:
+    #         res = simulation_3(K_true=20, K=k, width=50,
+    #                            nsub_list=np.array([10, 10]),
+    #                            M=np.array([40, 20], dtype=int),
+    #                            num_part=1, sigma2=noise_level,
+    #                            low=low, high=high,
+    #                            iter=100, relevant=re)
+    #         D = pd.concat([D, res], ignore_index=True)
+    #     D.to_csv(f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv', index=False, sep='\t')
+
+    fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
+    D = pd.read_csv(fname, delimiter='\t')
+    _plot_diffK(D, style="common_kappa", save=True)
+
+    ########## Comparing model 1 and 3 ##########
+    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
+    # D = pd.read_csv(fname, delimiter='\t')
+    # D = D.loc[(D['K_fit']==20) & (D['relevant']==False)]
+    # compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
+
+    ########## Comparing model 3 and 4 ##########
+    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
+    # D = pd.read_csv(fname, delimiter='\t')
+    # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)]
+    # compare_model_3_4(D, title='K_true=20, K_fit=20, relevant=False, model3 and model4')
+
+    # example_fusion_group(K_true=20, K=20, width=50, nsub_list=np.array([10,10]),
+    #                      M=np.array([40,20],dtype=int), num_part=1, sigma2=[0.3,0.6],
+    #                      low=0.7, high=0.7, relevant=True)
+
+    ########## Comparing model 3vs4 when different fitting/true k ##########
+    compare_diffK(generate_ck=False, save=True)

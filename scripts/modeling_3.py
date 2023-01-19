@@ -129,6 +129,7 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
                   relevant=None, print_relevancy=False):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
     D['relevant'] = ""
+    # D = D.loc[D['K']==17]
     if ck is not None:
         D = D.loc[D['common_kappa']==ck]
 
@@ -185,10 +186,10 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
     if relevant is not None:
         T = T.loc[T.relevant == relevant]
 
-    plt.figure(figsize=(22,5))
-    crits = ['dcbc_group','dcbc_indiv','coserr_group','coserr_floor']
+    plt.figure(figsize=(8,5))
+    crits = ['dcbc_group','dcbc_indiv']
     for i, c in enumerate(crits):
-        plt.subplot(1, 4, i + 1)
+        plt.subplot(1, 2, i + 1)
         sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='common_kappa',
                    hue_order=T['common_kappa'].unique(), errorbar="se")
         # if style is not None:
@@ -196,15 +197,17 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
         #                 style=style, style_order=style_order, markers=True)
         # else:
         #     sb.lineplot(data=T, x="K", y=c, hue='session',
-        #                 hue_order=['sess_1', 'sess_2', 'Fusion'], markers=True)
-        if c == 'coserr_group':
-            plt.ylim(0.775,0.825)
-        elif c== 'coserr_floor':
-            plt.ylim(0.475, 0.525)
+        #                 hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        if c == 'dcbc_indiv':
+            plt.ylim(0, 0.04)
+        elif c == 'dcbc_group':
+            plt.ylim(0, 0.04)
+        # elif c== 'coserr_floor':
+        #     plt.ylim(0.475, 0.525)
 
-        plt.legend(loc='lower right')
+        # plt.legend(loc='lower right')
 
-    plt.suptitle(f'IBC two sessions fusion on selected sessions trend, common_kappa={ck}')
+    plt.suptitle(f'IBC two sessions fusion - overall trend (two sessions have overlapping)')
     plt.tight_layout()
     plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
     plt.show()
@@ -328,11 +331,11 @@ def plot_IBC_performance_reliability(K=[10,17,20,34,40,68], save=False):
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    # for k in [10,17,20,34,40,68]:
+    # for k in [100]:
     #     result_3_eval(K=k)
 
     fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
-    result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=False)
+    result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
     ##### 2. Check whether the session perfermance is related to reliability
     ##### The answer is No! (IBC sessions performance unrelated to reliability)
     # result_3_rel_check(fname, K=[10,17,20,34,40,68])
@@ -348,4 +351,19 @@ if __name__ == "__main__":
     # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 
-
+    # ##### Plot the indiv and fusion map #####
+    # color_info = pd.read_csv('Y:\data\FunctionalFusion\Atlases/tpl-SUIT/atl-Buckner17.lut', sep=' ',
+    #                          header=None)
+    # colors = np.zeros((1, 3))
+    # colors = np.vstack((colors, color_info.iloc[:, 1:4].to_numpy()))
+    #
+    # plt.figure(figsize=(20, 10))
+    # plot_model_parcel(['Models_03/asym_Ib_space-MNISymC3_K-17_ses-preference',
+    #                    'Models_03/asym_Ib_space-MNISymC3_K-17_ses-tom',
+    #                    'Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom',
+    #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-preference',
+    #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-tom',
+    #                    'Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom'],
+    #                   [2, 3], cmap='tab20', align=True, device='cuda')
+    # plt.suptitle('Model 4, K=20, sessions= enumeration, mathlang')
+    # plt.show()

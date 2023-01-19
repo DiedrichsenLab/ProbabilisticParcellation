@@ -126,6 +126,36 @@ def result_5_plot(fname, model_type='Models_01'):
     plt.suptitle(f'All datasets fusion, {model_type}')
     plt.show()
 
+def result_5_benchmark(fname, benchmark='MDTB', save=False):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    D = D.loc[(D['train_data']!="['MDTB' 'Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' "
+                                "'Somatotopic']")]
+    D = D.replace("['Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' 'Somatotopic']", 'all')
+    df = D.loc[(D['test_data'] == benchmark)]
+    crits = ['dcbc_group','dcbc_indiv']
+
+    plt.figure(figsize=(10, 5))
+    for i, c in enumerate(crits):
+        plt.subplot(2, 1, i + 1)
+        sb.barplot(data=df, x='train_data', y=c, order=["['Pontine']", "['Nishimoto']",
+                                                        "['IBC']", "['WMFS']", "['Demand']",
+                                                        "['Somatotopic']", 'all'],
+                   hue='common_kappa', hue_order=[True, False], errorbar="se",
+                   palette=sb.color_palette()[1:3], width=0.7)
+        plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
+        # plt.xticks(rotation=45)
+        if c == 'dcbc_group':
+            plt.ylim(0.02, 0.12)
+        elif c == 'dcbc_indiv':
+            plt.ylim(0.1, 0.18)
+
+    plt.suptitle(f'All datasets fusion, benchmark_dataset={benchmark}')
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f'all_datasets_fusion.pdf', format='pdf')
+    plt.show()
+
 def plot_diffK(fname, hue="test_data", style="common_kappa"):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
 
@@ -144,8 +174,38 @@ def plot_diffK(fname, hue="test_data", style="common_kappa"):
         #     plt.legend('')
         # plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
 
+    plt.suptitle(f'all datasets fusion, diff K = {df.K.unique()}')
+    plt.tight_layout()
+    plt.show()
+
+def plot_diffK_benchmark(fname, benchmark='MDTB', save=False):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    D = D.loc[(D['train_data']!="['MDTB' 'Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' "
+                                "'Somatotopic']")]
+    D = D.replace("['Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' 'Somatotopic']", 'all')
+    df = D.loc[(D['test_data'] == benchmark)]
+
+    plt.figure(figsize=(8, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        sb.lineplot(data=df, x='K', y=c,
+                    hue='common_kappa', hue_order=[True, False],
+                    style="train_data",
+                    style_order=["['Pontine']", "['Nishimoto']", "['IBC']",
+                                 "['WMFS']", "['Demand']", "['Somatotopic']", "all"],
+                    palette=sb.color_palette()[1:3],
+                    errorbar=None)
+        if i == len(crits)-1:
+            plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
+        else:
+            plt.legend('')
+
     plt.suptitle(f'All datasets fusion, diff K = {df.K.unique()}')
     plt.tight_layout()
+
+    if save:
+        plt.savefig('all_datasets_fusion_diffK.pdf', format='pdf')
     plt.show()
 
 def make_all_in_one_tsv(path, out_name):
@@ -175,83 +235,41 @@ def make_all_in_one_tsv(path, out_name):
 
 
 if __name__ == "__main__":
+    ############# Evaluating indiv datasets vs fusion #############
     # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     # D = pd.DataFrame()
+    # # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6]]
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
-    #     for k in [10,20,34,40,68]:
+    #     for k in [100]:
     #         datanames = T.two_letter_code[datasets].to_list()
+    #         datanames += [''.join(T.two_letter_code[datasets]),
+    #                       ''.join(T.two_letter_code[[0, 1, 2, 3, 4, 5, 6]])]
     #         res = result_5_eval(K=k, symmetric='asym', model_type=['03','04'],
     #                             model_name=datanames, t_datasets=[T.name[i]],
     #                             return_df=True)
     #         D = pd.concat([D, res], ignore_index=True)
     # wdir = model_dir + f'/Models/Evaluation/asym'
-    # fname = f'/eval_all_asym_MdPoNiIbWmDeSo_K-10_to_68_teston_indivDataset.tsv'
+    # fname = f'/eval_dataset7_asym_K-100.tsv'
     # D.to_csv(wdir + fname, index=False, sep='\t')
-    # fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
-    # result_5_plot(fname, model_type='Models_03')
 
-    ############# Making all-in-one #############
-    # path = model_dir + '/Models/Evaluation/IBC_twoSessions'
-    # oname = model_dir + '/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
-    # make_all_in_one_tsv(path, out_name=oname)
+    ############# Plot results #############
+    # fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
+    # # result_5_plot(fname, model_type='Models_03')
+    # result_5_benchmark(fname, benchmark='MDTB', save=True)
+    # plot_diffK_benchmark(fname, save=True)
 
     ############# Plot fusion atlas #############
-    datasets = ['Md', 'Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
+    datasets = ['Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
     # Making color map
-    color_file = atlas_dir + '/tpl-SUIT/atl-Buckner17.lut'
+    color_file = atlas_dir + '/tpl-SUIT/atl-NettekovenSym34.lut'
     color_info = pd.read_csv(color_file, sep=' ', header=None)
-    colors = np.zeros((18, 3))
-    colors[1:18, :] = color_info.iloc[:, 1:4].to_numpy()
+    colors = color_info.iloc[:,1:4].to_numpy()
 
-    model_names = [f'Models_03/asym_{s}_space-MNISymC3_K-17' for s in datasets]
-    model_names += [f'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-17']
+    model_names = [f'Models_04/asym_{s}_space-MNISymC3_K-34' for s in datasets]
+    model_names += [f'Models_04/asym_PoNiIbWmDeSo_space-MNISymC3_K-34']
 
-    plt.figure(figsize=(20, 20))
-    plot_model_parcel(model_names, [3, 3], cmap=colors, align=True, device='cuda')
-
-    fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
-
-    D = pd.read_csv(model_dir + fname, delimiter='\t')
-    D['diff'] = D['coserr_ind3'] - D['coserr_floor']
-    D = D.loc[(D["common_kappa"] == True)]
-
-    D = D.replace(["['MDTB' 'Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' 'Somatotopic']"],'all')
-    # crits = ['dcbc_group', 'dcbc_indiv', 'coserr_group',
-    #          'coserr_floor', 'coserr_ind3', 'diff']
-    crits = ['dcbc_group', 'dcbc_indiv', 'coserr_group', 'diff']
-
-    plt.figure(figsize=(5, 10))
-    for i, c in enumerate(crits):
-        plt.subplot(4, 1, i + 1)
-        sb.barplot(data=D, x='train_data', y=c, order=["['MDTB']", "['Pontine']",
-                                                       "['Nishimoto']", "['IBC']",
-                                                       "['WMFS']", "['Demand']",
-                                                       "['Somatotopic']", "all"],
-                   width=0.7, errorbar="se")
-
-        # plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
-        if i == len(crits) - 1:
-            plt.xticks(rotation=45)
-        else:
-            plt.xticks([])
-
-        if i == 0:
-            plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0,
-                       fontsize='small')
-        else:
-            plt.legend("")
-        if c == 'dcbc_group':
-            plt.ylim(0.02, 0.12)
-        elif c == 'dcbc_indiv':
-            plt.ylim(0.12, 0.22)
-        elif c == 'coserr_group':
-            plt.ylim(0.6, 0.9)
-        elif c == 'diff':
-            plt.ylim(0.12, 0.28)
-
-    plt.suptitle(f'Individual dataset vs. all datasets fusion')
-    plt.tight_layout()
-    plt.savefig('1111_ckFalse.pdf', format='pdf')
+    plt.figure(figsize=(20, 10))
+    plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
     plt.show()

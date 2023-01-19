@@ -239,8 +239,88 @@ def plot_IBC_rel():
     plt.suptitle(f'IBC individual sessions performance, tested on otherData vs. leftSess')
     plt.show()
 
+def plot_fig1(save=False):
+    D = pd.read_csv(
+        model_dir + '/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets'
+                    '.tsv',
+        sep='\t')
+    orderby = None
+
+    plt.figure(figsize=(12, 6))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(2, 1, i + 1)
+        if orderby is not None:
+            order = D.loc[(D['common_kappa'] == True)].groupby('session')[
+                c].mean().sort_values().keys().to_list()
+        else:
+            order = D.groupby('session')[c].mean().sort_values().keys().to_list()
+        sb.barplot(data=D, x='session', y=c, order=order, hue='common_kappa',
+                   hue_order=[True, False], width=0.7, errorbar="se",
+                   palette=sb.color_palette()[1:3])
+
+        plt.xticks(rotation=45)
+        plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
+        # if c == 'dcbc_group':
+        #     plt.ylim(0, 0.09)
+        # elif c == 'dcbc_indiv':
+        #     plt.ylim(0.1, 0.22)
+
+    plt.suptitle(f'IBC individual sessions vs. all sessions fusion (averaged across Ks)')
+    plt.tight_layout()
+
+    if save:
+        plt.savefig('IBC_indviSess_vs_fusion.pdf', format='pdf')
+    plt.show()
+
+def plot_fig2(save=False):
+    D = pd.read_csv(model_dir +
+                    '/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets'
+                    '.tsv', sep='\t')
+
+    plt.figure(figsize=(10, 5))
+    crits = ['dcbc_group', 'dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        sb.lineplot(data=D, x='K', y=c, hue='common_kappa', hue_order=[True, False],
+                    style='session', errorbar="se",
+                    palette=sb.color_palette()[1:3], err_style=None)
+        if i == len(crits) - 1:
+            plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0,
+                       fontsize='small')
+        else:
+            plt.legend('')
+
+        if c == 'coserr_group':
+            plt.ylim(0.7, 1.0)
+    #     if c == 'coserr_floor':
+    #         plt.ylim(0.4, 0.8)
+
+    plt.suptitle(f'IBC individual sessions vs. all sessions fusion (varying across Ks)')
+    plt.tight_layout()
+
+    if save:
+        plt.savefig('IBC_indviSess_vs_fusion_diffK.pdf', format='pdf')
+    plt.show()
+
+
 if __name__ == "__main__":
     # result_4_eval(K=[10,17,20,34,40,68], t_datasets=['MDTB', 'Pontine', 'Nishimoto',
     #                                                  'WMFS', 'Demand', 'Somatotopic'])
-    fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_indivSess_on_otherDatasets.tsv'
-    result_4_plot(fname, test_data='Pontine', orderby=False)
+    # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
+    # result_4_plot(fname, test_data='Pontine', orderby=False)
+
+    # plot_fig1(save=True)
+    plot_fig2(save=True)
+
+    ######## Plot indiv sess vs fusion map ########
+    # color_file = atlas_dir + '/tpl-SUIT/atl-NettekovenSym34.lut'
+    # color_info = pd.read_csv(color_file, sep=' ', header=None)
+    # colors = color_info.iloc[:,1:4].to_numpy()
+    #
+    # plt.figure(figsize=(20, 12))
+    # sess = DataSetIBC(base_dir + '/IBC').sessions
+    # model_names = [f'Models_03/asym_Ib_space-MNISymC3_K-34_{s}' for s in sess]
+    # plot_model_parcel(model_names + [f'Models_03/asym_Ib_space-MNISymC3_K-34'],
+    #                   [3, 5], cmap=colors, align=True, device='cuda')
+    # plt.show()
