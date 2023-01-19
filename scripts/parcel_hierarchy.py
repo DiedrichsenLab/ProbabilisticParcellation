@@ -9,15 +9,16 @@ from scipy.linalg import block_diag
 import torch as pt
 import matplotlib.pyplot as plt
 from ProbabilisticParcellation.util import *
+import PcmPy as pcm
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from copy import deepcopy
+import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
-from ProbabilisticParcellation.hierarchical_clustering import cluster_model
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -135,9 +136,6 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     cinfo, coarse_model = load_batch_best(mname_coarse)
 
     # -- Cluster fine model --
-    K_coarse = split_mn[-1].split('-')[1]
-    mname_merged = f'{mname_fine}_merged-{K_coarse}'
-
     # Get winner take all assignment for fine model
     fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
 
@@ -145,56 +143,34 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     coarse_probabilities = pt.softmax(coarse_model.arrange.logpi, dim=0)
 
     print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+    
     # Get mapping between fine parcels and coarse parcels
-    mapping = guided_clustering(fine_probabilities, coarse_probabilities)
-    new_K_sym = np.unique(mapping)
+    mapping = cl.guided_clustering(fine_probabilities, coarse_probabilities)
+    # Move parcels up
+    mapping = np.unique(
+        mapping, return_inverse=True)[1]
 
-    # -- Make new model --
-    # Initiliaze new probabilities
-    new_probabilities = np.zeros(coarse_probabilities.shape)
-
-    # # Initiliaze new probabilities with small prob instead of zero
-    # min_val = float("1e-30")
-    # new_probabilities = np.repeat(min_val, coarse_probabilities.flatten().shape).reshape(coarse_probabilities.shape)
-
-    # get new probabilities
-    indicator = pcm.matrix.indicator(mapping)
-    merged_probabilities = np.dot(indicator.T, (fine_probabilities))
-
-    # sort probabilities according to original coarse parcels
-    new_parcels = [int(k) for k in new_K_sym]
-    merged_probabilities_sorted = np.array(
-        [x for _, x in sorted(zip(new_parcels, merged_probabilities))])
-    new_probabilities[new_parcels] = merged_probabilities_sorted
-
-    # Create new, clustered model
-    new_model = deepcopy(coarse_model)
-
-    # fill new probabilities
-    new_model.arrange.logpi = pt.log(
-        pt.tensor(new_probabilities, dtype=pt.float32))
+    # -- Merge model --   
+    merged_model = cl.merge_model(fine_model, mapping)
 
     # Make new info
-    K_new = len(new_K_sym) * 2
     new_info = deepcopy(finfo)
-    new_info['K_original'] = int(finfo.K)
-    new_info['K'] = int(K_new)
-    new_info['K_coarse'] = int(K_coarse)
+    new_info['K_coarse'] = int(cinfo.K)
     new_info['model_type'] = mname_fine.split('/')[0]
+    new_info['K_original'] = int(new_info.K)
+    new_info['K'] = int((mapping.max() + 1) * 2)
 
-    # Create reduced model
-    new_model = reduce_model(new_model, new_info, new_parcels)
     # Refit reduced model
-    new_model = refit_model(new_model, new_info)
+    new_model, new_info = lf.refit_model(merged_model, new_info)
 
     # -- Save model --
+    mname_merged = f'{mname_fine}_merged-{cinfo.K}'
     # save new model
     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
     # TODO: Make sure this is a dataframe, not a series
-    raise ('Make this a df not a series')
     new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
 
     return new_model, mname_merged, mapping

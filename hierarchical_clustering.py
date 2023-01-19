@@ -12,8 +12,8 @@ import generativeMRF.emissions as em
 import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
-from scipy.linalg import block_diag
 import PcmPy as pcm
+from scipy.linalg import block_diag
 import nibabel as nb
 import nibabel.processing as ns
 import SUITPy as suit
@@ -23,7 +23,6 @@ import seaborn as sb
 import sys
 import pickle
 from ProbabilisticParcellation.util import *
-from ProbabilisticParcellation.learn_fusion_gpu import build_data_list
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -227,8 +226,9 @@ def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     # ax.show()
     return sym_score
 
+
 def guided_clustering(fine_probabilities, coarse_probabilities):
-    """Maps parcels of a fine parcellation to parcels of a coarse parcellation.
+    """Maps parcels of a fine parcellation to parcels of a coarse parcellation guided by functional fusion model.
 
     Args:
         fine_probabilities: Probabilstic parcellation of a fine model (fine parcellation)
@@ -256,101 +256,60 @@ def guided_clustering(fine_probabilities, coarse_probabilities):
         # assign coarse parcel winner to fine parcel
         fine_coarse_mapping[fine_parcel] = winner.item()
     
-    print(f'\n Merged Model: \t{np.unique(fine_coarse_mapping).shape[0]} WTA Parcels \n')
+    print(f'\n Clustered Model: \t{np.unique(fine_coarse_mapping).shape[0]} WTA Parcels \n')
+
     return fine_coarse_mapping
 
-def reduce_model(new_model, new_info, new_parcels):
+
+def merge_model(model, mapping):
     """Reduces model to effective K.
 
     Args:
-        new_model:      Coarse model containing voxel probabilities of fine model (Clustered model)
-        new_info:       Information for new model (Clustered model)
-        new_parcels:    Vector of new parcels
+        model:      Model to be clustered
+        mapping:    Cluster assignment for each model parcel
 
     Returns:
-        new_model: Reduced model with empty parcels removed (Clustered fine model with effective K)
-
+        new_model:  Clustered model
     """
-    new_model = deepcopy(new_model)
+    # Get winner take all assignment for fine model
+    Prob = pt.softmax(model.arrange.logpi, dim=0)
 
+    # get new probabilities
+    indicator = pcm.matrix.indicator(mapping)
+    merged_probabilities = np.dot(indicator.T, (Prob))
+    new_parcels = np.unique(mapping)
+
+    # Create new, clustered model
+    new_model = deepcopy(model)
+    
+    # Fill arrangement model parameteres
+    new_model.arrange.logpi = pt.log(
+        pt.tensor(merged_probabilities, dtype=pt.float32))
+    new_model.arrange.set_param_list(['logpi'])
+    new_model.arrange.K = int(len(new_parcels))
+    
     if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
-        new_model.K_sym = int(len(new_parcels))
         all_parcels = [*new_parcels, *new_parcels]
     else:
         all_parcels = new_parcels
-        
-    new_model.arrange.K = int(len(new_parcels))
-    new_model.arrange.nparams = new_model.P * new_model.arrange.K
-    new_model.arrange.logpi = new_model.arrange.logpi[new_parcels]
+    
+    new_model.arrange.K_full = len(all_parcels)
 
-    # Refit emission models
-    print(f'Freezing arrangement model and fitting emission models...')    
-
-    for e, em in enumerate(new_model.emissions):
+    # Fill emission model parameteres
+    for e in np.arange(len(new_model.emissions)):
         new_model.emissions[e].K = int(len(all_parcels))
-        new_model.emissions[e].nparams = em.V.shape[0] * em.K
-        print(new_model.emissions[e].param_offset)
-        print(f'\n{[em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0]+1]}\n\n')
-        new_model.emissions[e].param_offset = [em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0]+1]
+        new_model.emissions[e].V = new_model.emissions[e].V[:, all_parcels]
+        new_model.emissions[e].set_param_list('V')
+        
+        # new_model.emissions[e].nparams = em.V.shape[0] * em.K
+        # new_model.emissions[e].param_offset = [
+        #     em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0] + 1]
+        # print(new_model.emissions[e].param_offset)
+        # print(f'\n{[em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0]+1]}\n\n')
+        
     
     return new_model
 
-
-def refit_model(new_model, new_info):
-    """Refits model.
-
-    Args:
-        new_model:      Model to be refitted
-        new_info:       Information for new model
-
-    Returns:
-        new_model: Refitted model
-
-    """
-
-    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
-        atlas, _ = am.get_atlas(new_info.atlas, atlas_dir, sym=True)
-        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
-    else:
-        M = fm.FullMultiModel(new_model.arrange, new_model.emissions)
-
-    
-    model_settings = {'Models_01': [True, True, False],
-                      'Models_02': [False, True, False],
-                      'Models_03': [True, False, False],
-                      'Models_04': [False, False, False],
-                      'Models_05': [False, True, True]}
-    
-    uniform_kappa = model_settings[new_info.model_type][0]
-    join_sess = model_settings[new_info.model_type][1]
-    join_sess_part = model_settings[new_info.model_type][2]
-
-    datasets = new_info.datasets.strip("'[").strip("]'").split("' '")
-    sessions = new_info.sess.strip("'[").strip("]'").split("' '")
-    types = new_info.type.strip("'[").strip("]'").split("' '")
-
-    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
-                                                         atlas=new_info.atlas,
-                                                         sess=sessions,
-                                                         type=types,
-                                                         join_sess=join_sess,
-                                                         join_sess_part=join_sess_part)
-
-    # Copy the object (without data)
-    m = deepcopy(M)
-    # Attach the data
-    m.initialize()
-    m.initialize(data, subj_ind=subj_ind)
-
-    m.arrange.set_params_list()
-
-    m, ll, theta, U_hat, ll_init = m.fit_em(
-            iter=1,
-            tol=0.01,
-            fit_emission=True,
-            fit_arrangement=False)
-
-    return m
 
 
 
