@@ -630,7 +630,10 @@ def refit_model(model, new_info):
         tol=0.01,
         fit_emission=True,
         fit_arrangement=False,
-        first_evidence=False)
+        first_evidence=True)
+
+
+    
 
     return m
 
