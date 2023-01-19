@@ -31,6 +31,8 @@ from copy import copy,deepcopy
 from itertools import combinations
 from ProbabilisticParcellation.util import *
 from ProbabilisticParcellation.evaluate import *
+import ProbabilisticParcellation.similarity_colormap as sc
+import ProbabilisticParcellation.hierarchical_clustering as cl
 
 # pytorch cuda global flag
 # pt.cuda.is_available = lambda : False
@@ -234,6 +236,31 @@ def make_all_in_one_tsv(path, out_name):
         D.to_csv(out_name, sep='\t', index=False)
 
 
+def get_cmap(mname, load_best=True, sym=False):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    if load_best:
+        info, model = load_batch_best(mname)
+    else:
+        info, model = load_batch_fit(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0) + 1
+
+    # Get parcel similarity:
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
+    W = sc.calc_mds(w_cos_sim, center=True)
+
+    # Define color anchors
+    m, regions, colors = sc.get_target_points(atlas, parcel)
+    cmap = sc.colormap_mds(W, target=(m, regions, colors), clusters=None, gamma=0.3)
+
+    return cmap.colors
+
+
 if __name__ == "__main__":
     ############# Evaluating indiv datasets vs fusion #############
     # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
@@ -261,14 +288,12 @@ if __name__ == "__main__":
     # plot_diffK_benchmark(fname, save=True)
 
     ############# Plot fusion atlas #############
-    datasets = ['Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
+    indiv_dataset = ['Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
+    m_fusion = ''.join(indiv_dataset)
+    datasets = [m_fusion] + indiv_dataset
     # Making color map
-    color_file = atlas_dir + '/tpl-SUIT/atl-NettekovenSym34.lut'
-    color_info = pd.read_csv(color_file, sep=' ', header=None)
-    colors = color_info.iloc[:,1:4].to_numpy()
-
+    colors = get_cmap(f'Models_04/asym_{m_fusion}_space-MNISymC3_K-34')
     model_names = [f'Models_04/asym_{s}_space-MNISymC3_K-34' for s in datasets]
-    model_names += [f'Models_04/asym_PoNiIbWmDeSo_space-MNISymC3_K-34']
 
     plt.figure(figsize=(20, 10))
     plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
