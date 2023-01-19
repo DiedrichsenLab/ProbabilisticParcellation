@@ -18,21 +18,7 @@ import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
-if not Path(base_dir).exists():
-    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
-if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
-
 pt.set_default_tensor_type(pt.FloatTensor)
-
-
 
 def analyze_parcel(mname, load_best=True, sym=True,num_cluster = 7):
 
@@ -76,6 +62,11 @@ def analyze_parcel(mname, load_best=True, sym=True,num_cluster = 7):
                     labels=labels,
                     render='plotly')
     ax.show()
+    ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
+                    dtype='prob',
+                    labels=labels,
+                    render='plotly')
+    ax.show()
 
     return Prob,parcel,atlas,labels,cmap
 
@@ -106,11 +97,15 @@ def merge_clusters():
 
 if __name__ == "__main__":
     
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    basename = model_dir + '/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    pass
+    ea.export_map(Prob,atlas.name,cmap,labels,basename)
+
+
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
+    #Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # pass
 
 
     # export the merged model
