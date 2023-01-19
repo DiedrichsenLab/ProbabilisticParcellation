@@ -243,7 +243,7 @@ def guided_clustering(fine_probabilities, coarse_probabilities):
     fine_parcellation = fine_probabilities.argmax(axis=0)
     coarse_parcellation = coarse_probabilities.argmax(axis=0)
 
-    print(f'---\n ++ Mapping values ++ \n Fine Model: \t{np.unique(fine_parcellation).shape[0]} WTA Parcels \n Coarse Model: \t{np.unique(coarse_parcellation).shape[0]} WTA Parcels')
+    print(f'\n Fine Model: \t\t{np.unique(fine_parcellation).shape[0]} WTA Parcels \n Coarse Model: \t\t{np.unique(coarse_parcellation).shape[0]} WTA Parcels')
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0])
     for fine_parcel in (fine_parcellation).unique():
@@ -272,16 +272,16 @@ def merge_model(model, mapping):
         new_model:  Clustered model
     """
     # Move parcels up
-    mapping_moved = np.unique(
+    mapping = np.unique(
         mapping, return_inverse=True)[1]
     
     # Get winner take all assignment for fine model
     Prob = pt.softmax(model.arrange.logpi, dim=0)
 
     # get new probabilities
-    indicator = pcm.matrix.indicator(mapping_moved)
+    indicator = pcm.matrix.indicator(mapping)
     merged_probabilities = np.dot(indicator.T, (Prob))
-    new_parcels = np.unique(mapping_moved)
+    new_parcels = np.unique(mapping)
 
     # Create new, clustered model
     new_model = deepcopy(model)
@@ -293,23 +293,25 @@ def merge_model(model, mapping):
     new_model.arrange.K = int(len(new_parcels))
     
     if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
-        all_parcels = [*new_parcels, *new_parcels]
+        all_parcels = [*new_parcels, *new_parcels + new_parcels.shape[0]]
+        all_mappings = [*mapping, *mapping + new_parcels.shape[0]]
     else:
         all_parcels = new_parcels
+        all_mappings = mapping
     
     new_model.arrange.K_full = len(all_parcels)
 
     # Fill emission model parameteres
     for e in np.arange(len(new_model.emissions)):
         new_model.emissions[e].K = int(len(all_parcels))
-        new_model.emissions[e].V = new_model.emissions[e].V[:, all_parcels]
+
+        # get new Vs
+        V = new_model.emissions[e].V
+        indicator = pcm.matrix.indicator(all_mappings)
+        new_Vs = np.dot((V), indicator)       
+        new_model.emissions[e].V = pt.tensor(
+            new_Vs, dtype=pt.get_default_dtype())
         new_model.emissions[e].set_param_list('V')
-        
-        # new_model.emissions[e].nparams = em.V.shape[0] * em.K
-        # new_model.emissions[e].param_offset = [
-        #     em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0] + 1]
-        # print(new_model.emissions[e].param_offset)
-        # print(f'\n{[em.param_offset[0], em.K * em.V.shape[0], em.K * em.V.shape[0]+1]}\n\n')
         
     
     return new_model

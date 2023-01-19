@@ -599,25 +599,22 @@ def refit_model(model, new_info):
                                                          join_sess=join_sess,
                                                          join_sess_part=join_sess_part)
 
-    # Copy the object (without data)
-    m = deepcopy(M)
     # Attach the data
-    m.initialize(data, subj_ind=subj_ind)
+    M.initialize(data, subj_ind=subj_ind)
 
     # Refit emission models
-    print(f'Freezing arrangement model and fitting emission models...')
+    print(f'Freezing arrangement model and fitting emission models...\n')
 
-    m, ll, theta, U_hat, ll_init = m.fit_em(
-        iter=1,
-        tol=0.01,
-        fit_emission=True,
-        fit_arrangement=False,
-        first_evidence=True)
-
-
+    M, ll, _, _ = M.fit_em(iter=100, tol=0.01,
+                                            fit_emission=True,
+                                            fit_arrangement=False,
+                                            first_evidence=True)
     
+    # make info from a Series back to a dataframe
+    new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    new_info['loglik'] = ll[-1].item()
 
-    return m
+    return M, new_info
 
 
 if __name__ == "__main__":

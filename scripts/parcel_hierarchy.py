@@ -36,15 +36,12 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 
-def analyze_parcel(mname, load_best=True, sym=True,num_cluster = 7):
+def analyze_parcel(mname, sym=True,num_cluster = 7):
 
     # Get model and atlas. 
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    if load_best:
-        info,model = load_batch_best(mname)
-    else:
-        info,model = load_batch_fit(mname)
+    info,model = load_batch_best(mname)
     atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
 
     # Get winner-take all parcels 
@@ -138,7 +135,7 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     # Get probabilities of coarse model
     coarse_probabilities = pt.softmax(coarse_model.arrange.logpi, dim=0)
 
-    print(f'--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n ++ Start values ++ \n Fine Model: \t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t{coarse_probabilities.shape[0]} Prob Parcels')
+    print(f'\n--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n\n  Fine Model: \t\t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t\t{coarse_probabilities.shape[0]} Prob Parcels')
     
     # Get mapping between fine parcels and coarse parcels
     mapping = cl.guided_clustering(fine_probabilities, coarse_probabilities)
@@ -157,30 +154,35 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     new_model, new_info = lf.refit_model(merged_model, new_info)
 
     # -- Save model --
-    mname_merged = f'{mname_fine}_merged-{cinfo.K}'
+    # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
+    mname_merged = f'{mname_fine}_Kclus-{int(new_info.K_coarse)}_Keff-{int(new_info.K)}'
+
     # save new model
     with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
-    # TODO: Make sure this is a dataframe, not a series
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv', sep='\t')
+    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+                    sep='\t', index=False)
 
-    return new_model, mname_merged, mapping
+    print(
+        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+
+    return new_model, mname_merged
 
 if __name__ == "__main__":
     
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    pass
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # pass
 
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
     # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [14]:
+    for k in [10, 14, 20, 28]:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
@@ -190,22 +192,22 @@ if __name__ == "__main__":
         # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
         # merge model
-        _, mname_merged, mapping = cluster_model(mname_fine, mname_coarse, sym=True)
+        _, mname_merged = cluster_model(mname_fine, mname_coarse, sym=True)
         merged_models.append(mname_merged)
 
     # export the merged model
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
     # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname_merged)
     
     # # Plot fine, coarse and merged model
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
     # --- Show Merged Parcellation at K=20, K=34, K=40--- 
     # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    # for mname_merged in merged_models:
-    #     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, load_best=False, sym=True)
+    for mname_merged in merged_models:
+        Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
     
 
     # # Show MNISymC2 Parcellation
