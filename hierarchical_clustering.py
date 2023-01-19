@@ -271,13 +271,17 @@ def merge_model(model, mapping):
     Returns:
         new_model:  Clustered model
     """
+    # Move parcels up
+    mapping_moved = np.unique(
+        mapping, return_inverse=True)[1]
+    
     # Get winner take all assignment for fine model
     Prob = pt.softmax(model.arrange.logpi, dim=0)
 
     # get new probabilities
-    indicator = pcm.matrix.indicator(mapping)
+    indicator = pcm.matrix.indicator(mapping_moved)
     merged_probabilities = np.dot(indicator.T, (Prob))
-    new_parcels = np.unique(mapping)
+    new_parcels = np.unique(mapping_moved)
 
     # Create new, clustered model
     new_model = deepcopy(model)
