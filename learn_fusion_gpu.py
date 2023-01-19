@@ -25,29 +25,7 @@ import pickle
 from copy import deepcopy
 import time
 
-# pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
 
-# Find model directory to save model fitting results
-model_dir = 'Y:/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
-
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
-
-atlas_dir = base_dir + f'/Atlases'
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
@@ -133,6 +111,48 @@ def build_data_list(datasets,
         sub += n_subj
     return data, cond_vec, part_vec, subj_ind
 
+def build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa = True,
+                weighting=None):
+    """ Builds a Full model based on your specification"""
+    if arrange == 'independent':
+        if sym_type == 'sym':
+             ar_model = ar.ArrangeIndependentSymmetric(K, 
+                            atlas.indx_full, 
+                            atlas.indx_reduced,
+                            same_parcels=False,
+                            spatial_specific=True,
+                            remove_redundancy=False)
+        elif sym_type == 'asym':
+            ar_model = ar.ArrangeIndependent(K, atlas.P,
+                                         spatial_specific=True,
+                                         remove_redundancy=False)
+    else:
+        raise (NameError(f'unknown arrangement model:{arrange}'))
+
+    # Initialize emission models
+    em_models = []
+    for j, ds in enumerate(cond_vec):
+        if emission == 'VMF':
+            em_model = em.MixVMF(K=K, P=atlas.P,
+                                 X=matrix.indicator(cond_vec[j]),
+                                 part_vec=part_vec[j],
+                                 uniform_kappa=uniform_kappa)
+        elif emission == 'wVMF':
+            em_model = em.wMixVMF(K=K, P=atlas.P,
+                                  X=matrix.indicator(cond_vec[j]),
+                                  part_vec=part_vec[j],
+                                  uniform_kappa=uniform_kappa,
+                                  weighting='lsquare_sum2P')
+        else:
+            raise ((NameError(f'unknown emission model:{emission}')))
+        em_models.append(em_model)
+    M = fm.FullMultiModel(ar_model, em_models)
+    if weighting is not None:
+        M.ds_weight = weighting  # Weighting for each dataset
+
+    return M
 
 def batch_fit(datasets, sess,
               type=None, cond_ind=None, part_ind=None, subj=None,
@@ -188,48 +208,10 @@ def batch_fit(datasets, sess,
     n_sets = len(data)
 
     print(f'Building fullMultiModel {arrange} + {emission} for fitting...')
-    # Initialize arrangement model
-
-    if arrange == 'independent':
-        if sym_type == 'sym':
-            ar_model = ar.ArrangeIndependentSymmetric(K, 
-                            atlas.indx_full, 
-                            atlas.indx_reduced,
-                            same_parcels=False,
-                            spatial_specific=True,
-                            remove_redundancy=False)
-        elif sym_type == 'asym':
-            ar_model = ar.ArrangeIndependent(K, atlas.P,
-                                         spatial_specific=True,
-                                         remove_redundancy=False)
-    else:
-        raise (NameError(f'unknown arrangement model:{arrange}'))
-
-    # Initialize emission models
-    em_models = []
-    for j, ds in enumerate(data):
-        if emission == 'VMF':
-            em_model = em.MixVMF(K=K, P=atlas.P,
-                                 X=matrix.indicator(cond_vec[j]),
-                                 part_vec=part_vec[j],
-                                 uniform_kappa=uniform_kappa)
-        elif emission == 'wVMF':
-            em_model = em.wMixVMF(K=K, P=atlas.P,
-                                  X=matrix.indicator(cond_vec[j]),
-                                  part_vec=part_vec[j],
-                                  uniform_kappa=uniform_kappa,
-                                  weighting='lsquare_sum2P')
-        else:
-            raise ((NameError(f'unknown emission model:{emission}')))
-        em_models.append(em_model)
-
-    M = fm.FullMultiModel(ar_model, em_models)
+    M = build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa,weighting)
     fm.report_cuda_memory()
-
-    # Step 5: Estimate the parameter thetas to fit the new model using EM
-    # Somewhat hacky: Weight different datasets differently
-    if weighting is not None:
-        M.ds_weight = weighting  # Weighting for each dataset
 
     # Initialize data frame for results
     models, priors = [], []

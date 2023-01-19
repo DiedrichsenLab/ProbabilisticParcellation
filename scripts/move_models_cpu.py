@@ -37,7 +37,7 @@ def move_to_cpu():
 
 def update_symmetric():
     fname = glob.glob(model_dir + '/Models/Models_03/sym_*.pickle')
-    for f in fname[:1]:
+    for f in fname:
         print(f)
         with open(f, 'rb') as file:
             models = pickle.load(file)

@@ -36,24 +36,28 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 
-def analyze_parcel(mname, load_best=True, sym=True):
+def analyze_parcel(mname, load_best=True, sym=True,num_cluster = 7):
 
+    # Get model and atlas. 
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     if load_best:
         info,model = load_batch_best(mname)
     else:
         info,model = load_batch_fit(mname)
+    atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
+
+    # Get winner-take all parcels 
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0)+1
 
     # Get parcel similarity:
     w_cos_sym,_,_ = cl.parcel_similarity(model,plot=True,sym=sym)
 
     # groups=['I','L','W','A','O','D','M']
     # Do Clustering:
-    num_clusters = 7
-    if num_clusters > model.arrange.K:
-        num_clusters = model.arrange.K-1
-    labels,clusters,leaves = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=4,plot=False)
+    
+    labels,clusters,leaves = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
     ax = plt.gca()
 
     # Make a colormap
@@ -61,23 +65,15 @@ def analyze_parcel(mname, load_best=True, sym=True):
     W = sc.calc_mds(w_cos_sim,center=True)
 
     # Define color anchors
-    m = np.array([0.65,0.65,0.65])
-
-    # Desired orientation of the eigenvectors of MDS in colorspace
-    V=np.array([[-0.3,-0.6,1],[1,-.6,-.7],[1,1,1]]).T
-    V=sc.make_orthonormal(V)
-
-    cmap = sc.colormap_mds(W,target=(m,V),clusters=clusters,gamma=0)
+    m,regions,colors = sc.get_target_points(atlas,parcel)
+    cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map
-    cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=7,plot=True,cmap=cmap)
+    cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
-    Prob = np.array(model.marginal_prob())
-    parcel = Prob.argmax(axis=0)+1
-    atlas = split_mn[2][6:]
-    ax = plot_data_flat(parcel,atlas,cmap = cmap,
+    ax = plot_data_flat(parcel,atlas.name,cmap = cmap,
                     dtype='label',
                     labels=labels,
                     render='plotly')
@@ -146,9 +142,6 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     
     # Get mapping between fine parcels and coarse parcels
     mapping = cl.guided_clustering(fine_probabilities, coarse_probabilities)
-    # Move parcels up
-    mapping = np.unique(
-        mapping, return_inverse=True)[1]
 
     # -- Merge model --   
     merged_model = cl.merge_model(fine_model, mapping)
@@ -177,12 +170,11 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
 
 if __name__ == "__main__":
     
-    # # Load model to check type
-    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
-    # fileparts = mname_fine.split('/')
-    # split_mn = fileparts[-1].split('_')
-    # finfo,fmodel = load_batch_best(mname_fine)
-    # type(fmodel)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    pass
 
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
