@@ -90,14 +90,12 @@ def merge_clusters():
         merged_models.append(mname_merged)
 
 
-def cluster_model(mname_fine, mname_coarse, sym=True):
+def cluster_model(mname_fine, mname_coarse):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
         mname_fine:     Probabilstic parcellation to merge (fine parcellation)
         mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
-        sym:            Boolean indicating if model is symmetric. Defaults to True.
-        reduce:         Boolean indicating if model should be reduced (empty parcels removed). Defaults to True.
 
     Returns:
         merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
@@ -110,6 +108,10 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
     finfo, fine_model = load_batch_best(mname_fine)
+    if split_mn[0] == 'sym':
+        sym = True
+    else:
+        sym = False
 
     # Import coarse model
     fileparts = mname_coarse.split('/')
@@ -136,7 +138,10 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
     new_info['K_coarse'] = int(cinfo.K)
     new_info['model_type'] = mname_fine.split('/')[0]
     new_info['K_original'] = int(new_info.K)
-    new_info['K'] = int((mapping.max() + 1) * 2)
+    if sym:
+        new_info['K'] = int(len(np.unique(mapping)) * 2)
+    else:
+        new_info['K'] = int(len(np.unique(mapping)))
 
     # Refit reduced model
     new_model, new_info = lf.refit_model(merged_model, new_info)
@@ -184,7 +189,7 @@ if __name__ == "__main__":
         # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
         # merge model
-        _, mname_merged = cluster_model(mname_fine, mname_coarse, sym=True)
+        _, mname_merged = cluster_model(mname_fine, mname_coarse)
         merged_models.append(mname_merged)
 
     # export the merged model
