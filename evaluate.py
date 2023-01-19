@@ -29,16 +29,13 @@ from ProbabilisticParcellation.util import *
 # from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
 # pytorch cuda global flag
-pt.set_default_tensor_type(pt.cuda.FloatTensor
-                           if pt.cuda.is_available() else
-                           pt.FloatTensor)
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
+    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -154,7 +151,7 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
 def run_prederror(model_names, test_data, test_sess, cond_ind,
                   part_ind=None, eval_types=['group','floor'],
                   indivtrain_ind=None, indivtrain_values=[0],
-                  device=None):
+                  device=None, load_best=True):
     """ Calculates a prediction error using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
@@ -207,7 +204,12 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
     # Now loop over possible models we want to evaluate
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(f"{model_name}", device=device)
+        if load_best:
+            minfo, model = load_batch_best(f"{model_name}", device=device)
+        else:
+            minfo, model = load_batch_fit(f"{model_name}")
+            minfo = minfo.iloc[0]
+        
         model_kp = model.emissions[0].uniform_kappa
         this_res = pd.DataFrame()
         # Loop over the splits - if split then train a individual model
@@ -277,9 +279,9 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['session'] = model_name.split('ses-')[1]
+            this_res['test_sess'] = model_name.split('ses-')[1]
         else:
-            this_res['session'] = 'all'
+            this_res['test_sess'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
@@ -352,7 +354,7 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
 def run_dcbc_individual(model_names, test_data, test_sess,
                         cond_ind=None,part_ind=None,
                         indivtrain_ind=None,indivtrain_values=[0],
-                        device=None):
+                        device=None, load_best=True):
     """ Calculates DCBC using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
@@ -410,7 +412,12 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     # Now loop over possible models we want to evaluate
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
-        minfo, model = load_batch_best(f"{model_name}", device=device)
+        if load_best:
+            minfo, model = load_batch_best(f"{model_name}", device=device)
+        else:
+            minfo, model = load_batch_fit(f"{model_name}")
+            minfo = minfo.iloc[0]
+        
         Prop = model.marginal_prob()
 
         this_res = pd.DataFrame()
@@ -476,9 +483,9 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         this_res['model_type'] = model_name.split('/')[0]
         # Add a column it's session fit
         if len(model_name.split('ses-')) >= 2:
-            this_res['session'] = model_name.split('ses-')[1]
+            this_res['test_sess'] = model_name.split('ses-')[1]
         else:
-            this_res['session'] = 'all'
+            this_res['tess_sess'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results

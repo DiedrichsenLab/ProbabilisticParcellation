@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Script to fusion datasets on the cortical data
+"""Script for learning fusion on datasets
 
 Created on 11/17/2022 at 2:16 PM
-Author: dzhi
+Author: dzhi, jdiedrichsen
 """
-# Script for importing the MDTB data set from super_cerebellum to general format.
 from time import gmtime
 from pathlib import Path
 import pandas as pd
@@ -13,9 +12,7 @@ import numpy as np
 import Functional_Fusion.atlas_map as am
 from Functional_Fusion.dataset import *
 import Functional_Fusion.matrix as matrix
-from scipy.linalg import block_diag
 import nibabel as nb
-import SUITPy as suit
 import generativeMRF.full_model as fm
 import generativeMRF.spatial as sp
 import generativeMRF.arrangements as ar
@@ -23,10 +20,7 @@ import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
 from ProbabilisticParcellation.util import *
 import torch as pt
-from learn_mdtb import get_mdtb_parcel
 import matplotlib.pyplot as plt
-import seaborn as sb
-import sys
 import pickle
 from copy import deepcopy
 import time
@@ -35,26 +29,6 @@ import time
 pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
                            pt.FloatTensor)
-
-# Find model directory to save model fitting results
-model_dir = 'Y:/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
-
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
-
-atlas_dir = base_dir + f'/Atlases'
-
 
 def build_data_list(datasets,
                     atlas='MNISymC3',
@@ -140,12 +114,55 @@ def build_data_list(datasets,
         sub += n_subj
     return data, cond_vec, part_vec, subj_ind
 
+def build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa = True,
+                weighting=None):
+    """ Builds a Full model based on your specification"""
+    if arrange == 'independent':
+        if sym_type == 'sym':
+             ar_model = ar.ArrangeIndependentSymmetric(K, 
+                            atlas.indx_full, 
+                            atlas.indx_reduced,
+                            same_parcels=False,
+                            spatial_specific=True,
+                            remove_redundancy=False)
+        elif sym_type == 'asym':
+            ar_model = ar.ArrangeIndependent(K, atlas.P,
+                                         spatial_specific=True,
+                                         remove_redundancy=False)
+    else:
+        raise (NameError(f'unknown arrangement model:{arrange}'))
+
+    # Initialize emission models
+    em_models = []
+    for j, ds in enumerate(cond_vec):
+        if emission == 'VMF':
+            em_model = em.MixVMF(K=K, P=atlas.P,
+                                 X=matrix.indicator(cond_vec[j]),
+                                 part_vec=part_vec[j],
+                                 uniform_kappa=uniform_kappa)
+        elif emission == 'wVMF':
+            em_model = em.wMixVMF(K=K, P=atlas.P,
+                                  X=matrix.indicator(cond_vec[j]),
+                                  part_vec=part_vec[j],
+                                  uniform_kappa=uniform_kappa,
+                                  weighting='lsquare_sum2P')
+        else:
+            raise ((NameError(f'unknown emission model:{emission}')))
+        em_models.append(em_model)
+    M = fm.FullMultiModel(ar_model, em_models)
+    if weighting is not None:
+        M.ds_weight = weighting  # Weighting for each dataset
+
+    return M
 
 def batch_fit(datasets, sess,
               type=None, cond_ind=None, part_ind=None, subj=None,
               atlas=None,
               K=10,
               arrange='independent',
+              sym_type = 'asym',
               emission='VMF',
               n_rep=3, n_inits=10, n_iter=80, first_iter=10,
               name=None,
@@ -157,16 +174,16 @@ def batch_fit(datasets, sess,
     selects the best one from a batch and saves them
 
     Args:
-        model_type (str): String indicating model_type
         datasets (list): List of dataset names to be used as training
         sess (list): List of list of sessions to be used for each
-        type (list): List the type
+        type (list): List the data types
         cond_ind (list): Name of the info-field that indicates the condition
         part_ind (list): Name of the field indicating independent partitions of the data
         subj (list, optional): _description_. Defaults to None
         atlas (Atlas): Atlas to be used. Defaults to None.
         K (int): Number of parcels. Defaults to 10.
         arrange (str): Type of arangement model. Defaults to 'independent'.
+        sym_type (str): {'sym','asym'} - defaults to asymmetric model
         emission (list / strs): Type of emission models. Defaults to 'VMF'.
         n_inits (int): Number of random starting values. default: 10
         n_iter (int): Maximal number of iterations per fit: default: 20
@@ -193,57 +210,11 @@ def batch_fit(datasets, sess,
     # Load all necessary data and designs
     n_sets = len(data)
 
-    # Build the model
-    # Check for size of Atlas + whether symmetric
-    if isinstance(atlas, (am.AtlasSurfaceSymmetric,
-                          am.AtlasVolumeSymmetric)):
-        P_arrange = atlas.Psym
-        K_arrange = np.ceil(K / 2).astype(int)
-    else:
-        P_arrange = atlas.P
-        K_arrange = K
-
     print(f'Building fullMultiModel {arrange} + {emission} for fitting...')
-    # Initialize arrangement model
-    if arrange == 'independent':
-        ar_model = ar.ArrangeIndependent(K=K_arrange, P=P_arrange,
-                                         spatial_specific=True,
-                                         remove_redundancy=False)
-    else:
-        raise (NameError(f'unknown arrangement model:{arrange}'))
-
-    # Initialize emission models
-    em_models = []
-    for j, ds in enumerate(data):
-        if emission == 'VMF':
-            em_model = em.MixVMF(K=K, P=atlas.P,
-                                 X=matrix.indicator(cond_vec[j]),
-                                 part_vec=part_vec[j],
-                                 uniform_kappa=uniform_kappa)
-        elif emission == 'wVMF':
-            em_model = em.wMixVMF(K=K, P=atlas.P,
-                                  X=matrix.indicator(cond_vec[j]),
-                                  part_vec=part_vec[j],
-                                  uniform_kappa=uniform_kappa,
-                                  weighting='lsquare_sum2P')
-        else:
-            raise ((NameError(f'unknown emission model:{emission}')))
-        em_models.append(em_model)
-
-    # Make a full fusion model
-    if isinstance(atlas, (am.AtlasSurfaceSymmetric,
-                          am.AtlasVolumeSymmetric)):
-        M = fm.FullMultiModelSymmetric(ar_model, em_models,
-                                       atlas.indx_full, atlas.indx_reduced,
-                                       same_parcels=False)
-    else:
-        M = fm.FullMultiModel(ar_model, em_models)
-
-    # Step 5: Estimate the parameter thetas to fit the new model using EM
-
-    # Somewhat hacky: Weight different datasets differently
-    if weighting is not None:
-        M.ds_weight = weighting  # Weighting for each dataset
+    M = build_model(K,arrange,sym_type,emission,atlas,
+                cond_vec,part_vec,
+                uniform_kappa,weighting)
+    fm.report_cuda_memory()
 
     # Initialize data frame for results
     models, priors = [], []
@@ -265,11 +236,13 @@ def batch_fit(datasets, sess,
     prior = pt.zeros((n_fits, K, atlas.P))
     for i in range(n_fits):
         print(f'Start fit: repetition {i} - {name}')
+
         iter_tic = time.perf_counter()
-        # Copy the obejct (without data)
+        # Copy the object (without data)
         m = deepcopy(M)
         # Attach the data
         m.initialize(data, subj_ind=subj_ind)
+        fm.report_cuda_memory()
 
         m, ll, theta, U_hat, ll_init = m.fit_em_ninits(
             iter=n_iter,
@@ -279,7 +252,6 @@ def batch_fit(datasets, sess,
             first_iter=first_iter)
         info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         m.clear()
-        models.append(m)
 
         # Align group priors
         if i == 0:
@@ -301,6 +273,10 @@ def batch_fit(datasets, sess,
         num_rep = sum(sim < 0.02 for sim in this_similarity)
         print(num_rep)
 
+        # Move to CPU device before storing
+        m.move_to(device='cpu')
+        models.append(m)
+
         # Convergence: 1. must run enough repetitions (50);
         #              2. num_rep greater than threshold (10% of max_iter)
         if (i>50) and (num_rep >= int(n_fits*0.1)):
@@ -308,17 +284,13 @@ def batch_fit(datasets, sess,
         iter_toc = time.perf_counter()
         print(f'Done fit: repetition {i} - {name} - {iter_toc - iter_tic:0.4f} seconds!')
 
-    # Align the different models
-    for m in models:
-        m.move_to(device='cpu')
     models = np.array(models, dtype=object)
-    # ev.align_models(models)
 
     return info, models
 
 
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
-            sym_type=[0,1], subj_list=None, weighting=None, this_sess=None):
+            sym_type=['asym','sym'], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
     T = pd.read_csv(base_dir + '/dataset_description.tsv',sep='\t')
     datasets = T.name.to_numpy()
@@ -332,12 +304,10 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     part_ind = np.array(['half'] * len(T), dtype=object)
 
     # Make the atlas object
-    mask = base_dir + '/Atlases/tpl-MNI152NLIn2009cSymC/tpl-MNISymC_res-3_gmcmask.nii'
-    atlas = [am.AtlasVolumetric('MNISymC3', mask_img=mask),
-             am.AtlasVolumeSymmetric('MNISymC3', mask_img=mask)]
+    if space is None:
+        space='MNISymC3'
 
-    # Give a overall name for the type of model
-    mname = ['asym', 'sym']
+    atlas, _ = am.get_atlas(space, atlas_dir)
 
     # Provide different setttings for the different model types
     join_sess_part = False
@@ -367,17 +337,18 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     # Generate a dataname from first two letters of each training data set
     dataname = ''.join(T.two_letter_code[set_ind])
 
-    for i in sym_type:
+    for mname in sym_type:
         tic = time.perf_counter()
-        name = mname[i] + '_' + ''.join(dataname)
+        name = mname + '_' + ''.join(dataname)
         info, models = batch_fit(datasets[set_ind],
                                  sess=sess[set_ind],
                                  type=type[set_ind],
                                  cond_ind=cond_ind[set_ind],
                                  part_ind=part_ind[set_ind],
                                  subj=subj_list,
-                                 atlas=atlas[i],
+                                 atlas=atlas,
                                  K=K,
+                                 sym_type = mname,
                                  name=name,
                                  n_inits=50,
                                  n_iter=200,
@@ -390,14 +361,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+        fname = f'/{name}_space-{atlas.name}_K-{K}'
 
         if this_sess is not None:
             return wdir, fname, info, models
 
         if subj_list is not None:
             wdir = model_dir + f'/Models/Models_{model_type}/leaveNout'
-            fname = f'/{name}_space-{atlas[i].name}_K-{K}'
+            fname = f'/{name}_space-{atlas.name}_K-{K}'
             return wdir, fname, info, models
 
         info.to_csv(wdir + fname + '.tsv', sep='\t')
@@ -405,7 +376,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             pickle.dump(models, file)
 
         toc = time.perf_counter()
-        print(f'Done Model fitting - {mname[i]}. Used {toc - tic:0.4f} seconds!')
+        print(f'Done Model fitting - {mname}. Used {toc - tic:0.4f} seconds!')
 
 
 def clear_models(K, model_type='04'):
@@ -521,7 +492,7 @@ def leave_one_out_fit(dataset=[0], model_type=['01'], K=10):
             sub_list = np.delete(np.arange(this_nsub), i)
             wdir, fname, info, models = fit_all(dataset, K,
                                                 model_type=m,
-                                                sym_type=[0],
+                                                sym_type=['asym'],
                                                 subj_list=[sub_list])
             fname = fname + f'_leave-{i}'
             info.to_csv(wdir + fname + '.tsv', sep='\t')
@@ -543,7 +514,7 @@ def fit_indv_sess(indx=3, model_type='01', K=10):
             wdir, fname, info, models = fit_all([indx], K,
                                                 model_type=model_type,
                                                 repeats=100,
-                                                sym_type=[0],
+                                                sym_type=['asym'],
                                                 this_sess=[[indv_sess]])
             fname = fname + f'_{indv_sess}'
             info.to_csv(wdir + fname + '.tsv', sep='\t')
@@ -557,30 +528,26 @@ def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type=
     if not Path(ibc_dir + nam + '.tsv').exists():
         print(f'fitting model {model_type} with K={K} on IBC sessions {sess1} + {sess2} ...')
         wdir, fname, info, models = fit_all([3], K, model_type=model_type, repeats=50,
-                                            sym_type=[0], this_sess=[['ses-'+sess1,
+                                            sym_type=['asym'], this_sess=[['ses-'+sess1,
                                                                       'ses-'+sess2]])
         fname = fname + f'_ses-{sess1}+{sess2}'
         info.to_csv(wdir + '/IBC_sessFusion' + fname + '.tsv', sep='\t')
         with open(wdir + '/IBC_sessFusion' + fname + '.pickle', 'wb') as file:
             pickle.dump(models, file)
 
-def fit_all_datasets():
-    space = 'MNISymC3' # Set atlas space
-    msym = 'sym' # Set model symmetry
-    if msym == 'sym':
-        s = 1
-    elif msym == 'asym':
-        s = 0
-
+def fit_all_datasets(space = 'MNISymC2',
+                    msym = 'sym',
+                    K=[68],
+                    datasets_list = [[0, 1, 2, 3, 4, 5, 6]]):
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
-    datasets_list = [[0, 1, 2, 3, 4, 5, 6, 7]]
+    
     T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
     for datasets in datasets_list:
-        for k in [10, 20, 34, 40, 68, 80]:
+        for k in K:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
                 wdir = model_dir + f'/Models'
@@ -592,13 +559,22 @@ def fit_all_datasets():
                 #     # move_batch_to_device(fname, device='cuda')
                 if not Path(wdir + fname + '.tsv').exists():
                     print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym])
                 else:
                     print(f'model {t} with K={k} already fitted as {fname}')
 
 
 if __name__ == "__main__":
-    fit_all_datasets()
+    datasets_list=[0,1,2,3,4,5,6]
+    K = 68
+    sym_type = ['asym']
+    model_type = '03'
+    space = 'MNISymC2'
+
+    fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
+            sym_type=['sym'], space='MNISymC2')
+
+
     ########## Reliability map
     # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
     #                              voxel_wise=True)
@@ -606,21 +582,21 @@ if __name__ == "__main__":
     # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
 
-    ########## IBC selected sessions fusion fit ##########
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
-            this_s1 = s1.split('-')[1]
-            this_s2 = s2.split('-')[1]
-            for k in [40, 68]:
-                for t in ['03','04']:
-                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
-                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
-                    if not os.path.isfile(fname):
-                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-                        print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
+    # ########## IBC selected sessions fusion fit ##########
+    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
+    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
+    # for s1 in sess_1:
+    #     sess_2.remove(s1)
+    #     for s2 in sess_2:
+    #         this_s1 = s1.split('-')[1]
+    #         this_s2 = s2.split('-')[1]
+    #         for k in [40, 68]:
+    #             for t in ['03','04']:
+    #                 wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+    #                 fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+    #                 if not os.path.isfile(fname):
+    #                     fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+    #                     print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
 
     ########## IBC all sessions fit ##########
     # fit_indv_sess(3, model_type='03', K=40)
@@ -655,5 +631,70 @@ if __name__ == "__main__":
     #                   align=True)
     # plt.savefig('ib_k-20_allsess.png', format='png')
     # plt.show()
+
+    
+    # ########## Higher K ##########
+    space = 'MNISymC3' # Set atlas space
+    # space = 'MNISymC2' # Set atlas space
+    msym = 'sym' # Set model symmetry
+    # ks = [10, 20, 34]
+    ks = [14, 28, 48, 56, 60]
+    # ks = [34, 40, 68, 80]
+    # ks=[80]
+
+
+    # # -- Build dataset list --
+    n_dsets = 7 # without HCP
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    individual_datasets = [ [d] for d in alldatasets ]
+
+    dataset_list = []
+    dataset_list.extend([alldatasets])
+    dataset_list.extend(individual_datasets)
+    # dataset_list.extend(loo_datasets)
+
+
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    for t in ['03']:
+        for datasets in dataset_list:
+            for k in ks:
+                datanames = ''.join(T.two_letter_code[datasets])
+                wdir = model_dir + f'/Models/Models_{t}'
+                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+
+                if not Path(wdir+fname).exists():
+                    print(f'fitting model {t} with K={k} as {fname}...')
+                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym], space=space)
+                else:
+                    print(f'model {t} with K={k} already fitted as {fname}')
+
+    # # # -- Build dataset list with HCP--
+    # n_dsets = 8 # with HCP
+    # alldatasets = np.arange(n_dsets).tolist()
+    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    # individual_datasets = [ [d] for d in alldatasets ]
+
+    # dataset_list = []
+    # dataset_list.extend([alldatasets])
+    # dataset_list.extend(individual_datasets)
+    # # dataset_list.extend(loo_datasets)
+
+
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    # for datasets in dataset_list:
+    #     for t in ['03','04']:
+    #         for k in ks:
+
+
+    #             datanames = ''.join(T.two_letter_code[datasets])
+    #             wdir = model_dir + f'/Models/Models_{t}'
+    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+
+    #             if not Path(wdir+fname).exists():
+    #                 print(f'fitting model {t} with K={k} as {fname}...')
+    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
+    #             else:
+    #                 print(f'model {t} with K={k} already fitted as {fname}')
 
     pass

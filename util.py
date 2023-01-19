@@ -2,7 +2,6 @@ import numpy as np
 import nibabel as nb
 import SUITPy as suit
 import pickle
-from pathlib import Path
 import Functional_Fusion.atlas_map as am
 import pandas as pd
 import torch as pt
@@ -10,13 +9,19 @@ import json
 import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 import generativeMRF.full_model as fm
+from pathlib import Path
 
-# Find model directory to save model fitting results
+# Set directories for the entire project - just set here and import everywhere 
+# else  
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
+if not Path(model_dir).exists():
+    model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(model_dir).exists():
+    model_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -26,7 +31,13 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
+    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(base_dir).exists():
+    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
+
+atlas_dir = base_dir + f'/Atlases'
 
 
 def cal_corr(Y_target, Y_source):
@@ -51,12 +62,12 @@ def cal_corr(Y_target, Y_source):
     return Corr
 
 def load_batch_fit(fname):
-    """ Loads a batch of fits and extracts marginal probability maps 
+    """ Loads a batch of fits and extracts marginal probability maps
     and mean vectors
     Args:
         fname (str): File name
-    Returns: 
-        info: Data Frame with information 
+    Returns:
+        info: Data Frame with information
         models: List of models
     """
     wdir = model_dir + '/Models/'
@@ -73,10 +84,10 @@ def clear_batch(fname):
     wdir = base_dir + '/Models/'
     with open(wdir + fname + '.pickle','rb') as file:
         models = pickle.load(file)
-    # Clear models 
+    # Clear models
     for m in models:
         m.clear()
-    
+
     with open(wdir + fname + '.pickle','wb') as file:
         pickle.dump(models,file)
 
@@ -105,16 +116,20 @@ def load_batch_best(fname, device=None):
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
+    if not isinstance(models,list):
+        return info.iloc[0],models
+    
     j = info.loglik.argmax()
 
     best_model = models[j]
     if device is not None:
         best_model.move_to(device)
 
-    return info.iloc[j], best_model
+    info_reduced = info.iloc[j]
+    return info_reduced, best_model
 
 def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
-    """ Makes a color map from a *.lut file 
+    """ Makes a color map from a *.lut file
     Args:
         fname (str): Name of Lut file
 
@@ -135,14 +150,14 @@ def plot_data_flat(data,atlas,
                     render='matplotlib',
                     colorbar = False):
     """ Maps data from an atlas space to a full volume and
-    from there onto the surface - then plots it. 
+    from there onto the surface - then plots it.
 
     Args:
         data (_type_): _description_
         atlas (str): Atlas code ('SUIT3','MNISymC3',...)
         cmap (_type_, optional): Colormap. Defaults to None.
         dtype (str, optional): 'label' or 'func'
-        cscale (_type_, optional): Color scale 
+        cscale (_type_, optional): Color scale
         render (str, optional): 'matplotlib','plotly'
 
     Returns:
@@ -151,8 +166,8 @@ def plot_data_flat(data,atlas,
     # Plot Data from a specific atlas space on the flatmap
     suit_atlas, _ = am.get_atlas(atlas,base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(data)
-    
-    # Figure out correct mapping space 
+
+    # Figure out correct mapping space
     if atlas[0:4]=='SUIT':
         map_space='SUIT'
     elif atlas[0:7]=='MNISymC':
@@ -160,22 +175,22 @@ def plot_data_flat(data,atlas,
     else:
         raise(NameError('Unknown atlas space'))
 
-    # Plotting label 
+    # Plotting label
     if dtype =='label':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
             space=map_space,ignore_zeros=True)
-        ax = suit.flatmap.plot(surf_data, 
+        ax = suit.flatmap.plot(surf_data,
                 render=render,
-                cmap=cmap, 
+                cmap=cmap,
                 new_figure=False,
                 label_names = labels,
                 overlay_type='label',
                 colorbar= colorbar)
-    # Plotting funtional data 
+    # Plotting funtional data
     elif dtype== 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
             space=map_space)
-        ax = suit.flatmap.plot(surf_data, 
+        ax = suit.flatmap.plot(surf_data,
                 render=render,
                 cmap=cmap,
                 cscale = cscale,
@@ -192,12 +207,12 @@ def plot_multi_flat(data,atlas,grid,
                     cscale = None,
                     titles=None,
                     colorbar = False):
-    """Plots a grid of flatmaps with some data 
+    """Plots a grid of flatmaps with some data
 
     Args:
-        data (array): NxP array of data 
+        data (array): NxP array of data
         atlas (str): Atlas code ('SUIT3','MNISymC3',...)
-        grid (tuple): (rows,cols) grid for subplot 
+        grid (tuple): (rows,cols) grid for subplot
         cmap (colormap): Color map Defaults to None.
         dtype (str, optional):'label' or 'func'
         cscale (_type_, optional): Scale of data (None)
@@ -216,32 +231,32 @@ def plot_multi_flat(data,atlas,grid,
             plt.savefig(f'rel_{titles[i]}.png', format='png')
 
 def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
-    """  Load a bunch of model fits, selects the best from 
+    """  Load a bunch of model fits, selects the best from
     each of them and plots the flatmap of the parcellation
 
     Args:
-        model_names (list): List of mode names 
-        grid (tuple): (rows,cols) of matrix 
+        model_names (list): List of mode names
+        grid (tuple): (rows,cols) of matrix
         cmap (str / colormat): Colormap. Defaults to 'tab20b'.
         align (bool): Align the models before plotting. Defaults to False.
     """
-    titles = [] 
+    titles = []
     models = []
 
-    # Load models and produce titles 
+    # Load models and produce titles
     for i,mn in enumerate(model_names):
         info,model = load_batch_best(mn, device=device)
         models.append(model)
         # Split the name and build titles
-        fname = mn.split('/') # Get filename if directory is given 
-        split_mn = fname[-1].split('_') 
+        fname = mn.split('/') # Get filename if directory is given
+        split_mn = fname[-1].split('_')
         atlas = split_mn[2][6:]
         titles.append(split_mn[1] + ' ' + split_mn[3])
-    
-    # Align models if requested 
+
+    # Align models if requested
     if align:
         Prob = ev.align_models(models,in_place=False)
-    else: 
+    else:
         Prob = ev.extract_marginal_prob(models)
 
     if type(Prob) is pt.Tensor:

@@ -77,7 +77,7 @@ def eval_generative_SNMF(model_names = ['asym_Md_space-SUIT3_K-10']):
     atlas = am.AtlasVolumetric('SUIT3', mask_img=mask)
 
     # get original mdtb parcels (nmf)
-    from learn_mdtb import get_mdtb_parcel
+    from depreciated.learn_mdtb import get_mdtb_parcel
     mdtb_par, _ = get_mdtb_parcel(do_plot=False)
     mdtb_par = np.where(mdtb_par == 0, np.nan, mdtb_par)
 
@@ -607,7 +607,7 @@ def result_4_rel_check(fname, train_model='IBC', t_data=['Mdtb']):
     plt.show()
 
 def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
-                  t_datasets=None, return_df=False):
+                  t_datasets=None, return_df=False, k_merged=None, load_best=True):
     """Evaluate group and individual DCBC and coserr of all dataset fusion
        and any dataset training standalone on each of the datasets.
     Args:
@@ -633,18 +633,21 @@ def result_5_eval(K=10, symmetric='asym', model_type=None, model_name=None,
     for t in model_type:
         print(f'- Start evaluating Model_{t} - {model_name}...')
         m_name += [f'Models_{t}/{symmetric}_{nam}_space-MNISymC3_K-{K}' for nam in model_name]
+        if k_merged is not None:
+            m_name = [f'Models_{t}/{symmetric}_{nam}_space-MNISymC3_K-{K}_merged_K-{k_merged}' for nam in model_name]
+            load_best=False
 
     for ds in t_datasets:
         print(f'Testdata: {ds}\n')
         # 1. Run DCBC individual
         res_dcbc = run_dcbc_individual(m_name, ds, 'all', cond_ind=None,
                                        part_ind='half', indivtrain_ind='half',
-                                       indivtrain_values=[1,2], device='cuda')
+                                       indivtrain_values=[1,2], device='cuda', load_best=load_best)
         # 2. Run coserr individual
         res_coserr = run_prederror(m_name, ds, 'all', cond_ind=None,
                                    part_ind='half', eval_types=['group', 'floor'],
                                    indivtrain_ind='half', indivtrain_values=[1,2],
-                                   device='cuda')
+                                   device='cuda', load_best=load_best)
         # 3. Merge the two dataframe
         res = pd.merge(res_dcbc, res_coserr, how='outer')
         results = pd.concat([results, res], ignore_index=True)
@@ -910,5 +913,21 @@ if __name__ == "__main__":
     #                 'Models_03/asym_Ib_space-MNISymC3_K-10',
     #                 'Models_04/asym_Ib_space-MNISymC3_K-10',
     #                 'Models_05/asym_Ib_space-MNISymC3_K-10']
-    #
-    # pass
+
+    ############# Result 6: Clustered models #############
+    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    D = pd.DataFrame()
+    datasets = [0, 1, 2, 3, 4, 5, 6]
+    datanames = T.two_letter_code[datasets].to_list()
+
+    for i in range(7):
+        for k_merged in [10,18,22,26]:
+            res = result_5_eval(K=68, symmetric='sym', model_type=['03'],
+                                model_name=['MdPoNiIbWmDeSo'], t_datasets=[T.name[i]],
+                                return_df=True, k_merged=k_merged)
+            D = pd.concat([D, res], ignore_index=True)
+    wdir = model_dir + f'/Models/Evaluation/sym'
+    fname = f'/eval_all_sym_MdPoNiIbWmDeSo_merged_teston_indivDataset.tsv'
+    D.to_csv(wdir + fname, index=False, sep='\t')
+
+    pass
