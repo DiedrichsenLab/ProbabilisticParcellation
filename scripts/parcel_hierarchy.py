@@ -57,11 +57,6 @@ def analyze_parcel(mname, load_best=True, sym=True,num_cluster = 7):
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
-    ax = plot_data_flat(parcel,atlas.name,cmap = cmap,
-                    dtype='label',
-                    labels=labels,
-                    render='plotly')
-    ax.show()
     ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
                     dtype='prob',
                     labels=labels,
