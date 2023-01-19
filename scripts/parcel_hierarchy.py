@@ -20,18 +20,6 @@ import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
-if not Path(base_dir).exists():
-    base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
-if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
-
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
@@ -70,8 +58,8 @@ def analyze_parcel(mname, sym=True,num_cluster = 7):
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
-    ax = plot_data_flat(parcel,atlas.name,cmap = cmap,
-                    dtype='label',
+    ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
+                    dtype='prob',
                     labels=labels,
                     render='plotly')
     ax.show()
@@ -172,10 +160,14 @@ def cluster_model(mname_fine, mname_coarse, sym=True):
 
 if __name__ == "__main__":
     
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-60'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    basename = model_dir + '/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    ea.export_map(Prob,atlas.name,cmap,labels,basename)
+
+
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    #Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # pass
 
     save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'

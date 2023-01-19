@@ -172,21 +172,14 @@ def plot_data_flat(data,atlas,
         ax: Axis / figure of plot
     """
     # Plot Data from a specific atlas space on the flatmap
-    suit_atlas, _ = am.get_atlas(atlas,base_dir + '/Atlases')
+    suit_atlas, ainf = am.get_atlas(atlas,base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(data)
 
-    # Figure out correct mapping space
-    if atlas[0:4]=='SUIT':
-        map_space='SUIT'
-    elif atlas[0:7]=='MNISymC':
-        map_space='MNISymC'
-    else:
-        raise(NameError('Unknown atlas space'))
 
-    # Plotting label
+    # Mapping labels directly by the mode 
     if dtype =='label':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
-            space=map_space,ignore_zeros=True)
+            space=ainf['normspace'],ignore_zeros=True)
         ax = suit.flatmap.plot(surf_data,
                 render=render,
                 cmap=cmap,
@@ -194,7 +187,7 @@ def plot_data_flat(data,atlas,
                 label_names = labels,
                 overlay_type='label',
                 colorbar= colorbar)
-    # Plotting funtional data
+    # Plotting one series of functional data
     elif dtype== 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
             space=map_space)
@@ -204,6 +197,19 @@ def plot_data_flat(data,atlas,
                 cscale = cscale,
                 new_figure=False,
                 overlay_type='func',
+                colorbar= colorbar)
+    # Mapping probabilities on the flatmap and then 
+    # determining a winner from this (slightly better than label)
+    elif dtype== 'prob':
+        surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
+            space=ainf['normspace'])
+        label = np.argmax(surf_data,axis=1)+1
+        ax = suit.flatmap.plot(label,
+                render=render,
+                cmap=cmap,
+                new_figure=False,
+                label_names = labels,
+                overlay_type='label',
                 colorbar= colorbar)
     else:
         raise(NameError('Unknown data type'))
