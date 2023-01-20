@@ -23,8 +23,7 @@ import ProbabilisticParcellation.export_atlas as ea
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-
-def analyze_parcel(mname, sym=True,num_cluster = 7):
+def analyze_parcel(mname, sym=True, num_cluster=7):
 
     # Get model and atlas. 
     fileparts = mname.split('/')
@@ -41,7 +40,6 @@ def analyze_parcel(mname, sym=True,num_cluster = 7):
 
     # groups=['I','L','W','A','O','D','M']
     # Do Clustering:
-    
     labels,clusters,leaves = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
     ax = plt.gca()
 
@@ -90,7 +88,7 @@ def merge_clusters():
         merged_models.append(mname_merged)
 
 
-def cluster_model(mname_fine, mname_coarse):
+def get_guided_clustering(mname_fine, mname_coarse):
     """Merges the parcels of a fine parcellation model according to a coarser model.
 
     Args:
@@ -170,27 +168,28 @@ if __name__ == "__main__":
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
-
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
-    #Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12'
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+    basename = f'model_dir/Atlases/{mname.split("/")[1]}'
+    ea.export_map(Prob, atlas.name, cmap, labels, basename)
     # pass
 
-    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
-    # --- Merge parcels at K=20, 34 & 40 ---
-    merged_models = []
-    # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [10, 14, 20, 28]:
+    # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+    # # --- Merge parcels at K=20, 34 & 40 ---
+    # merged_models = []
+    # # for k in [10, 14, 20, 28, 34, 40]:
+    # for k in [10, 14, 20, 28]:
 
-        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+    #     mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    #     mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
 
-        # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
-        # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
+    #     # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
+    #     # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
-        # merge model
-        _, mname_merged = cluster_model(mname_fine, mname_coarse)
-        merged_models.append(mname_merged)
+    #     # merge model
+    #     _, mname_merged = get_guided_clustering(mname_fine, mname_coarse)
+    #     merged_models.append(mname_merged)
 
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
@@ -204,7 +203,7 @@ if __name__ == "__main__":
     # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     for mname_merged in merged_models:
-        Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
+        Prob, parcel, atlas, labels, cmap = analyze_parcel(mname_merged, sym=True, clustering_method='guided')
     
 
     # # Show MNISymC2 Parcellation
