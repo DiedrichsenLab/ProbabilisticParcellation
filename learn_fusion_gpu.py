@@ -605,7 +605,7 @@ def refit_model(model, new_info):
     # Refit emission models
     print(f'Freezing arrangement model and fitting emission models...\n')
 
-    M, ll, _, _ = M.fit_em(iter=100, tol=0.01,
+    M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
                                             fit_emission=True,
                                             fit_arrangement=False,
                                             first_evidence=True)
@@ -613,6 +613,13 @@ def refit_model(model, new_info):
     # make info from a Series back to a dataframe
     new_info = pd.DataFrame(new_info.to_dict(), index=[0])
     new_info['loglik'] = ll[-1].item()
+    # Plot ll
+    # 
+    # pt.Tensor.ndim = property(lambda self: len(self.shape))
+    # x = pt.linspace(0,ll.shape[0], ll.shape[0])
+    # plt.figure()
+    # plt.plot(x[1:], ll[1:])
+
 
     return M, new_info
 
