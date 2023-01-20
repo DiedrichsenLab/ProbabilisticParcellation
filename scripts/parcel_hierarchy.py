@@ -163,10 +163,10 @@ def get_guided_clustering(mname_fine, mname_coarse):
 
 if __name__ == "__main__":
     
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    basename = model_dir + '/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    ea.export_map(Prob,atlas.name,cmap,labels,basename)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # basename = model_dir + '/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12'
     Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
