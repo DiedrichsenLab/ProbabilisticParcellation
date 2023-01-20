@@ -168,27 +168,28 @@ if __name__ == "__main__":
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
-
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-60'
-    #Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12'
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+    basename = f'model_dir/Atlases/{mname.split("/")[1]}'
+    ea.export_map(Prob, atlas.name, cmap, labels, basename)
     # pass
 
-    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
-    # --- Merge parcels at K=20, 34 & 40 ---
-    merged_models = []
-    # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [10, 14, 20, 28]:
+    # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+    # # --- Merge parcels at K=20, 34 & 40 ---
+    # merged_models = []
+    # # for k in [10, 14, 20, 28, 34, 40]:
+    # for k in [10, 14, 20, 28]:
 
-        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+    #     mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    #     mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
 
-        # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
-        # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
+    #     # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
+    #     # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
-        # merge model
-        _, mname_merged = get_guided_clustering(mname_fine, mname_coarse)
-        merged_models.append(mname_merged)
+    #     # merge model
+    #     _, mname_merged = get_guided_clustering(mname_fine, mname_coarse)
+    #     merged_models.append(mname_merged)
 
     # export the merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
