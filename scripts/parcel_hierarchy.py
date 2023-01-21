@@ -23,7 +23,7 @@ import ProbabilisticParcellation.export_atlas as ea
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=7):
+def analyze_parcel(mname, sym=True, num_cluster=7, clustering='agglomative', cluster_by=None):
 
     # Get model and atlas. 
     fileparts = mname.split('/')
@@ -32,16 +32,24 @@ def analyze_parcel(mname, sym=True, num_cluster=7):
     atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
 
     # Get winner-take all parcels 
-    Prob = np.array(model.marginal_prob())
+    Prob = np.array(model.arrange.marginal_prob())
     parcel = Prob.argmax(axis=0)+1
 
     # Get parcel similarity:
     w_cos_sym,_,_ = cl.parcel_similarity(model,plot=True,sym=sym)
 
-    # groups=['I','L','W','A','O','D','M']
     # Do Clustering:
-    labels,clusters,leaves = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
-    ax = plt.gca()
+    if clustering == 'agglomative':
+        labels,clusters,_ = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
+    if clustering == 'model_guided':
+        if cluster_by is None:
+            raise('Need to specify model that guides clustering')
+        cluster_info, cluster_model = load_batch_best(cluster_by)
+        clusters_half, clusters = cl.guided_clustering(
+            mname, cluster_by)
+        labels, cluster_counts = cl.cluster_labels(clusters)
+        print(f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
+        
 
     # Make a colormap
     w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False)
@@ -52,7 +60,8 @@ def analyze_parcel(mname, sym=True, num_cluster=7):
     cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map
-    cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
+    if clustering == 'agglomative':
+        cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
@@ -88,96 +97,27 @@ def merge_clusters():
         merged_models.append(mname_merged)
 
 
-def get_guided_clustering(mname_fine, mname_coarse):
-    """Merges the parcels of a fine parcellation model according to a coarser model.
-
-    Args:
-        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
-        mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
-
-    Returns:
-        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
-        mname_merged:   Name of merged model
-        mapping:        Mapping of fine parcels to coarse parcels.
-
-    """
-    # -- Import models --
-    # Import fine model
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    finfo, fine_model = load_batch_best(mname_fine)
-    if split_mn[0] == 'sym':
-        sym = True
-    else:
-        sym = False
-
-    # Import coarse model
-    fileparts = mname_coarse.split('/')
-    split_mn = fileparts[-1].split('_')
-    cinfo, coarse_model = load_batch_best(mname_coarse)
-
-    # -- Cluster fine model --
-    # Get winner take all assignment for fine model
-    fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
-
-    # Get probabilities of coarse model
-    coarse_probabilities = pt.softmax(coarse_model.arrange.logpi, dim=0)
-
-    print(f'\n--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n\n  Fine Model: \t\t{fine_probabilities.shape[0]} Prob Parcels \n Coarse Model: \t\t{coarse_probabilities.shape[0]} Prob Parcels')
-    
-    # Get mapping between fine parcels and coarse parcels
-    mapping = cl.guided_clustering(fine_probabilities, coarse_probabilities)
-
-    # -- Merge model --   
-    merged_model = cl.merge_model(fine_model, mapping)
-
-    # Make new info
-    new_info = deepcopy(finfo)
-    new_info['K_coarse'] = int(cinfo.K)
-    new_info['model_type'] = mname_fine.split('/')[0]
-    new_info['K_original'] = int(new_info.K)
-    if sym:
-        new_info['K'] = int(len(np.unique(mapping)) * 2)
-    else:
-        new_info['K'] = int(len(np.unique(mapping)))
-
-    # Refit reduced model
-    new_model, new_info = lf.refit_model(merged_model, new_info)
-
-    # -- Save model --
-    # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
-    mname_merged = f'{mname_fine}_Kclus-{int(new_info.K_coarse)}_Keff-{int(new_info.K)}'
-
-    # save new model
-    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
-        pickle.dump([new_model], file)
-
-    # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
-                    sep='\t', index=False)
-
-    print(
-        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
-
-    return new_model, mname_merged
 
 if __name__ == "__main__":
-    
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    basename = model_dir + '/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # Agglomative clustering
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    ea.export_map(Prob,atlas.name,cmap,labels,basename)
+    # ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12'
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
-    basename = f'model_dir/Atlases/{mname.split("/")[1]}'
-    ea.export_map(Prob, atlas.name, cmap, labels, basename)
+    # Guided clustering
+    cluster_by = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-14'
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname, sym=True, clustering='model_guided', cluster_by=cluster_by)
+    clustername = f'{model_dir}/Atlases/{mname.split("/")[1]}_C-{cluster_by.split("-")[-1]}'
+    ea.export_map(Prob, atlas.name, cmap, labels, clustername)
+
     # pass
 
     # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
-    # # --- Merge parcels at K=20, 34 & 40 ---
-    # merged_models = []
-    # # for k in [10, 14, 20, 28, 34, 40]:
+    # # # --- Merge parcels at K=20, 34 & 40 ---
+    # # merged_models = []
+    # # # for k in [10, 14, 20, 28, 34, 40]:
     # for k in [10, 14, 20, 28]:
 
     #     mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
@@ -188,7 +128,7 @@ if __name__ == "__main__":
     #     # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
         
     #     # merge model
-    #     _, mname_merged = get_guided_clustering(mname_fine, mname_coarse)
+    #     _, mname_merged = cl.save_guided_clustering(mname_fine, mname_coarse)
     #     merged_models.append(mname_merged)
 
     # export the merged model
@@ -198,13 +138,7 @@ if __name__ == "__main__":
     # # Plot fine, coarse and merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
-
-    # --- Show Merged Parcellation at K=20, K=34, K=40--- 
-    # mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    for mname_merged in merged_models:
-        Prob, parcel, atlas, labels, cmap = analyze_parcel(mname_merged, sym=True, clustering_method='guided')
-    
+  
 
     # # Show MNISymC2 Parcellation
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-10'
