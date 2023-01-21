@@ -295,6 +295,7 @@ def cluster_labels(mapping, descriptor='alpha', sym=True):
 
     Returns:
         labels: Region labels with naming convention <Letter><Number><Hemisphere>, i.e. A1L for parcel 1 in cluster A in left hemisphere.
+        cluster_counts: Counts of regions within each cluster
 
     """
     # Move parcels up
@@ -313,10 +314,11 @@ def cluster_labels(mapping, descriptor='alpha', sym=True):
     # make the labels
     labels = np.empty((mapping_half.shape[0],), dtype=object)
 
-    current = [1] *len(groups)
+    cluster_counts = [0] *len(groups)
     for i, l in enumerate(mapping_half):
-        labels[i] = f"{groups[l]}{current[l]}"
-        current[l] = current[l]+1
+        cluster_counts[l] = cluster_counts[l] + 1
+        labels[i] = f"{groups[l]}{cluster_counts[l]}"
+        
 
     # Make labels for mapping
     if sym:
@@ -328,7 +330,7 @@ def cluster_labels(mapping, descriptor='alpha', sym=True):
     else:
         raise(NotImplementedError('Asym labelling not yet implemented.'))
     
-    return labels
+    return labels, cluster_counts
 
 def merge_model(model, mapping):
     """Reduces model to effective K.

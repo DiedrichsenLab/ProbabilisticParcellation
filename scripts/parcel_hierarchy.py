@@ -47,9 +47,9 @@ def analyze_parcel(mname, sym=True, num_cluster=7, clustering='agglomative', clu
         cluster_info, cluster_model = load_batch_best(cluster_by)
         clusters_half, clusters = cl.guided_clustering(
             mname, cluster_by)
-        labels = cl.cluster_labels(clusters)
+        labels, cluster_counts = cl.cluster_labels(clusters)
+        print(f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
         
-    ax = plt.gca()
 
     # Make a colormap
     w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False)
@@ -60,8 +60,9 @@ def analyze_parcel(mname, sym=True, num_cluster=7, clustering='agglomative', clu
     cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map
-    # cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
-    # sc.plot_colorspace(cmap(np.arange(model.K)))
+    if clustering == 'agglomative':
+        cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
+    sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
     ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
@@ -100,16 +101,16 @@ def merge_clusters():
 if __name__ == "__main__":
     # Agglomative clustering
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    basename = f'model_dir/Atlases/{mname.split("/")[1]}'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
     # Guided clustering
     cluster_by = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-14'
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname, sym=True, clustering='model_guided', cluster_by=cluster_by)
-    basename = f'model_dir/Atlases/{mname.split("/")[1]}'
-    # ea.export_map(Prob, atlas.name, cmap, labels, basename)
+    clustername = f'{model_dir}/Atlases/{mname.split("/")[1]}_C-{cluster_by.split("-")[-1]}'
+    ea.export_map(Prob, atlas.name, cmap, labels, clustername)
 
     # pass
 
