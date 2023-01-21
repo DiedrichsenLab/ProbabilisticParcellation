@@ -89,23 +89,47 @@ def make_sfn_atlas():
 
 
 
-def merge_clusters():
-    save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+def merge_clusters(ks):
+    # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
-    # for k in [10, 14, 20, 28, 34, 40]:
-    for k in [14]:
+
+    for k in ks:
 
         mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
 
         # merge model
-        _, mname_merged, mapping = cl.cluster_model(mname_fine, mname_coarse, sym=True, reduce=True)
+        _, mname_merged = cl.save_guided_clustering(
+            mname_fine, mname_coarse)
         merged_models.append(mname_merged)
+    return merged_models
 
+
+def export_merged(merged_models=None):
+
+    # --- Export merged models ---
+    if merged_models is None:
+        merged_models = [
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-10_Keff-10',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-20_Keff-18',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-28_Keff-20']
+
+    for mname_merged in merged_models:
+        # export the merged model
+        Prob, parcel, atlas, labels, cmap = analyze_parcel(
+            mname_merged, sym=True)
+        ea.export_map(Prob, atlas.name, cmap, labels,
+                      f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
 
 
 if __name__ == "__main__":
+    ks = [34, 40, 48, 56]
+    merged_models = merge_clusters(ks)
+    export_merged(merged_models)
+
+
     # # Agglomative clustering
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
@@ -121,34 +145,7 @@ if __name__ == "__main__":
 
     # pass
 
-    # # # --- Merge parcels at K=20, 34 & 40 ---
-    # # merged_models = []
-    # # # for k in [10, 14, 20, 28, 34, 40]:
-    # for k in [10, 14, 20, 28]:
 
-    #     mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    #     mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
-
-    
-    #     # f_Prob,f_parcel,f_atlas,f_labels,f_cmap = analyze_parcel(mname_fine,sym=True)
-    #     # c_Prob,c_parcel,c_atlas,c_labels,c_cmap = analyze_parcel(mname_coarse,sym=True)
-        
-    #     # merge model
-    #     _, mname_merged = cl.save_guided_clustering(mname_fine, mname_coarse)
-    #     merged_models.append(mname_merged)
-
-    # # --- Export merged models ---
-    merged_models = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-10_Keff-10',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-20_Keff-18',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-28_Keff-20']
-    
-    for mname_merged in merged_models:
-        # export the merged model
-        Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_merged, sym=True)
-        ea.export_map(Prob, atlas.name, cmap, labels,
-                      f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
     
     # # Plot fine, coarse and merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
