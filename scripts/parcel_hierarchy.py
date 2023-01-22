@@ -125,16 +125,19 @@ def export_merged(merged_models=None):
 
 
 if __name__ == "__main__":
-    ks = [34, 40, 48, 56]
-    merged_models = merge_clusters(ks)
-    export_merged(merged_models)
+    # ks = [34, 40, 48, 56]
+    # merged_models = merge_clusters(ks)
+    # export_merged(merged_models)
+
+    # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
+    # sc.read_cmap(cmap_file)
 
 
-    # # Agglomative clustering
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    # basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # # ea.export_map(Prob,atlas.name,cmap,labels,basename)
+    # Agglomative clustering
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    ea.export_map(Prob,atlas.name,cmap,labels,basename)
 
     # # Guided clustering
     # cluster_by = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-14'

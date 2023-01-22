@@ -220,7 +220,8 @@ def plot_multi_flat(data,atlas,grid,
                     dtype = 'label',
                     cscale = None,
                     titles=None,
-                    colorbar = False):
+                    colorbar=False,
+                    save_fig=True):
     """Plots a grid of flatmaps with some data
 
     Args:
@@ -242,7 +243,8 @@ def plot_multi_flat(data,atlas,grid,
                     colorbar = (i==0) & colorbar)
         if titles is not None:
             plt.title(titles[i])
-            plt.savefig(f'rel_{titles[i]}.png', format='png')
+            if save_fig:
+                plt.savefig(f'rel_{titles[i]}.png', format='png')
 
 def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
     """  Load a bunch of model fits, selects the best from
