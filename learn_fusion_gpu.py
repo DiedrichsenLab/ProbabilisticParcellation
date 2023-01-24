@@ -642,21 +642,21 @@ if __name__ == "__main__":
     # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
 
-    # ########## IBC selected sessions fusion fit ##########
-    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    # for s1 in sess_1:
-    #     sess_2.remove(s1)
-    #     for s2 in sess_2:
-    #         this_s1 = s1.split('-')[1]
-    #         this_s2 = s2.split('-')[1]
-    #         for k in [40, 68]:
-    #             for t in ['03','04']:
-    #                 wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
-    #                 fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
-    #                 if not os.path.isfile(fname):
-    #                     fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-    #                     print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
+    ########## IBC selected sessions fusion fit ##########
+    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
+    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
+    for s1 in sess_1:
+        sess_2.remove(s1)
+        for s2 in sess_2:
+            this_s1 = s1.split('-')[1]
+            this_s2 = s2.split('-')[1]
+            for k in [40, 68]:
+                for t in ['01']:
+                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                    if not os.path.isfile(fname):
+                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                        print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
 
     ########## IBC all sessions fit ##########
     # fit_indv_sess(3, model_type='03', K=40)
