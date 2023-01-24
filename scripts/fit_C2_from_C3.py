@@ -78,5 +78,9 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40'
-    refit_model_in_new_space(mname,new_space='MNISymC2')
+    #
+    # ks = [68, 80]
+    ks = [10, 14, 20, 28, 34, 48, 56, 60]
+    for k in ks:
+        mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+        refit_model_in_new_space(mname,new_space='MNISymC2')
