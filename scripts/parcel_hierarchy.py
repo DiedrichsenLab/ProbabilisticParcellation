@@ -173,6 +173,7 @@ def compare_levels():
 
 
 if __name__ == "__main__":
+    # Merge C2 models
     space = 'MNISymC2'
     ks = [10, 20, 34, 40, 48, 56]
     merged_models = merge_clusters(ks, space)
