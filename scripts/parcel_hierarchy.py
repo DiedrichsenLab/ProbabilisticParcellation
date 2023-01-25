@@ -90,15 +90,15 @@ def make_sfn_atlas():
 
 
 
-def merge_clusters(ks):
+def merge_clusters(ks, space='MNISymC3'):
     # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
 
     for k in ks:
 
-        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-{k}'
+        mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{k}'
 
         # merge model
         _, mname_merged = cl.save_guided_clustering(
@@ -112,10 +112,10 @@ def export_merged(merged_models=None):
     # --- Export merged models ---
     if merged_models is None:
         merged_models = [
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-10_Keff-10',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-14_Keff-12',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-20_Keff-18',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-28_Keff-20']
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-10_Keff-10',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-20_Keff-18',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-28_Keff-20']
 
     for mname_merged in merged_models:
         # export the merged model
@@ -173,9 +173,9 @@ def compare_levels():
 
 
 if __name__ == "__main__":
-
-    ks = [34, 40, 48, 56]
-    merged_models = merge_clusters(ks)
+    space = 'MNISymC2'
+    ks = [10, 20, 34, 40, 48, 56]
+    merged_models = merge_clusters(ks, space)
     export_merged(merged_models)
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
