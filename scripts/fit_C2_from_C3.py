@@ -82,10 +82,22 @@ def refit_model_in_new_space(mname,new_space='MNISymC2'):
 
 
 if __name__ == "__main__":
-    #
+
+    target_space = 'MNISymC2'
+    
     # ks = [68, 80]
-    # ks = [14, 20, 28, 34, 48, 56]
-    ks = [56]
+    ks = [14, 20, 28, 34, 48, 60]
+    
+    # ks = [56]
+    # for k in ks:
+    #     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+    #     refit_model_in_new_space(mname, new_space=target_space)
+    
+    # move models that are still on cuda to cpu
     for k in ks:
-        mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
-        refit_model_in_new_space(mname,new_space='MNISymC2')
+        mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{target_space}_K-{k}'
+        inf, m = load_batch_fit(mname)
+        if not m[0].ds_weight.is_cuda:
+            print(f'Convert model {t} with K={k} {mname} to cuda...')
+            lf.move_batch_to_device(mname, device=default_device)
+
