@@ -31,6 +31,21 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 
+def recover_info(info):
+    """Recovers info fields that were lists from tsv-saved strings.
+    Args:
+        info: Model info loaded form tsv
+    Returns:
+        info: Model info with list fields.
+        
+    """
+    # Recover model info from tsv file format
+    for var in ['datasets', 'sess', 'type']:
+        v = eval(info[var])
+        if len(model.emissions) > 2 and len(v) == 1:
+            v = eval(info[var].replace(' ', ','))
+        info[var] = v
+    return info
 
 def get_profiles(model, info):
     """Returns the functional profile for each parcel
@@ -44,18 +59,19 @@ def get_profiles(model, info):
     # Get task profile for each emission model
     profile = [em.V for em in model.emissions]
 
-    # Get conditions of each dataset
-    datasets = info.datasets.strip("'[").strip("]'").split("' '")
-    types = info.type.strip("'[").strip("]'").split("' '")
-    sessions = info.sess.strip("'[").strip("]'").split("' '")
+    # Get conditions
     conditions = []
-    for i,dname in enumerate(datasets):
-        _, dinfo, dataset = get_dataset(base_dir,dname,atlas=info.atlas,sess=sessions[i],type=types[i], info_only=True)
+    for d,dname in enumerate(info.datasets):
+        _, dinfo, dataset = get_dataset(base_dir,dname,atlas=info.atlas,sess=info.sess[d],type=info.type[d], info_only=True)
+
         condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
         condition_names = condition_names[dataset.cond_name].to_list()
         conditions.append([condition.split('  ')[0] for condition in condition_names])
 
-    return profile, conditions, datasets
+    # Match profile vectors to conditions
+    # (Several emission models for the same dataset)
+    conditions
+    return profile, conditions
 
 def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=5, print=True):
     """Returns the functional profile for a given parcel either for selected dataset or all datasets
@@ -109,6 +125,9 @@ if __name__ == "__main__":
     K=68
     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}'
     info, model = load_batch_best(mname)
+    info = recover_info(info)
     # for each parcel, get the highest scoring task
-    profiles, conditions, datasets = get_profiles(model=model, info=info)
-    datasets = info.datasets.strip("'[").strip("]'").split("' '")
+    profiles, conditions = get_profiles(model=model, info=info)
+
+    pass
+    

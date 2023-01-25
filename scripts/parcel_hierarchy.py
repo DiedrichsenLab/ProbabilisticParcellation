@@ -112,10 +112,15 @@ def export_merged(merged_models=None):
     # --- Export merged models ---
     if merged_models is None:
         merged_models = [
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-10_Keff-10',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-20_Keff-18',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-28_Keff-20']
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-10_Keff-10',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-14_Keff-14',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-20_Keff-20',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-28_Keff-22',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-34_Keff-24',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_Keff-24',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-48_Keff-36',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-56_Keff-36',
+            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-60_Keff-38']
 
     for mname_merged in merged_models:
         # export the merged model
@@ -139,15 +144,17 @@ def compare_levels():
     Prop_68 = np.array(model_68.marginal_prob())
     parcel_68 = Prop_68.argmax(axis=0) + 1
 
+
     merged_models = [
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-12',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-18',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-20',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-22',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-26',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36']
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
+    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
 
     m_models = []
     m_infos = []
@@ -174,10 +181,12 @@ def compare_levels():
 
 if __name__ == "__main__":
     # Merge C2 models
-    space = 'MNISymC2'
-    ks = [48, 60]
-    merged_models = merge_clusters(ks, space)
-    export_merged(merged_models)
+    # space = 'MNISymC2'
+    # ks = [48, 60]
+    # merged_models = merge_clusters(ks, space)
+    # export_merged(merged_models)
+
+    export_merged()
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
