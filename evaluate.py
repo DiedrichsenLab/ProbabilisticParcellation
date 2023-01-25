@@ -450,7 +450,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
                 trainsess = [idx for idx in eval(minfo.sess) if isinstance(idx, list)][0]
                 traind, info, _ = get_dataset(base_dir, test_data,
                                            atlas='MNISymC3', sess=trainsess)
-                model.initialize([traind[:,info.sess == s,:] for s in trainsess])
+                model.initialize([np.hstack([traind[:,info.sess == s,:] for s in trainsess])])
                 U_indiv, _ = model.Estep()
                 U_indiv = model.remap_evidence(U_indiv)
 

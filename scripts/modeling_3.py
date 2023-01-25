@@ -58,7 +58,7 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results' + '/3.IBC_two_sessions'
 
-def result_3_eval(K=10, ses1=None, ses2=None):
+def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
     """Result3: Evaluate group and individual DCBC and coserr
        of IBC two single sessions and fusion on the IBC
        left-out sessions.
@@ -90,14 +90,12 @@ def result_3_eval(K=10, ses1=None, ses2=None):
             this_s2 = s2.split('-')[1]
             print(f'- Start evaluating {this_s1} and {this_s2}.')
             # Making the models for both common/separate kappa
-            model_name = [f'Models_03/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s1}',
-                          f'Models_03/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s2}',
-                          f'Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
-                          f'ses-{this_s1}+{this_s2}',
-                          f'Models_04/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s1}',
-                          f'Models_04/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s2}',
-                          f'Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
-                          f'ses-{this_s1}+{this_s2}']
+            model_name = []
+            for mt in model_type:
+                model_name += [f'Models_{mt}/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s1}',
+                               f'Models_{mt}/asym_Ib_space-MNISymC3_K-{K}_ses-{this_s2}',
+                               f'Models_{mt}/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
+                               f'ses-{this_s1}+{this_s2}']
 
             # remove the sessions were used to training to make test sessions
             this_sess = [i for i in sess if i not in [s1, s2]]
@@ -331,39 +329,44 @@ def plot_IBC_performance_reliability(K=[10,17,20,34,40,68], save=False):
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    # for k in [100]:
-    #     result_3_eval(K=k)
+    for k in [10,17,20]:
+        result_3_eval(K=k, model_type=['01'])
 
-    fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
-    result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
-    ##### 2. Check whether the session perfermance is related to reliability
-    ##### The answer is No! (IBC sessions performance unrelated to reliability)
-    # result_3_rel_check(fname, K=[10,17,20,34,40,68])
-
-    ##### 3. Further check whether the session perfermance is consistant tested on
-    ##### leftout sessions or tested on other clean datasets
-    ##### The answer is Yes! (IBC sessions performance is consistant across testsets)
-    plot_IBC_performance_reliability(K=[10,17,20,34,40,68], save=True)
-
-    ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
-    # Option 1: overall trend (ignoring relevant/irrelevant sessions)
-    result_3_plot(fname, ck=True, style=None)
-    # Option 2: overall trend (triaged by relevant/irrelevant sessions)
-    result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
+    # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
+    # result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
+    # ##### 2. Check whether the session perfermance is related to reliability
+    # ##### The answer is No! (IBC sessions performance unrelated to reliability)
+    # # result_3_rel_check(fname, K=[10,17,20,34,40,68])
+    #
+    # ##### 3. Further check whether the session perfermance is consistant tested on
+    # ##### leftout sessions or tested on other clean datasets
+    # ##### The answer is Yes! (IBC sessions performance is consistant across testsets)
+    # plot_IBC_performance_reliability(K=[10,17,20,34,40,68], save=True)
+    #
+    # ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
+    # # Option 1: overall trend (ignoring relevant/irrelevant sessions)
+    # result_3_plot(fname, ck=True, style=None)
+    # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
+    # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 
     # ##### Plot the indiv and fusion map #####
-    # color_info = pd.read_csv('Y:\data\FunctionalFusion\Atlases/tpl-SUIT/atl-Buckner17.lut', sep=' ',
-    #                          header=None)
-    # colors = np.zeros((1, 3))
-    # colors = np.vstack((colors, color_info.iloc[:, 1:4].to_numpy()))
-    #
-    # plt.figure(figsize=(20, 10))
-    # plot_model_parcel(['Models_03/asym_Ib_space-MNISymC3_K-17_ses-preference',
-    #                    'Models_03/asym_Ib_space-MNISymC3_K-17_ses-tom',
-    #                    'Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom',
+    # colors = get_cmap('Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom')
+    # colors[-1] = colors[1]
+    # colors[1] = np.array([254 / 255, 254 / 255, 0 / 255, 1.])
+    # colors[5] = np.array([232 / 255, 114 / 255, 232 / 255, 1.])
+    # plot_model_parcel(['Models_03/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom',
+    #                    'Models_03/asym_Ib_space-MNISymC3_K-17_ses-preference',
+    #                    'Models_03/asym_Ib_space-MNISymC3_K-17_ses-tom'],
+    #                    [1, 3], cmap=colors, align=True, device='cuda')
+
+    # colors = get_cmap('Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom')
+    # plot_model_parcel(['Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom',
     #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-preference',
-    #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-tom',
-    #                    'Models_04/IBC_sessFusion/asym_Ib_space-MNISymC3_K-17_ses-preference+tom'],
-    #                   [2, 3], cmap='tab20', align=True, device='cuda')
-    # plt.suptitle('Model 4, K=20, sessions= enumeration, mathlang')
+    #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-tom'],
+    #                    [1, 3], cmap=colors, align=True, device='cuda')
     # plt.show()
+
+    ##### Plot IBC session reliability map #####
+    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False, voxel_wise=True)
+    # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
+    #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)

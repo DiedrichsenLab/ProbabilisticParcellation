@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 import generativeMRF.full_model as fm
 from pathlib import Path
+import ProbabilisticParcellation.similarity_colormap as sc
+import ProbabilisticParcellation.hierarchical_clustering as cl
 
 # Set directories for the entire project - just set here and import everywhere 
 # else  
@@ -124,8 +126,6 @@ def load_batch_best(fname, device=None):
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
-    if not isinstance(models,list):
-        return info.iloc[0],models
     
     j = info.loglik.argmax()
 
@@ -190,7 +190,7 @@ def plot_data_flat(data,atlas,
     # Plotting one series of functional data
     elif dtype== 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
-            space=map_space)
+            space=ainf['normspace'])
         ax = suit.flatmap.plot(surf_data,
                 render=render,
                 cmap=cmap,
@@ -233,16 +233,19 @@ def plot_multi_flat(data,atlas,grid,
         titles (_type_, optional): _description_. Defaults to None.
     """
     for i in range(data.shape[0]):
-        plt.subplot(grid[0],grid[1],i+1)
+        # plt.subplot(grid[0],grid[1],i+1)
         plot_data_flat(data[i,:],atlas,
                     cmap = cmap,
                     dtype = dtype,
                     cscale = cscale,
                     render='matplotlib',
                     colorbar = (i==0) & colorbar)
+
+        plt.tight_layout()
         if titles is not None:
-            plt.title(titles[i])
-            plt.savefig(f'rel_{titles[i]}.png', format='png')
+            # plt.title(titles[i])
+            plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
+                        bbox_inches='tight', pad_inches=0)
 
 def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     """  Load a bunch of model fits, selects the best from
@@ -282,8 +285,8 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     parc = np.argmax(Prob,axis=1)+1
 
 
-    plot_multi_flat(parc,atlas,grid=grid,
-                     cmap=cmap,
+    plot_multi_flat(Prob,atlas,grid=grid,
+                     cmap=cmap, dtype='prob',
                      titles=titles)
 
 def _compute_var_cov(data, cond='all', mean_centering=True):
@@ -413,6 +416,30 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
     }
 
     return D
+
+def get_cmap(mname, load_best=True, sym=False):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    if load_best:
+        info, model = load_batch_best(mname)
+    else:
+        info, model = load_batch_fit(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0) + 1
+
+    # Get parcel similarity:
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
+    W = sc.calc_mds(w_cos_sim, center=True)
+
+    # Define color anchors
+    m, regions, colors = sc.get_target_points(atlas, parcel)
+    cmap = sc.colormap_mds(W, target=(m, regions, colors), clusters=None, gamma=0.3)
+
+    return cmap.colors
 
 def get_parcel(atlas, parcel_name='MDTB10', do_plot=False):
     """Samples the existing MDTB10 parcellation

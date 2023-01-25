@@ -89,17 +89,17 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
             model.emissions[0].tmp_list = ['Y', 'num_part', 'W']
 
     # Align with the MDTB parcels
-    m_mdtb_align = deepcopy(model)
-    MDTBparcel, _ = get_parcel('MNISymC3', parcel_name='MDTB10')
-    logpi = ar.expand_mn(MDTBparcel.reshape(1, -1) - 1, m_mdtb_align.arrange.K)
-    logpi = logpi.squeeze() * 3.0
-    logpi[:, MDTBparcel == 0] = 0
-    m_mdtb_align.arrange.logpi = logpi.softmax(dim=0)
+    # m_mdtb_align = deepcopy(model)
+    # MDTBparcel, _ = get_parcel('MNISymC3', parcel_name='MDTB10')
+    # logpi = ar.expand_mn(MDTBparcel.reshape(1, -1) - 1, m_mdtb_align.arrange.K)
+    # logpi = logpi.squeeze() * 3.0
+    # logpi[:, MDTBparcel == 0] = 0
+    # m_mdtb_align.arrange.logpi = logpi.softmax(dim=0)
 
     # Build the individual training model on session 1:
     m1 = deepcopy(model)
-    MM = [m_mdtb_align, m1]
-    Prop = ev.align_models(MM, in_place=True)
+    # MM = [m_mdtb_align, m1]
+    # Prop = ev.align_models(MM, in_place=True)
 
     cond_vec = iinfo['cond_num_uni'].values.reshape(-1, )
     part_vec = iinfo['run'].values.reshape(-1, )
@@ -221,41 +221,40 @@ def result_1_plot_curve(fname, oname=None, save=False):
 def result_1_plot_flatmap(Us, sub=0, cmap='tab20', save_folder=None):
     group, U_em, U_comp = Us[0], Us[1], Us[2]
 
-    oneRun_em = pt.argmax(U_em[0][sub], dim=0) + 1
-    allRun_em = pt.argmax(U_em[-1][sub], dim=0) + 1
-    oneRun_comp = pt.argmax(U_comp[0][sub], dim=0) + 1
-    group = pt.argmax(group, dim=0) + 1
+    oneRun_em = U_em[0][sub]
+    allRun_em = U_em[-1][sub]
+    oneRun_comp = U_comp[0][sub]
     maps = pt.stack([oneRun_em, allRun_em, oneRun_comp, group])
 
-    plt.figure(figsize=(25, 25))
+    # plt.figure(figsize=(25, 25))
     plot_multi_flat(maps.cpu().numpy(), 'MNISymC3', grid=(2, 2), cmap=cmap,
-                    titles=['One run data only',
-                            '16 runs data only',
-                            'One run data + group probability map',
-                            'group probability map'])
+                    dtype = 'prob', titles=['One run data only',
+                                             '16 runs data only',
+                                             'One run data + group probability map',
+                                             'group probability map'])
 
     plt.suptitle(f'Individual vs. group, MDTB - sub {sub}')
     if save_folder is not None:
         sdir = res_dir + f'/1.indiv_vs_group' + save_folder
-        plt.savefig(sdir + f'/indiv_group_plot_sub_{sub}.pdf', format='pdf')
+        plt.savefig(sdir + f'/indiv_group_plot_sub_{sub}.png', format='png')
 
     plt.show()
 
 
 if __name__ == "__main__":
-    for t in ['03']:
-        for k in [17]:
-            model_type = f'Models_{t}'
-            model_name = f'asym_Md_space-MNISymC3_K-{k}'
-            fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
-            # D, Us = result_1_eval(model_type=model_type, model_name=model_name, oname=fname)
-
-    result_1_plot_curve(fname, oname=model_type + f'_{model_name}.pdf', save=True)
+    # for t in ['03']:
+    #     for k in [17]:
+    #         model_type = f'Models_{t}'
+    #         model_name = f'asym_Md_space-MNISymC3_K-{k}'
+    #         fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
+    #         # D, Us = result_1_eval(model_type=model_type, model_name=model_name, oname=fname)
+    #
+    # result_1_plot_curve(fname, oname=model_type + f'_{model_name}.pdf', save=True)
 
     ########## Making color map ##########
-    # cmap = matplotlib.cm.get_cmap('Spectral')
-    # colors = cmap(np.linspace(0, 1, 35))
-    color_file = atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
-    color_info = pd.read_csv(color_file, sep=' ', header=None)
-    colors = np.zeros((11,3))
-    colors[1:11,:] = color_info.iloc[:,1:4].to_numpy()
+    D, Us = result_1_eval(model_type='Models_03', model_name='asym_Md_space-MNISymC3_K-17',
+                          oname=None)
+    colors = get_cmap('Models_03/asym_Md_space-MNISymC3_K-17')
+    colors[12] = np.array([249 / 255, 178 / 255, 247 / 255, 1.])
+    result_1_plot_flatmap(Us, sub=0, cmap=colors, save_folder='/Models_03/asym_17')
+

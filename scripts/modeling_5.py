@@ -292,9 +292,9 @@ if __name__ == "__main__":
     m_fusion = ''.join(indiv_dataset)
     datasets = [m_fusion] + indiv_dataset
     # Making color map
-    colors = get_cmap(f'Models_04/asym_{m_fusion}_space-MNISymC3_K-34')
-    model_names = [f'Models_04/asym_{s}_space-MNISymC3_K-34' for s in datasets]
+    colors = get_cmap(f'Models_03/asym_{m_fusion}_space-MNISymC3_K-34')
+    model_names = [f'Models_03/asym_{s}_space-MNISymC3_K-34' for s in datasets]
 
-    plt.figure(figsize=(20, 10))
+    # plt.figure(figsize=(20, 10))
     plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
     plt.show()
