@@ -128,6 +128,16 @@ def colormap_mds(W,target=None,clusters=None,gamma=0.3):
     newcmp = ListedColormap(colorsp)
     return newcmp
 
+def read_cmap(file):
+    """Get matplotlib colour map reads in a saved .cmap file
+    Args:
+        file (str): Cmap file
+    Returns:
+        colormap (Listed Colormap):
+    """
+    cmap = np.loadtxt(file, delimiter=" ", encoding=None)
+    cmap = ListedColormap(cmap)
+    return cmap
 
 """ Old: eigenvector based colormap: depreciated
         tm=target[0]

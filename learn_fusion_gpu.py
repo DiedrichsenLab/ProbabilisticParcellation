@@ -625,14 +625,14 @@ def refit_model(model, new_info):
 
 
 if __name__ == "__main__":
-    datasets_list=[0,1,2,3,4,5,6]
-    K = 68
-    sym_type = ['asym']
-    model_type = '03'
-    space = 'MNISymC2'
+    # datasets_list=[0,1,2,3,4,5,6]
+    # K = 68
+    # sym_type = ['asym']
+    # model_type = '03'
+    # space = 'MNISymC2'
 
-    fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
-            sym_type=['sym'], space='MNISymC2')
+    # fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
+    #         sym_type=['sym'], space='MNISymC2')
 
 
     ########## Reliability map

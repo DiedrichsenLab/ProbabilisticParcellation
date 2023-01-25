@@ -53,8 +53,8 @@ def export_map(data,atlas,cmap,labels,base_name):
                 label_names=labels,
                 label_RGBA = cmap)
 
-    nb.save(dseg,base_name + f'_space-{atlas}_dseg.nii')
-    nb.save(probseg,base_name + f'_space-{atlas}_probseg.nii')
+    nb.save(dseg,base_name + f'_dseg.nii')
+    nb.save(probseg,base_name + f'_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
     save_info(np.arange(len(labels)),cmap[:,0:4],labels, base_name)
     print(f'Exported {base_name}.')

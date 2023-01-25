@@ -343,7 +343,7 @@ def merge_model(model, mapping):
         new_model:  Clustered model
     """
     # Move parcels up
-    mapping, _ = np.unique(
+    mapping = np.unique(
         mapping, return_inverse=True)[1]
     
     # Get winner take all assignment for fine model
