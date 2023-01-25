@@ -22,7 +22,10 @@ def make_highres_model(info,model, new_space = 'MNISymC2'):
     split_mn = info['name'].split('_')
 
     tic = time.perf_counter()
-    ds = eval(info.datasets.replace(' ',','))
+    try:
+        ds = eval(info.datasets)
+    except:
+        ds = eval(info.datasets.replace(' ', ','))
     se = eval(info.sess.replace(' ',','))
     ty = eval(info.type.replace(' ',','))
     data, cond_vec, part_vec, subj_ind = lf.build_data_list(ds,
