@@ -97,8 +97,8 @@ def merge_clusters(ks):
 
     for k in ks:
 
-        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
+        mname_fine = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+        mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-{k}'
 
         # merge model
         _, mname_merged = cl.save_guided_clustering(
@@ -112,10 +112,10 @@ def export_merged(merged_models=None):
     # --- Export merged models ---
     if merged_models is None:
         merged_models = [
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-10_Keff-10',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-14_Keff-12',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-20_Keff-18',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_Kclus-28_Keff-20']
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-10_Keff-10',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-14_Keff-12',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-20_Keff-18',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-28_Keff-20']
 
     for mname_merged in merged_models:
         # export the merged model
@@ -124,10 +124,13 @@ def export_merged(merged_models=None):
         ea.export_map(Prob, atlas.name, cmap, labels,
                       f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
 
+def compare_levels():
+    """Compares different clustering levels.
+        For a selection of merged models, calculate adjusted Rand index between original fine parcellation and merged parcellation (merged according to coarse parcellation).
 
-if __name__ == "__main__":
+    """
     # Compare original parcellation with clustered parcellation
-    atlas = 'MNISymC3'
+    atlas = 'MNISymC2'
 
     fine_model = f'/Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68'
     fileparts = fine_model.split('/')
@@ -153,25 +156,27 @@ if __name__ == "__main__":
         m_models.append(model)
         m_infos.append(info)
 
-    n_models = len(m_models)
-    n_voxels = parcel_68.shape[0]
-    m_parcels = np.zeros((n_models, n_voxels))
+        n_models = len(m_models)
+        n_voxels = parcel_68.shape[0]
+        m_parcels = np.zeros((n_models, n_voxels))
 
-    for i, model in enumerate(m_models):
-        Prop = np.array(model.marginal_prob())
-        parcel = Prop.argmax(axis=0) + 1
-        m_parcels[i, :] = parcel
+        for i, model in enumerate(m_models):
+            Prop = np.array(model.marginal_prob())
+            parcel = Prop.argmax(axis=0) + 1
+            m_parcels[i, :] = parcel
 
-    # get U_hat
-    
-    
-    ev.ARI(parcel_68, m_parcels[0, :])
-    parcel
-    pass
+        # get U_hat
 
-    # ks = [34, 40, 48, 56]
-    # merged_models = merge_clusters(ks)
-    # export_merged(merged_models)
+        ev.ARI(parcel_68, m_parcels[0, :])
+        parcel
+        pass
+
+
+if __name__ == "__main__":
+
+    ks = [34, 40, 48, 56]
+    merged_models = merge_clusters(ks)
+    export_merged(merged_models)
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
