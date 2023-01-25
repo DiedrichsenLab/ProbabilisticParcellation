@@ -97,7 +97,7 @@ if __name__ == "__main__":
     for k in ks:
         mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{target_space}_K-{k}'
         inf, m = load_batch_fit(mname)
-        if m.ds_weight.is_cuda:
+        if m[0].ds_weight.is_cuda:
             print(f'Convert model with K={k} {mname} to cpu...')
             lf.move_batch_to_device(mname, device='cpu')
 
