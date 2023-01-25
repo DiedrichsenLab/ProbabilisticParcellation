@@ -86,7 +86,7 @@ if __name__ == "__main__":
     target_space = 'MNISymC2'
     
     # ks = [68, 80]
-    ks = [14, 20, 28, 34, 48, 60]
+    ks = [40]
     
     # ks = [56]
     # for k in ks:
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     for k in ks:
         mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{target_space}_K-{k}'
         inf, m = load_batch_fit(mname)
-        if not m[0].ds_weight.is_cuda:
-            print(f'Convert model {t} with K={k} {mname} to cuda...')
-            lf.move_batch_to_device(mname, device=default_device)
+        if m.ds_weight.is_cuda:
+            print(f'Convert model with K={k} {mname} to cpu...')
+            lf.move_batch_to_device(mname, device='cpu')
 
