@@ -190,7 +190,7 @@ def plot_data_flat(data,atlas,
     # Plotting one series of functional data
     elif dtype== 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
-            space=map_space)
+                                             space=ainf['normspace'])
         ax = suit.flatmap.plot(surf_data,
                 render=render,
                 cmap=cmap,
@@ -225,10 +225,10 @@ def plot_multi_flat(data,atlas,grid,
     """Plots a grid of flatmaps with some data
 
     Args:
-        data (array): NxP array of data
+        data (array or list): NxP array of data or list of NxP arrays of data (if plotting Probabilities)
         atlas (str): Atlas code ('SUIT3','MNISymC3',...)
         grid (tuple): (rows,cols) grid for subplot
-        cmap (colormap): Color map Defaults to None.
+        cmap (colormap or list): Color map or list of color maps. Defaults to None.
         dtype (str, optional):'label' or 'func'
         cscale (_type_, optional): Scale of data (None)
         titles (_type_, optional): _description_. Defaults to None.
@@ -238,10 +238,13 @@ def plot_multi_flat(data,atlas,grid,
     elif isinstance(data, list):
         n_subplots = len(data)
     
+    if not isinstance(cmap, list):
+        cmap = [cmap] * n_subplots
+
     for i in np.arange(n_subplots):
         plt.subplot(grid[0],grid[1],i+1)
         plot_data_flat(data[i],atlas,
-                    cmap = cmap,
+                    cmap = cmap[i],
                     dtype = dtype,
                     cscale = cscale,
                     render='matplotlib',
