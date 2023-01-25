@@ -31,23 +31,8 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 
-def get_conditions(minfo):
-    """Loads the conditions for a given dataset
-    """
 
-    datasets = minfo.datasets.strip("'[").strip("]'").split("' '")
-    types = minfo.type.strip("'[").strip("]'").split("' '")
-    sessions = minfo.sess.strip("'[").strip("]'").split("' '")
-    conditions = []
-    for i,dname in enumerate(datasets):
-        _,dinfo,dataset = get_dataset(base_dir,dname,atlas=minfo.atlas,sess=sessions[i],type=types[i], info_only=True)
-        condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
-        condition_names = condition_names[dataset.cond_name].to_list()
-        conditions.append([condition.split('  ')[0] for condition in condition_names])
-
-    return conditions, datasets
-
-def get_profiles(model,info):
+def get_profiles(model, info):
     """Returns the functional profile for each parcel
     Args:
         model: Loaded model
@@ -56,12 +41,19 @@ def get_profiles(model,info):
         profile: V for each emission model
         conditions: list of condition lists for each dataset
     """
+    # Get task profile for each emission model
     profile = [em.V for em in model.emissions]
-    # load the condition for each dataset
-    conditions, datasets = get_conditions(info)
-    # (sanity check: profile length for each dataset should match length of condition list)
-    # for i,cond in enumerate(conditions):
-    #     print('Profile length matching n conditions {} :{}'.format(datasets[i],len(cond)==profile[i].shape[0]))
+
+    # Get conditions of each dataset
+    datasets = info.datasets.strip("'[").strip("]'").split("' '")
+    types = info.type.strip("'[").strip("]'").split("' '")
+    sessions = info.sess.strip("'[").strip("]'").split("' '")
+    conditions = []
+    for i,dname in enumerate(datasets):
+        _, dinfo, dataset = get_dataset(base_dir,dname,atlas=info.atlas,sess=sessions[i],type=types[i], info_only=True)
+        condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
+        condition_names = condition_names[dataset.cond_name].to_list()
+        conditions.append([condition.split('  ')[0] for condition in condition_names])
 
     return profile, conditions, datasets
 
@@ -109,3 +101,14 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
             print('{} :\t{}'.format(datasets[d], dataset_profile[:ncond]))
 
     return profile
+
+
+if __name__ == "__main__":
+    # Merge C2 models
+    space = 'MNISymC2'
+    K=68
+    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}'
+    info, model = load_batch_best(mname)
+    # for each parcel, get the highest scoring task
+    profiles, conditions, datasets = get_profiles(model=model, info=info)
+    datasets = info.datasets.strip("'[").strip("]'").split("' '")

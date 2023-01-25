@@ -175,9 +175,9 @@ def compare_levels():
 if __name__ == "__main__":
     # Merge C2 models
     space = 'MNISymC2'
-    # ks = [14, 20, 28, 34, 40, 48, 60]
-    # merged_models = merge_clusters(ks, space)
-    # export_merged(merged_models)
+    ks = [48, 60]
+    merged_models = merge_clusters(ks, space)
+    export_merged(merged_models)
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)

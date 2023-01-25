@@ -233,9 +233,14 @@ def plot_multi_flat(data,atlas,grid,
         cscale (_type_, optional): Scale of data (None)
         titles (_type_, optional): _description_. Defaults to None.
     """
-    for i in range(data.shape[0]):
+    if isinstance(data, np.ndarray):
+        n_subplots = data.shape[0]
+    elif isinstance(data, list):
+        n_subplots = len(data)
+    
+    for i in np.arange(n_subplots):
         plt.subplot(grid[0],grid[1],i+1)
-        plot_data_flat(data[i,:],atlas,
+        plot_data_flat(data[i],atlas,
                     cmap = cmap,
                     dtype = dtype,
                     cscale = cscale,
