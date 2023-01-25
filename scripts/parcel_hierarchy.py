@@ -175,9 +175,9 @@ def compare_levels():
 if __name__ == "__main__":
     # Merge C2 models
     space = 'MNISymC2'
-    ks = [20, 34, 40, 48]
-    merged_models = merge_clusters(ks, space)
-    export_merged(merged_models)
+    # ks = [14, 20, 28, 34, 40, 48, 60]
+    # merged_models = merge_clusters(ks, space)
+    # export_merged(merged_models)
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
@@ -206,9 +206,10 @@ if __name__ == "__main__":
   
 
     # # Show MNISymC2 Parcellation
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-10'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    ea.export_map(Prob, atlas.name, cmap, labels, output)
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
