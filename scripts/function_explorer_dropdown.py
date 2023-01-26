@@ -41,23 +41,25 @@ parcel_68 = Prob_68.argmax(axis=0) + 1
 cmap_68 = cm.read_cmap(
     f"{model_dir}/Atlases/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68.cmap"
 )
-info = fp.recover_info(info_68, model_68, fine_model)
 
 # Get labels
 w_cos_sym, _, _ = cl.parcel_similarity(model_68, plot=True, sym=True)
 labels_68, clusters, _ = cl.agglomative_clustering(
     w_cos_sym, sym=True, num_clusters=5, plot=False
 )
-info["labels"] = labels_68
 
+info = fp.recover_info(info_68, model_68, fine_model)
+profiles, conditions = fp.get_profiles(model=model_68, info=info)
 
-# Get task profiles
-parcel_profiles, profile_data = fp.get_profiles(model=model_68, info=info)
-
-# Make flatmap plot
 cerebellum = plot_data_flat(
-    parcel_68, atlas, cmap=cmap_68, dtype="label", labels=info.labels, render="plotly"
+    parcel_68, atlas, cmap=cmap_68, dtype="label", labels=labels_68, render="plotly"
 )
+
+df = fp.get_profile_data(labels_68, info, profiles, conditions)
+sessions = [2, 1, 2, 14, 2, 1, 1]
+datasets = []
+for d, dataset in enumerate(info.datasets):
+    datasets.extend([dataset] * sessions[d])
 
 # start of app
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
@@ -88,6 +90,18 @@ app.layout = html.Div(
         html.Div(
             [
                 html.P("Display functions for a selected region and dataset."),
+                html.Div(
+                    children=[
+                        html.Label("Dataset"),
+                        dcc.Dropdown(
+                            datasets,
+                            id="chosen_dataset",
+                            value=datasets[0],
+                            clearable=False,
+                        ),
+                    ],
+                    style={"padding": 10, "flex": 1},
+                ),
                 html.Div(
                     [
                         dbc.Row(
@@ -128,14 +142,14 @@ app.layout = html.Div(
 
 @app.callback(
     Output("image_wc", "src"),
+    # Input(component_id='figure-cerebellum', component_property='clickData'),
     Input(component_id="image_wc", component_property="src"),
+    Input(component_id="chosen_dataset", component_property="value"),
     Input(component_id="figure-cerebellum", component_property="clickData"),
 )
-def make_image(b, region):
+def make_image(b, dset, region):
     img = BytesIO()
-    fp.plot_wordcloud(parcel_profiles, profile_data, labels_68, region).save(
-        img, format="PNG"
-    )
+    fp.plot_wordcloud_dataset(df, dset, region).save(img, format="PNG")
     word_cloud = "data:image/png;base64,{}".format(
         base64.b64encode(img.getvalue()).decode()
     )
@@ -143,4 +157,4 @@ def make_image(b, region):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, port=8051)
