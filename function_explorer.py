@@ -140,19 +140,6 @@ app.layout = html.Div(
 )
 
 
-def plot_wordcloud(df, dset, region):
-    reg = "A1L"
-    # When initiliazing the website and if clickin on a null region, show no conditions
-    if region is not None and region["points"][0]["text"] != "0":
-        # get the region name
-        reg = region["points"][0]["text"]
-    d = df.conditions[(df.dataset == dset) & (df.label == reg)]
-    wc = WordCloud(background_color="white", width=512, height=384).generate(
-        " ".join(d)
-    )
-    return wc.to_image()
-
-
 @app.callback(
     Output("image_wc", "src"),
     # Input(component_id='figure-cerebellum', component_property='clickData'),
@@ -162,8 +149,11 @@ def plot_wordcloud(df, dset, region):
 )
 def make_image(b, dset, region):
     img = BytesIO()
-    plot_wordcloud(df, dset, region).save(img, format="PNG")
-    return "data:image/png;base64,{}".format(base64.b64encode(img.getvalue()).decode())
+    fp.plot_wordcloud(df, dset, region).save(img, format="PNG")
+    word_cloud = "data:image/png;base64,{}".format(
+        base64.b64encode(img.getvalue()).decode()
+    )
+    return word_cloud
 
 
 if __name__ == "__main__":
