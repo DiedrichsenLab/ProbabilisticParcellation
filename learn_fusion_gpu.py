@@ -330,6 +330,10 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         uniform_kappa = False
         join_sess = True
         join_sess_part = True
+    elif model_type == '06':
+        uniform_kappa = True
+        join_sess = True
+        join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
     dataname = ''.join(T.two_letter_code[set_ind])
@@ -580,24 +584,24 @@ if __name__ == "__main__":
     #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
 
     # ########## IBC selected sessions fusion fit ##########
-    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    # for s1 in sess_1:
-    #     sess_2.remove(s1)
-    #     for s2 in sess_2:
-    #         this_s1 = s1.split('-')[1]
-    #         this_s2 = s2.split('-')[1]
-    #         for k in [40]:
-    #             for t in ['01']:
-    #                 wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
-    #                 fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
-    #                 if not os.path.isfile(fname):
-    #                     fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-    #                     print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
+    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
+    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
+    for s1 in sess_1:
+        sess_2.remove(s1)
+        for s2 in sess_2:
+            this_s1 = s1.split('-')[1]
+            this_s2 = s2.split('-')[1]
+            for k in [17]:
+                for t in ['06']:
+                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                    if not os.path.isfile(fname):
+                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                        print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
 
     ########## IBC all sessions fit ##########
-    for k in [40,68,100]:
-        fit_indv_sess(3, model_type='01', K=k)
+    # for k in [10,17,20,34,40,68,100]:
+    #     fit_indv_sess(3, model_type='01', K=k)
     # fit_indv_sess(3, model_type='04', K=40)
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 

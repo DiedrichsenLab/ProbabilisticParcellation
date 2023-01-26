@@ -127,6 +127,8 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
                   relevant=None, print_relevancy=False):
     D = pd.read_csv(model_dir + fname, delimiter='\t')
     D['relevant'] = ""
+    # D.rename(columns={'test_sess': 'session'}, inplace=True)
+
     # D = D.loc[D['K']==17]
     if ck is not None:
         D = D.loc[D['common_kappa']==ck]
@@ -188,14 +190,14 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
     crits = ['dcbc_group','dcbc_indiv']
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
-        sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='common_kappa',
-                   hue_order=T['common_kappa'].unique(), errorbar="se")
-        # if style is not None:
-        #     sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
-        #                 style=style, style_order=style_order, markers=True)
-        # else:
-        #     sb.lineplot(data=T, x="K", y=c, hue='session',
-        #                 hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        # sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='model_type',
+        #            hue_order=T['model_type'].unique(), errorbar="se")
+        if style is not None:
+            sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
+                        style=style, style_order=style_order, markers=True)
+        else:
+            sb.lineplot(data=T, x="K", y=c, hue='session',
+                        hue_order=['sess_1','sess_2','Fusion'], markers=True)
         if c == 'dcbc_indiv':
             plt.ylim(0, 0.04)
         elif c == 'dcbc_group':
@@ -326,13 +328,42 @@ def plot_IBC_performance_reliability(K=[10,17,20,34,40,68], save=False):
         plt.savefig('IBC_sess_performance_consistancy_check.pdf', format='pdf')
     plt.show()
 
+def make_all_in_one_tsv(path, out_name):
+    """Making all-in-one tsv file of evaluation
+    Args:
+        path: the path of the folder that contains
+              all tsv files will be integrated
+        out_name: output file name
+    Returns:
+        None
+    """
+    files = os.listdir(path)
+
+    if not any(".tsv" in x for x in files):
+        raise Exception('Input data file type must be .tsv file!')
+    else:
+        D = pd.DataFrame()
+        for fname in files:
+            res = pd.read_csv(path + f'/{fname}', delimiter='\t')
+
+            # Making sure <PandasArray> mistakes are well-handled
+            trains = res["train_data"].unique()
+            print(trains)
+            D = pd.concat([D, res], ignore_index=True)
+
+        D.to_csv(out_name, sep='\t', index=False)
+
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    for k in [10,17,20]:
-        result_3_eval(K=k, model_type=['01'])
+    # for k in [10,17,20]:
+    #     result_3_eval(K=k, model_type=['01'])
 
-    # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
+    # make_all_in_one_tsv('Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01',
+    #                     'Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01'
+    #                     '\model1.tsv')
+    # fname = '/Models/Evaluation_01/model1.tsv'
+    fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
     # result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
     # ##### 2. Check whether the session perfermance is related to reliability
     # ##### The answer is No! (IBC sessions performance unrelated to reliability)
@@ -345,7 +376,7 @@ if __name__ == "__main__":
     #
     # ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
     # # Option 1: overall trend (ignoring relevant/irrelevant sessions)
-    # result_3_plot(fname, ck=True, style=None)
+    result_3_plot(fname, ck=None, style='model_type')
     # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 
