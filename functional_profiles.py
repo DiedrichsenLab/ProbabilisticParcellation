@@ -21,6 +21,7 @@ import seaborn as sb
 import sys
 import pickle
 from ProbabilisticParcellation.util import *
+from ProbabilisticParcellation.scripts.parcel_hierarchy import analyze_parcel
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -31,7 +32,7 @@ from matplotlib.colors import ListedColormap
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 
-def recover_info(info):
+def recover_info(info, model):
     """Recovers info fields that were lists from tsv-saved strings.
     Args:
         info: Model info loaded form tsv
@@ -41,10 +42,11 @@ def recover_info(info):
     """
     # Recover model info from tsv file format
     for var in ['datasets', 'sess', 'type']:
-        v = eval(info[var])
-        if len(model.emissions) > 2 and len(v) == 1:
-            v = eval(info[var].replace(' ', ','))
-        info[var] = v
+        if not isinstance(info[var], list):
+            v = eval(info[var])
+            if len(model.emissions) > 2 and len(v) == 1:
+                v = eval(info[var].replace(' ', ','))
+            info[var] = v
     return info
 
 def get_profiles(model, info):
@@ -53,32 +55,50 @@ def get_profiles(model, info):
         model: Loaded model
         info: Model info
     Returns:
-        profile: V for each emission model
-        conditions: list of condition lists for each dataset
+        profile: list of task profiles. Each entry is the V for one emission model
+        conditions: list of conditions. Each entry is the condition for one emission model
+        conditions_detailed: list of conditions. Each entry is the condition for one emission model along with the dataset name and the session name
     """
     # Get task profile for each emission model
     profile = [em.V for em in model.emissions]
 
     # Get conditions
-    conditions = []
+    conds = []
+    sessions = []
     for d,dname in enumerate(info.datasets):
         _, dinfo, dataset = get_dataset(base_dir,dname,atlas=info.atlas,sess=info.sess[d],type=info.type[d], info_only=True)
 
-        condition_names = dinfo.drop_duplicates(subset=[dataset.cond_ind])
-        condition_names = condition_names[dataset.cond_name].to_list()
-        conditions.append([condition.split('  ')[0] for condition in condition_names])
-
-    # Match profile vectors to conditions
-    # (Several emission models for the same dataset)
-    conditions
-    return profile, conditions
+        cs = dinfo.drop_duplicates(subset=[dataset.cond_ind])
+        cs = cs[dataset.cond_name].to_list()
+        # remove whitespace and replace underscore with dash
+        cs = [c.replace(' ', '').replace('_', '-')
+                            for c in cs]
+        conds.append(cs)
+        sessions.append(dataset.sessions)
+    
+    allsessions = [ses for dset_sessions in sessions for ses in dset_sessions]
+    
+    conditions = []
+    conditions_detailed = []
+    
+    if len(allsessions) == len(model.emissions):
+        # If each session has an emission model, match conditions to profile vectors
+        for d, dset_sessions in enumerate(sessions):
+            for ses in dset_sessions:
+                conditions_det = [f'{info.datasets[d][:2]}_{ses}_{con}' for con in conds[d]]
+                conditions_srt = [
+                    f'{con}' for con in conds[d]]
+                conditions_detailed.append(conditions_det)
+                conditions.append(conditions_srt)
+                
+    return profile, conditions, conditions_detailed
 
 def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=5, print=True):
     """Returns the functional profile for a given parcel either for selected dataset or all datasets
     Args:
         profiles: parcel scores for each condition in each dataset
         conditions: condition names of each dataset
-        datasets: dataset names
+        ems: emission model descriptors (dataset names or datset + session combinations)
         show_ds: selected dataset
                 'Mdtb'
                 'Pontine'
@@ -118,6 +138,47 @@ def show_parcel_profile(p, profiles, conditions, datasets, show_ds='all', ncond=
 
     return profile
 
+def get_profile_data(labels, info, profiles, conditions):
+    sessions = [2, 1, 2, 14, 2, 1, 1]
+    ems = []
+    for d, dataset in enumerate(info.datasets):
+        ems.extend([dataset] * sessions[d])
+
+
+    label_profile = {}
+    n_highest = 3
+    df_dict = {}
+    df_dict['dataset'] = []
+    df_dict['label'] = []
+    df_dict['n_label'] = []
+    df_dict['conditions'] = []
+    df_dict['parcel_no'] = []
+
+    
+
+    for l, label in enumerate(labels):
+        if l != 0:
+
+            parcel_no = labels.tolist().index(label) - 1
+            profile = show_parcel_profile(
+                parcel_no, profiles, conditions, ems, show_ds='all', ncond=1, print=False)
+            highest_conditions = ['{}:{}'.format(ems[p][:2], ' & '.join(
+                prof[:n_highest])) for p, prof in enumerate(profile)]
+            label_profile[label] = highest_conditions
+
+            for p in range(len(profile)):
+                current_data = profile[p]
+                for c in current_data:
+                    df_dict['dataset'].append(ems[p])
+                    df_dict['label'].append(label)
+                    df_dict['n_label'].append(l)
+                    df_dict['conditions'].append(c)
+                    df_dict['parcel_no'].append(parcel_no)
+
+    labels_alpha = sorted(label_profile.keys())
+    df = pd.DataFrame(df_dict)
+    return df
+
 
 if __name__ == "__main__":
     # Merge C2 models
@@ -125,9 +186,10 @@ if __name__ == "__main__":
     K=68
     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}'
     info, model = load_batch_best(mname)
-    info = recover_info(info)
+    info = recover_info(info, model)
     # for each parcel, get the highest scoring task
-    profiles, conditions = get_profiles(model=model, info=info)
-
+    profiles, conditions, cdetails = get_profiles(model=model, info=info)
+    _, _, _, labels, _ = analyze_parcel(mname, sym=True)
+    df = get_profile_data(labels, info, profiles, conditions)
     pass
     
