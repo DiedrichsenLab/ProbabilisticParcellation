@@ -25,7 +25,7 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True):
 
     # Get model and atlas. 
     fileparts = mname.split('/')
@@ -73,11 +73,12 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
-    ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
-                    dtype='prob',
-                    labels=labels,
-                    render='plotly')
-    ax.show()
+    if plot is True:
+        ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
+                        dtype='prob',
+                        labels=labels,
+                        render='plotly')
+        ax.show()
 
     return Prob, parcel, atlas, labels, cmap
 
