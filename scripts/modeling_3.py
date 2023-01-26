@@ -198,10 +198,10 @@ def result_3_plot(fname, train_model='IBC', ck=None, style=None, style_order=Non
         else:
             sb.lineplot(data=T, x="K", y=c, hue='session',
                         hue_order=['sess_1','sess_2','Fusion'], markers=True)
-        if c == 'dcbc_indiv':
-            plt.ylim(0, 0.04)
-        elif c == 'dcbc_group':
-            plt.ylim(0, 0.04)
+        # if c == 'dcbc_indiv':
+        #     plt.ylim(0, 0.04)
+        # elif c == 'dcbc_group':
+        #     plt.ylim(0, 0.04)
         # elif c== 'coserr_floor':
         #     plt.ylim(0.475, 0.525)
 
@@ -356,8 +356,8 @@ def make_all_in_one_tsv(path, out_name):
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    # for k in [10,17,20]:
-    #     result_3_eval(K=k, model_type=['01'])
+    for k in [17]:
+        result_3_eval(K=k, model_type=['06'])
 
     # make_all_in_one_tsv('Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01',
     #                     'Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01'
@@ -376,7 +376,8 @@ if __name__ == "__main__":
     #
     # ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
     # # Option 1: overall trend (ignoring relevant/irrelevant sessions)
-    result_3_plot(fname, ck=None, style='model_type')
+    result_3_plot(fname, ck=None, style='model_type',
+                  style_order=['Models_01','Models_03','Models_04'], relevant=None)
     # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 

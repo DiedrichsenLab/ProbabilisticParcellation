@@ -577,18 +577,15 @@ if __name__ == "__main__":
 
 
     ########## Reliability map
-    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
-    #                              voxel_wise=True)
-    # plt.figure(figsize=(25, 18))
-    # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
-    #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+                                 voxel_wise=True)
+    plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
+                    cscale=[-0.3, 0.7], colorbar=True, titles=sess)
 
     # ########## IBC selected sessions fusion fit ##########
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
+    from itertools import combinations
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for (s1, s2) in reversed(list(combinations(sess, 2))):
             this_s1 = s1.split('-')[1]
             this_s2 = s2.split('-')[1]
             for k in [17]:
@@ -597,11 +594,11 @@ if __name__ == "__main__":
                     fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
                     if not os.path.isfile(fname):
                         fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-                        print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
+                        print(f'-Done type {t}, K={k}, IBC session {this_s1} and {this_s2} fusion.')
 
     ########## IBC all sessions fit ##########
-    # for k in [10,17,20,34,40,68,100]:
-    #     fit_indv_sess(3, model_type='01', K=k)
+    # for k in [17]:
+    #     fit_indv_sess(3, model_type='06', K=k)
     # fit_indv_sess(3, model_type='04', K=40)
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 

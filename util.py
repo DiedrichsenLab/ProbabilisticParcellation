@@ -239,9 +239,9 @@ def plot_multi_flat(data,atlas,grid,
                     dtype = dtype,
                     cscale = cscale,
                     render='matplotlib',
-                    colorbar = (i==0) & colorbar)
+                    colorbar = colorbar)
 
-        plt.tight_layout()
+        # plt.tight_layout()
         if titles is not None:
             # plt.title(titles[i])
             plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
