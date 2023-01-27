@@ -15,6 +15,18 @@ import SUITPy as suit
 from ProbabilisticParcellation.util import *
 from copy import deepcopy
 
+def save_cortex_cifti(fname):
+    """Exports a cortical model as a surface-based CIFTI label file.
+    Args:
+        fname (str): model name
+    """
+    info, model = load_batch_best(fname)
+    Prop = model.marginal_prob()
+    par = pt.argmax(Prop, dim=0) + 1
+    atlas,_ = am.get_atlas('fs32k', atlas_dir)
+    img = nt.make_label_cifti(par.numpy(), atlas.get_brain_model_axis())
+    nb.save(img, model_dir + f'/Models/{fname}.dlabel.nii')
+
 def export_map(data,atlas,cmap,labels,base_name):
     """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file.
 
