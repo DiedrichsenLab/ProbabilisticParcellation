@@ -450,8 +450,15 @@ def run_dcbc_individual(model_names, test_data, test_sess,
                 trainsess = [idx for idx in eval(minfo.sess) if isinstance(idx, list)][0]
                 traind, info, _ = get_dataset(base_dir, test_data,
                                            atlas='MNISymC3', sess=trainsess)
-                model.initialize([np.hstack([traind[:,info.sess == s,:] for s in trainsess])])
-                U_indiv, _ = model.Estep()
+                # Check if the model was trained joint or separate sessions
+                if len(model.emissions) == 1:
+                    model.initialize([np.hstack([traind[:,info.sess == s,:] for s in trainsess])])
+                else:
+                    model.initialize([traind[:, info.sess == s, :] for s in trainsess])
+
+                # Get the individual parcellation on all training data
+                model, _, _, U_indiv = model.fit_em(iter=200, tol=0.1,
+                    fit_emission=True,fit_arrangement=False, first_evidence=False)
                 U_indiv = model.remap_evidence(U_indiv)
 
             # ------------------------------------------
