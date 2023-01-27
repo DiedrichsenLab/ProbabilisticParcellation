@@ -142,106 +142,6 @@ def get_profiles(model, info):
     return parcel_profiles, profile_data
 
 
-def show_parcel_profile(
-    p, profiles, conditions, datasets, show_ds="all", ncond=5, print=True
-):
-    """Returns the functional profile for a given parcel either for selected dataset or all datasets
-    Args:
-        profiles: parcel scores for each condition in each dataset
-        conditions: condition names of each dataset
-        ems: emission model descriptors (dataset names or datset + session combinations)
-        show_ds: selected dataset
-                'Mdtb'
-                'Pontine'
-                'Nishimoto'
-                'Ibc'
-                'Hcp'
-                'all'
-        ncond: number of highest scoring conditions to show
-
-    Returns:
-        profile: condition names in order of parcel score
-
-    """
-    if show_ds == "all":
-        # Collect condition names in order of parcel score from all datasets
-        profile = []
-        for d, dataset in enumerate(datasets):
-            cond_name = conditions[d]
-            cond_score = profiles[d][:, p].tolist()
-            # sort conditions by condition score
-            dataset_profile = [
-                name for _, name in sorted(zip(cond_score, cond_name), reverse=True)
-            ]
-            profile.append(dataset_profile)
-            if print:
-                print("{} :\t{}".format(dataset, dataset_profile[:ncond]))
-
-    else:
-        # Collect condition names in order of parcel score from selected dataset
-        d = datasets.index(show_ds)
-        cond_name = conditions[d]
-        cond_score = profiles[d][:, p].tolist()
-
-        # sort conditions by condition score
-        dataset_profile = [name for _, name in sorted(zip(cond_score, cond_name))]
-        profile = dataset_profile
-        if print:
-            print("{} :\t{}".format(datasets[d], dataset_profile[:ncond]))
-
-    return profile
-
-
-def get_profile_data(info, profiles, conditions):
-
-    n_sessions = [len(ses) for ses in info.session_ids]
-
-    ems = []
-    for d, dataset in enumerate(info.datasets):
-        ems.extend([dataset] * n_sessions[d])
-
-    label_profile = {}
-    n_highest = 3
-    df_dict = {}
-    df_dict["dataset"] = []
-    df_dict["label"] = []
-    df_dict["n_label"] = []
-    df_dict["conditions"] = []
-    df_dict["parcel_no"] = []
-
-    for l, label in enumerate(labels):
-        if l != 0:
-
-            parcel_no = labels.tolist().index(label) - 1
-            profile = show_parcel_profile(
-                parcel_no,
-                profiles,
-                conditions,
-                ems,
-                show_ds="all",
-                ncond=1,
-                print=False,
-            )
-            highest_conditions = [
-                "{}:{}".format(ems[p][:2], " & ".join(prof[:n_highest]))
-                for p, prof in enumerate(profile)
-            ]
-            label_profile[label] = highest_conditions
-
-            for p in range(len(profile)):
-                current_data = profile[p]
-                for c in current_data:
-                    df_dict["dataset"].append(ems[p])
-                    df_dict["label"].append(label)
-                    df_dict["n_label"].append(l)
-                    df_dict["conditions"].append(c)
-                    df_dict["parcel_no"].append(parcel_no)
-
-    labels_alpha = sorted(label_profile.keys())
-    df = pd.DataFrame(df_dict)
-    return df
-
-
 def plot_wordcloud_dataset(df, dset, region):
     reg = "A1L"
     # When initiliazing the website and if clickin on a null region, show no conditions
@@ -255,7 +155,7 @@ def plot_wordcloud_dataset(df, dset, region):
     return wc.to_image()
 
 
-def plot_wordcloud(parcel_profiles, profile_data, labels, selected_region):
+def get_wordcloud(parcel_profiles, profile_data, labels, selected_region):
     """Plots a wordcloud of condition names where word size is weighted by response vector
     Args:
         parcel_profiles: parcel scores for each condition in each dataset
@@ -264,7 +164,7 @@ def plot_wordcloud(parcel_profiles, profile_data, labels, selected_region):
         selected_region: region for which to display the parcel profile
 
     Returns:
-        profile: condition names in order of parcel score
+        wc: word cloud object
 
     """
     default_message = {"Select a parcel on the flatmap": 1}
@@ -288,7 +188,7 @@ def plot_wordcloud(parcel_profiles, profile_data, labels, selected_region):
     wc = WordCloud(background_color="white")
     wc.generate_from_frequencies(conditions_weighted)
 
-    return wc.to_image()
+    return wc
 
 
 if __name__ == "__main__":
@@ -301,5 +201,6 @@ if __name__ == "__main__":
     # for each parcel, get the highest scoring task
     parcel_profiles, profile_data = get_profiles(model=model, info=info)
     _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
-    plot_wordcloud(parcel_profiles, profile_data, labels)
+    wc = get_wordcloud(parcel_profiles, profile_data, labels)
+
     pass

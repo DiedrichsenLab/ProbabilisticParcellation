@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import string
 from ProbabilisticParcellation.scripts.parcel_hierarchy import analyze_parcel
 import ProbabilisticParcellation.functional_profiles as fp
+from ProbabilisticParcellation.scripts.explorer_layout import make_layout
 from copy import deepcopy
 import base64
 
@@ -59,71 +60,10 @@ cerebellum = plot_data_flat(
     parcel_68, atlas, cmap=cmap_68, dtype="label", labels=info.labels, render="plotly"
 )
 
-# start of app
+# ----- Function Explorer -----
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 application = app.server
-
-
-click_region_labels = dcc.Markdown(id="clicked-region")
-
-
-app.layout = html.Div(
-    [
-        html.Div(
-            [
-                html.H1("Functional Atlas Explorer"),
-                html.Div(
-                    [
-                        dcc.Graph(
-                            id="figure-cerebellum",
-                            figure=cerebellum,
-                            clear_on_unhover=False,
-                        ),
-                        dcc.Tooltip(id="graph-tooltip"),
-                    ]
-                ),
-            ],
-            style={"width": "49%", "display": "inline-block"},
-        ),
-        html.Div(
-            [
-                html.P("Display functions for a selected region and dataset."),
-                html.Div(
-                    [
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    [
-                                        dbc.Card(
-                                            [
-                                                dbc.CardBody(
-                                                    [
-                                                        # html.H5('Word Cloud',className='text-center'),
-                                                        html.Img(id="image_wc"),
-                                                    ]
-                                                )
-                                            ]
-                                        )
-                                    ],
-                                    width={"size": 12, "offset": 0, "order": 1},
-                                    style={"padding-left": 25, "padding-right": 25},
-                                    className="text-center",
-                                ),
-                            ]
-                        )
-                    ]
-                ),
-                html.Div(
-                    [
-                        html.H4(id="clicked-region"),
-                    ]
-                ),
-            ],
-            style={"width": "49%", "display": "inline-block"},
-        ),
-    ],
-    style={"display": "flex", "flex-direction": "row"},
-)
+app.layout = make_layout(cerebellum)
 
 
 @app.callback(
@@ -131,11 +71,19 @@ app.layout = html.Div(
     Input(component_id="image_wc", component_property="src"),
     Input(component_id="figure-cerebellum", component_property="clickData"),
 )
-def make_image(b, region):
+def plot_wordcloud(b, region):
+    """Makes word cloud image to be loaded into app
+    Args:
+        b: parcel scores for each condition in each dataset
+        region: selected region for which to show functional profile
+
+    Returns:
+        word_cloud: word cloud image png object
+
+    """
     img = BytesIO()
-    fp.plot_wordcloud(parcel_profiles, profile_data, labels_68, region).save(
-        img, format="PNG"
-    )
+    wc = fp.get_wordcloud(parcel_profiles, profile_data, info.labels, region)
+    wc.to_image().save(img, format="PNG")
     word_cloud = "data:image/png;base64,{}".format(
         base64.b64encode(img.getvalue()).decode()
     )
