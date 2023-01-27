@@ -28,7 +28,7 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from numpy.linalg import eigh, norm
 import matplotlib as mpl
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import TABLEAU_COLORS
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 from wordcloud import WordCloud
@@ -142,6 +142,41 @@ def get_profiles(model, info):
     return parcel_profiles, profile_data
 
 
+def export_profile(mname):
+    # Get model
+    info, model = load_batch_best(mname)
+    info = recover_info(info, model, mname)
+
+    # get functional profiles
+    parcel_profiles, profile_data = get_profiles(model=model, info=info)
+    _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
+
+    # make functional profile dataframe
+    parcel_responses = pd.DataFrame(
+        parcel_profiles.numpy(), columns=labels[1:].tolist()
+    )
+    Prof = pd.concat([profile_data, parcel_responses], axis=1)
+
+    # --- Assign a colour to each dataset (to aid profile visulisation) ---
+    datasets = Prof.dataset.unique()
+    # get all colours
+    all_colours = TABLEAU_COLORS
+    rgb = list(all_colours.values())
+
+    dataset_colours = dict(zip(datasets, rgb[: len(datasets)]))
+
+    Prof['dataset_colour'] = None
+    for dataset in datasets:
+        Prof.loc[Prof.dataset == dataset,
+                 'dataset_colour'] = dataset_colours[dataset]
+
+    # --- Save profile ---
+    # save functional profile as tsv
+    Prof.to_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+
+
 def plot_wordcloud_dataset(df, dset, region):
     reg = "A1L"
     # When initiliazing the website and if clickin on a null region, show no conditions
@@ -155,12 +190,10 @@ def plot_wordcloud_dataset(df, dset, region):
     return wc.to_image()
 
 
-def get_wordcloud(parcel_profiles, profile_data, labels, selected_region):
+def get_wordcloud(profile, selected_region):
     """Plots a wordcloud of condition names where word size is weighted by response vector
     Args:
-        parcel_profiles: parcel scores for each condition in each dataset
-        profile_data: condition names of each dataset
-        labels: region labels
+        profile: dataframe with condition information and parcel scores for each condition in each dataset
         selected_region: region for which to display the parcel profile
 
     Returns:
@@ -176,11 +209,10 @@ def get_wordcloud(parcel_profiles, profile_data, labels, selected_region):
     ):
         # get the region name
         region = selected_region["points"][0]["text"]
-        conditions = profile_data.condition
-        labels = labels.tolist()
-        weights = parcel_profiles[:, labels.index(region) - 1] * 100
+        weights = profile[region] * 100
+        conditions = profile.condition
 
-        conditions_weighted = dict(zip(conditions, weights.numpy()))
+        conditions_weighted = dict(zip(conditions, weights))
     else:
         conditions_weighted = default_message
 
@@ -191,16 +223,36 @@ def get_wordcloud(parcel_profiles, profile_data, labels, selected_region):
     return wc
 
 
+def dataset_colours(word, font_size, position, orientation, random_state=None, **kwargs):
+    colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
+    profile = pd.read_csv(f"{model_dir}/Atlases/{colour_file}", sep="\t")
+
+    colour = profile[profile.condition == word].dataset_colour.iloc[-1]
+
+    return colour
+
+
 if __name__ == "__main__":
-    # Merge C2 models
+
     space = "MNISymC2"
     K = 68
     mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}"
-    info, model = load_batch_best(mname)
-    info = recover_info(info, model, mname)
-    # for each parcel, get the highest scoring task
-    parcel_profiles, profile_data = get_profiles(model=model, info=info)
-    _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
-    wc = get_wordcloud(parcel_profiles, profile_data, labels)
+    # export_profile(mname)
 
+    # # Make word cloud
+    region = "C3L"
+    selected_region = {
+        "points": [{"text": region}]
+    }  # weird formatting is due to compatibility with mouseclick data for dash app
+
+    profile = pd.read_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+    wc = get_wordcloud(profile, selected_region=selected_region)
+    wc.recolor(color_func=dataset_colours)
+
+    plt.figure()
+    plt.imshow(wc, interpolation="bilinear")
+    plt.axis("off")
+    plt.show()
     pass

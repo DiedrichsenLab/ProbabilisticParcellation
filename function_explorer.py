@@ -53,7 +53,9 @@ info["labels"] = labels_68
 
 
 # Get task profiles
-parcel_profiles, profile_data = fp.get_profiles(model=model_68, info=info)
+profile = pd.read_csv(
+    f'{model_dir}/Atlases/{fine_model.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+)
 
 # Make flatmap plot
 cerebellum = plot_data_flat(
@@ -82,7 +84,10 @@ def plot_wordcloud(b, region):
 
     """
     img = BytesIO()
-    wc = fp.get_wordcloud(parcel_profiles, profile_data, info.labels, region)
+    wc = fp.get_wordcloud(profile, selected_region=region)
+
+    # # Colour conditions by source dataset (takes a long time to load)
+    # wc.recolor(color_func=fp.dataset_colours)
     wc.to_image().save(img, format="PNG")
     word_cloud = "data:image/png;base64,{}".format(
         base64.b64encode(img.getvalue()).decode()
