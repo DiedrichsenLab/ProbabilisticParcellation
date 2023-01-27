@@ -399,7 +399,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
 
     # Get partition vector of test data
     if part_ind is None:
-        part_vec = np.zeros((tinfo.shape[0],),dtype=int)
+        part_vec = np.ones((tinfo.shape[0],),dtype=int)
     else:
         part_vec = tinfo[part_ind].values
 

@@ -58,7 +58,7 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results'
 
-def result_4_eval(K=[10], t_datasets = ['MDTB','Pontine','Nishimoto'],
+def result_4_eval(K=[10], model_type=['03','04'], t_datasets = ['MDTB','Pontine','Nishimoto'],
                   test_ses=None):
     """Evaluate group and individual DCBC and coserr of IBC single
        sessions on all other test datasets.
@@ -73,16 +73,13 @@ def result_4_eval(K=[10], t_datasets = ['MDTB','Pontine','Nishimoto'],
 
     model_name = []
     # Making all IBC indiv sessions list
-    model_name += [f'Models_03/asym_Ib_space-MNISymC3_K-{this_k}_{s}'
-                   for this_k in K for s in sess]
-    model_name += [f'Models_04/asym_Ib_space-MNISymC3_K-{this_k}_{s}'
-                   for this_k in K for s in sess]
+    for mt in model_type:
+        model_name += [f'Models_{mt}/asym_Ib_space-MNISymC3_K-{this_k}_{s}'
+                       for this_k in K for s in sess]
 
-    # Additionally, add all IBC sessions fusion to list
-    model_name += [f'Models_03/asym_Ib_space-MNISymC3_K-{this_k}'
-                   for this_k in K]
-    model_name += [f'Models_04/asym_Ib_space-MNISymC3_K-{this_k}'
-                   for this_k in K]
+        # Additionally, add all IBC sessions fusion to list
+        model_name += [f'Models_{mt}/asym_Ib_space-MNISymC3_K-{this_k}'
+                       for this_k in K]
 
     results = pd.DataFrame()
     # Evaluate all single sessions on other datasets
@@ -102,7 +99,7 @@ def result_4_eval(K=[10], t_datasets = ['MDTB','Pontine','Nishimoto'],
         results = pd.concat([results, res], ignore_index=True)
 
     # Save file
-    wdir = model_dir + f'/Models/Evaluation'
+    wdir = model_dir + f'/Models/Evaluation_01'
     if test_ses is not None:
         fname = f'/eval_all_asym_Ib_K-{K}_{test_ses}_on_otherDatasets.tsv'
     else:
@@ -305,13 +302,14 @@ def plot_fig2(save=False):
 
 
 if __name__ == "__main__":
-    # result_4_eval(K=[10,17,20,34,40,68], t_datasets=['MDTB', 'Pontine', 'Nishimoto',
-    #                                                  'WMFS', 'Demand', 'Somatotopic'])
+    result_4_eval(K=[10,17,20,34,40,68,100], model_type=['01'],
+                  t_datasets=['MDTB', 'Pontine', 'Nishimoto',
+                              'WMFS', 'Demand', 'Somatotopic'])
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
     # result_4_plot(fname, test_data='Pontine', orderby=False)
 
     # plot_fig1(save=True)
-    plot_fig2(save=True)
+    # plot_fig2(save=True)
 
     ######## Plot indiv sess vs fusion map ########
     # color_file = atlas_dir + '/tpl-SUIT/atl-NettekovenSym34.lut'

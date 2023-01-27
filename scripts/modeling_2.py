@@ -498,12 +498,18 @@ def do_sessFusion_diffK(K_true=10, K=5, M=np.array([5],dtype=int),
             # Align full models themselves
             Prop = ev.align_models(models, in_place=True)
             Props.append(Prop)
-        UV_soft = [e.Estep()[0] for e in MM[1:]]
+
+        models = MM[1:]
+        UV_soft = []
+        for mo in models:
+            _, _, _, U_indiv = mo.fit_em(iter=200, tol=0.1, fit_emission=True,
+                                         fit_arrangement=False, first_evidence=False)
+            UV_soft.append(U_indiv)
+
         UV_hard = [pt.argmax(e, dim=1) for e in UV_soft]
         U_indv.append(UV_hard)
 
         # evaluation starts after model alignment
-        models = MM[1:]
         for j, fm_name in enumerate(fitting_model):
             if K == K_true:
                 # 1. U reconstruction error
@@ -885,19 +891,20 @@ if __name__ == '__main__':
     #                            M=np.array([40, 20], dtype=int),
     #                            num_part=1, sigma2=noise_level,
     #                            low=low, high=high,
-    #                            iter=100, relevant=re)
+    #                            iter=10, relevant=re)
     #         D = pd.concat([D, res], ignore_index=True)
     #     D.to_csv(f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv', index=False, sep='\t')
 
     fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
+    fname = f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
     D = pd.read_csv(fname, delimiter='\t')
-    _plot_diffK(D, style="common_kappa", save=True)
+    #_plot_diffK(D, style="common_kappa", save=False)
 
     ########## Comparing model 1 and 3 ##########
     # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
     # D = pd.read_csv(fname, delimiter='\t')
     # D = D.loc[(D['K_fit']==20) & (D['relevant']==False)]
-    # compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
+    compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
 
     ########## Comparing model 3 and 4 ##########
     # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'

@@ -190,7 +190,7 @@ def result_3_plot(D, train_model='IBC', ck=None, style=None, style_order=None,
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
         sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='model_type',
-                   hue_order=['Models_01','Models_06','Models_03','Models_04'], errorbar="se")
+                   hue_order=['Models_01','Models_03','Models_04'], errorbar="se")
         # if style is not None:
         #     sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
         #                 style=style, style_order=style_order, markers=True)
@@ -355,14 +355,14 @@ def make_all_in_one_tsv(path, out_name):
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    for k in [17]:
-        result_3_eval(K=k, model_type=['01'])
+    # for k in [17]:
+    #     result_3_eval(K=k, model_type=['01','03'])
 
     # make_all_in_one_tsv('Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01',
     #                     'Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01'
     #                     '\model1.tsv')
     # fname = '/Models/Evaluation_01/model1.tsv'
-    fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
+    # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
     # result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
     # ##### 2. Check whether the session perfermance is related to reliability
     # ##### The answer is No! (IBC sessions performance unrelated to reliability)
@@ -375,13 +375,12 @@ if __name__ == "__main__":
     #
     # ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
     # # Option 1: overall trend (ignoring relevant/irrelevant sessions)
-    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    # D = pd.read_csv(model_dir + fname, delimiter='\t')
     D2 = pd.read_csv(model_dir +
                      f'/Models/Evaluation/eval_all_asym_Ib_K-17_twoSess_on_leftSess.tsv', delimiter='\t')
     D2.rename(columns={'test_sess': 'session'}, inplace=True)
-    D = pd.concat([D, D2], ignore_index=True)
-    result_3_plot(D, ck=None, style='model_type',
-                  style_order=['Models_01','Models_06','Models_03','Models_04'], relevant=None)
+    result_3_plot(D2, ck=None, style='model_type',
+                  style_order=['Models_01','Models_03'], relevant=None)
     # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 

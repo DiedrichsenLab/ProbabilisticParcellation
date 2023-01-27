@@ -233,7 +233,7 @@ def plot_multi_flat(data,atlas,grid,
         titles (_type_, optional): _description_. Defaults to None.
     """
     for i in range(data.shape[0]):
-        # plt.subplot(grid[0],grid[1],i+1)
+        plt.subplot(grid[0],grid[1],i+1)
         plot_data_flat(data[i,:],atlas,
                     cmap = cmap,
                     dtype = dtype,
