@@ -92,7 +92,7 @@ def make_sfn_atlas():
 
 
 def merge_clusters(ks, space='MNISymC3'):
-    # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
+'
     # --- Merge parcels at K=20, 34 & 40 ---
     merged_models = []
 
