@@ -28,7 +28,7 @@ from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from numpy.linalg import eigh, norm
 import matplotlib as mpl
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import TABLEAU_COLORS
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 from wordcloud import WordCloud
@@ -142,104 +142,44 @@ def get_profiles(model, info):
     return parcel_profiles, profile_data
 
 
-def show_parcel_profile(
-    p, profiles, conditions, datasets, show_ds="all", ncond=5, print=True
-):
-    """Returns the functional profile for a given parcel either for selected dataset or all datasets
-    Args:
-        profiles: parcel scores for each condition in each dataset
-        conditions: condition names of each dataset
-        ems: emission model descriptors (dataset names or datset + session combinations)
-        show_ds: selected dataset
-                'Mdtb'
-                'Pontine'
-                'Nishimoto'
-                'Ibc'
-                'Hcp'
-                'all'
-        ncond: number of highest scoring conditions to show
+def export_profile(mname):
+    # Get model
+    info, model = load_batch_best(mname)
+    info = recover_info(info, model, mname)
 
-    Returns:
-        profile: condition names in order of parcel score
+    # get functional profiles
+    parcel_profiles, profile_data = get_profiles(model=model, info=info)
+    _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
 
-    """
-    if show_ds == "all":
-        # Collect condition names in order of parcel score from all datasets
-        profile = []
-        for d, dataset in enumerate(datasets):
-            cond_name = conditions[d]
-            cond_score = profiles[d][:, p].tolist()
-            # sort conditions by condition score
-            dataset_profile = [
-                name for _, name in sorted(zip(cond_score, cond_name), reverse=True)
-            ]
-            profile.append(dataset_profile)
-            if print:
-                print("{} :\t{}".format(dataset, dataset_profile[:ncond]))
+    # make functional profile dataframe
+    parcel_responses = pd.DataFrame(
+        parcel_profiles.numpy(), columns=labels[1:].tolist()
+    )
+    Prof = pd.concat([profile_data, parcel_responses], axis=1)
 
-    else:
-        # Collect condition names in order of parcel score from selected dataset
-        d = datasets.index(show_ds)
-        cond_name = conditions[d]
-        cond_score = profiles[d][:, p].tolist()
+    # --- Assign a colour to each dataset (to aid profile visulisation) ---
+    datasets = Prof.dataset.unique()
+    # get all colours
+    all_colours = TABLEAU_COLORS
+    rgb = list(all_colours.values())
+    colour_names = list(all_colours.keys())
 
-        # sort conditions by condition score
-        dataset_profile = [name for _, name in sorted(zip(cond_score, cond_name))]
-        profile = dataset_profile
-        if print:
-            print("{} :\t{}".format(datasets[d], dataset_profile[:ncond]))
+    dataset_colours = dict(zip(datasets, rgb[: len(datasets)]))
+    dataset_colour_names = dict(zip(datasets, colour_names[: len(datasets)]))
 
-    return profile
+    Prof['dataset_colour'] = None
+    Prof['dataset_colour_name'] = None
+    for dataset in datasets:
+        Prof.loc[Prof.dataset == dataset,
+                 'dataset_colour'] = dataset_colours[dataset]
+        Prof.loc[Prof.dataset == dataset,
+                 'dataset_colour_name'] = dataset_colours[dataset]
 
-
-def get_profile_data(info, profiles, conditions):
-
-    n_sessions = [len(ses) for ses in info.session_ids]
-
-    ems = []
-    for d, dataset in enumerate(info.datasets):
-        ems.extend([dataset] * n_sessions[d])
-
-    label_profile = {}
-    n_highest = 3
-    df_dict = {}
-    df_dict["dataset"] = []
-    df_dict["label"] = []
-    df_dict["n_label"] = []
-    df_dict["conditions"] = []
-    df_dict["parcel_no"] = []
-
-    for l, label in enumerate(labels):
-        if l != 0:
-
-            parcel_no = labels.tolist().index(label) - 1
-            profile = show_parcel_profile(
-                parcel_no,
-                profiles,
-                conditions,
-                ems,
-                show_ds="all",
-                ncond=1,
-                print=False,
-            )
-            highest_conditions = [
-                "{}:{}".format(ems[p][:2], " & ".join(prof[:n_highest]))
-                for p, prof in enumerate(profile)
-            ]
-            label_profile[label] = highest_conditions
-
-            for p in range(len(profile)):
-                current_data = profile[p]
-                for c in current_data:
-                    df_dict["dataset"].append(ems[p])
-                    df_dict["label"].append(label)
-                    df_dict["n_label"].append(l)
-                    df_dict["conditions"].append(c)
-                    df_dict["parcel_no"].append(parcel_no)
-
-    labels_alpha = sorted(label_profile.keys())
-    df = pd.DataFrame(df_dict)
-    return df
+    # --- Save profile ---
+    # save functional profile as tsv
+    Prof.to_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
 
 
 def plot_wordcloud_dataset(df, dset, region):
@@ -255,32 +195,32 @@ def plot_wordcloud_dataset(df, dset, region):
     return wc.to_image()
 
 
-def plot_wordcloud(parcel_profiles, profile_data, labels, selected_region):
+def get_wordcloud(profile, selected_region):
     """Plots a wordcloud of condition names where word size is weighted by response vector
     Args:
-        parcel_profiles: parcel scores for each condition in each dataset
-        profile_data: condition names of each dataset
-        labels: region labels
+        profile: dataframe with condition information and parcel scores for each condition in each dataset
         selected_region: region for which to display the parcel profile
 
     Returns:
-        profile: condition names in order of parcel score
+        wc: word cloud object
 
     """
     default_message = {"Select a parcel on the flatmap": 1}
     # When initiliazing the website and if clickin on a null region, show default message
-    if (
-        selected_region is not None
-        and "text" in selected_region["points"][0]
+    if selected_region is not None and isinstance(selected_region, str):
+        region = selected_region
+        weights = profile[region] * 100
+        conditions = profile.condition
+        conditions_weighted = dict(zip(conditions, weights))
+    elif (
+        "text" in selected_region["points"][0]
         and selected_region["points"][0]["text"] != "0"
     ):
-        # get the region name
+        # get the region name from clicked parcel
         region = selected_region["points"][0]["text"]
-        conditions = profile_data.condition
-        labels = labels.tolist()
-        weights = parcel_profiles[:, labels.index(region) - 1] * 100
-
-        conditions_weighted = dict(zip(conditions, weights.numpy()))
+        weights = profile[region] * 100
+        conditions = profile.condition
+        conditions_weighted = dict(zip(conditions, weights))
     else:
         conditions_weighted = default_message
 
@@ -288,18 +228,75 @@ def plot_wordcloud(parcel_profiles, profile_data, labels, selected_region):
     wc = WordCloud(background_color="white")
     wc.generate_from_frequencies(conditions_weighted)
 
-    return wc.to_image()
+    return wc
+
+
+def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
+    """Plots wordclouds of functional profiles for each parcel
+    Args:
+        profile: dataframe with condition information and parcel scores for each condition in each dataset
+        parcels: list of parcel labels for which to display the parcel profile or string 'all'. Defaults to 'all'
+        colour_by_dataset: Boolean indicating whether condition names should be coloured by originating dataset.
+
+    Returns:
+        wc: word cloud object
+
+    """
+    if parcels == 'all':
+        idx_start = list(profile.columns).index('condition') + 1
+        idx_end = list(profile.columns).index('dataset_colour') - 1
+        parcels = sorted(profile.columns[idx_start:idx_end])
+    else:
+        parcels = sorted(parcels)
+
+    fig = plt.figure(figsize=[40, 80])
+    for p, parcel in enumerate(parcels):
+        ax = fig.add_subplot(int(np.ceil(len(parcels) / 4)), 4, p + 1)
+        wc = get_wordcloud(profile, parcel)
+        if colour_by_dataset:
+            wc.recolor(color_func=dataset_colours)
+
+        ax.imshow(wc)
+        ax.title.set_text(parcel)
+        ax.axis('off')
+
+    return fig
+
+
+def dataset_colours(word, font_size, position, orientation, random_state=None, **kwargs):
+    colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
+    profile = pd.read_csv(f"{model_dir}/Atlases/{colour_file}", sep="\t")
+
+    colour = profile[profile.condition == word].dataset_colour.iloc[-1]
+
+    return colour
 
 
 if __name__ == "__main__":
-    # Merge C2 models
+
     space = "MNISymC2"
     K = 68
     mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}"
-    info, model = load_batch_best(mname)
-    info = recover_info(info, model, mname)
-    # for each parcel, get the highest scoring task
-    parcel_profiles, profile_data = get_profiles(model=model, info=info)
-    _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
-    plot_wordcloud(parcel_profiles, profile_data, labels)
+    export_profile(mname)
+
+    # # Make word cloud
+    region = "C3L"
+    selected_region = {
+        "points": [{"text": region}]
+    }  # weird formatting is due to compatibility with mouseclick data for dash app
+
+    profile = pd.read_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+    parcel_profiles(profile, parcels='all', colour_by_dataset=False)
+
+    # profile = pd.read_csv(
+    #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    # )
+    # wc = get_wordcloud(profile, selected_region=selected_region)
+    # wc.recolor(color_func=dataset_colours)
+    # plt.figure()
+    # plt.imshow(wc, interpolation="bilinear")
+    # plt.axis("off")
+    # plt.show()
     pass
