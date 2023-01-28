@@ -162,13 +162,18 @@ def export_profile(mname):
     # get all colours
     all_colours = TABLEAU_COLORS
     rgb = list(all_colours.values())
+    colour_names = list(all_colours.keys())
 
     dataset_colours = dict(zip(datasets, rgb[: len(datasets)]))
+    dataset_colour_names = dict(zip(datasets, colour_names[: len(datasets)]))
 
     Prof['dataset_colour'] = None
+    Prof['dataset_colour_name'] = None
     for dataset in datasets:
         Prof.loc[Prof.dataset == dataset,
                  'dataset_colour'] = dataset_colours[dataset]
+        Prof.loc[Prof.dataset == dataset,
+                 'dataset_colour_name'] = dataset_colours[dataset]
 
     # --- Save profile ---
     # save functional profile as tsv
@@ -202,16 +207,19 @@ def get_wordcloud(profile, selected_region):
     """
     default_message = {"Select a parcel on the flatmap": 1}
     # When initiliazing the website and if clickin on a null region, show default message
-    if (
-        selected_region is not None
-        and "text" in selected_region["points"][0]
+    if selected_region is not None and isinstance(selected_region, str):
+        region = selected_region
+        weights = profile[region] * 100
+        conditions = profile.condition
+        conditions_weighted = dict(zip(conditions, weights))
+    elif (
+        "text" in selected_region["points"][0]
         and selected_region["points"][0]["text"] != "0"
     ):
-        # get the region name
+        # get the region name from clicked parcel
         region = selected_region["points"][0]["text"]
         weights = profile[region] * 100
         conditions = profile.condition
-
         conditions_weighted = dict(zip(conditions, weights))
     else:
         conditions_weighted = default_message
@@ -221,6 +229,38 @@ def get_wordcloud(profile, selected_region):
     wc.generate_from_frequencies(conditions_weighted)
 
     return wc
+
+
+def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
+    """Plots wordclouds of functional profiles for each parcel
+    Args:
+        profile: dataframe with condition information and parcel scores for each condition in each dataset
+        parcels: list of parcel labels for which to display the parcel profile or string 'all'. Defaults to 'all'
+        colour_by_dataset: Boolean indicating whether condition names should be coloured by originating dataset.
+
+    Returns:
+        wc: word cloud object
+
+    """
+    if parcels == 'all':
+        idx_start = list(profile.columns).index('condition') + 1
+        idx_end = list(profile.columns).index('dataset_colour') - 1
+        parcels = sorted(profile.columns[idx_start:idx_end])
+    else:
+        parcels = sorted(parcels)
+
+    fig = plt.figure(figsize=[40, 80])
+    for p, parcel in enumerate(parcels):
+        ax = fig.add_subplot(int(np.ceil(len(parcels) / 4)), 4, p + 1)
+        wc = get_wordcloud(profile, parcel)
+        if colour_by_dataset:
+            wc.recolor(color_func=dataset_colours)
+
+        ax.imshow(wc)
+        ax.title.set_text(parcel)
+        ax.axis('off')
+
+    return fig
 
 
 def dataset_colours(word, font_size, position, orientation, random_state=None, **kwargs):
@@ -237,7 +277,7 @@ if __name__ == "__main__":
     space = "MNISymC2"
     K = 68
     mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}"
-    # export_profile(mname)
+    export_profile(mname)
 
     # # Make word cloud
     region = "C3L"
@@ -248,11 +288,15 @@ if __name__ == "__main__":
     profile = pd.read_csv(
         f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     )
-    wc = get_wordcloud(profile, selected_region=selected_region)
-    wc.recolor(color_func=dataset_colours)
+    parcel_profiles(profile, parcels='all', colour_by_dataset=False)
 
-    plt.figure()
-    plt.imshow(wc, interpolation="bilinear")
-    plt.axis("off")
-    plt.show()
+    # profile = pd.read_csv(
+    #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    # )
+    # wc = get_wordcloud(profile, selected_region=selected_region)
+    # wc.recolor(color_func=dataset_colours)
+    # plt.figure()
+    # plt.imshow(wc, interpolation="bilinear")
+    # plt.axis("off")
+    # plt.show()
     pass
