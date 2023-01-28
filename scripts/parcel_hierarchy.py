@@ -66,11 +66,13 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     # Define color anchors
     m,regions,colors = sc.get_target_points(atlas,parcel)
     cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
+    sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
         cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
-    sc.plot_colorspace(cmap(np.arange(model.K)))
+    plt.figure(figsize=(5,10))
+    cl.plot_parcel_size(Prob,cmap,labels,wta=True)
 
     # Plot the parcellation
     if plot is True:
@@ -88,8 +90,6 @@ def make_sfn_atlas():
     labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
     ea.export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
     ea.resample_atlas('atl-NettekovenSym34')
-
-
 
 def merge_clusters(ks, space='MNISymC3'):
     # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
@@ -182,12 +182,15 @@ def compare_levels():
 
 if __name__ == "__main__":
     # Merge C2 models
-    # space = 'MNISymC2'
-    # ks = [48, 60]
-    # merged_models = merge_clusters(ks, space)
+    space='MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
+    cl.save_guided_clustering(mname_fine, mname_coarse,'cosang')
+    # pass
+    
     # export_merged(merged_models)
 
-    export_merged()
+    # export_merged()
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
@@ -216,10 +219,10 @@ if __name__ == "__main__":
   
 
     # # Show MNISymC2 Parcellation
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    ea.export_map(Prob, atlas.name, cmap, labels, output)
+    # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    # ea.export_map(Prob, atlas.name, cmap, labels, output)
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
