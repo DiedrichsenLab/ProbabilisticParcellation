@@ -58,7 +58,7 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results'
 
-def result_4_eval(K=[10], model_type=['03','04'], t_datasets = ['MDTB','Pontine','Nishimoto'],
+def result_4_eval(K=[10], model_type=['03','04'], t_datasets=['MDTB','Pontine','Nishimoto'],
                   test_ses=None):
     """Evaluate group and individual DCBC and coserr of IBC single
        sessions on all other test datasets.
@@ -85,25 +85,45 @@ def result_4_eval(K=[10], model_type=['03','04'], t_datasets = ['MDTB','Pontine'
     # Evaluate all single sessions on other datasets
     for ds in t_datasets:
         print(f'Testdata: {ds}\n')
-        # 1. Run DCBC individual
-        res_dcbc = run_dcbc_individual(model_name, ds, 'all', cond_ind=None,
-                                       part_ind='half', indivtrain_ind='half',
-                                       indivtrain_values=[1,2], device='cuda')
-        # 2. Run coserr individual
-        res_coserr = run_prederror(model_name, ds, 'all', cond_ind=None,
-                                   part_ind='half', eval_types=['group', 'floor'],
-                                   indivtrain_ind='half', indivtrain_values=[1,2],
-                                   device='cuda')
-        # 3. Merge the two dataframe
-        res = pd.merge(res_dcbc, res_coserr, how='outer')
-        results = pd.concat([results, res], ignore_index=True)
+
+        # Preparing atlas, cond_vec, part_vec
+        atlas, _ = am.get_atlas('MNISymC3', atlas_dir=base_dir + '/Atlases')
+        tdata, tinfo, tds = get_dataset(base_dir, ds, atlas='MNISymC3', sess='all')
+        cond_vec = tinfo[tds.cond_ind].values.reshape(-1, ) # default from dataset class
+        part_vec = tinfo['half'].values
+        # part_vec = np.ones((tinfo.shape[0],), dtype=int)
+        CV_setting = [('half', 1), ('half', 2)]
+
+        ################ CV starts here ################
+        for (indivtrain_ind, indivtrain_values) in CV_setting:
+            # get train/test index for cross validation
+            train_indx = tinfo[indivtrain_ind] == indivtrain_values
+            test_indx = tinfo[indivtrain_ind] != indivtrain_values
+            # 1. Run DCBC individual
+            res_dcbc = run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device='cuda')
+            res_dcbc['indivtrain_ind'] = indivtrain_ind
+            res_dcbc['indivtrain_val'] = indivtrain_values
+            res_dcbc['test_data'] = ds
+            # 2. Run coserr individual
+            # res_coserr = run_prederror(model_name, ds, 'all', cond_ind=None,
+            #                            part_ind='half', eval_types=['group', 'floor'],
+            #                            indivtrain_ind='half', indivtrain_values=[1,2],
+            #                            device='cuda')
+            # 3. Merge the two dataframe
+            # res = pd.merge(res_dcbc, res_coserr, how='outer')
+            results = pd.concat([results, res_dcbc], ignore_index=True)
 
     # Save file
     wdir = model_dir + f'/Models/Evaluation_01'
     if test_ses is not None:
         fname = f'/eval_all_asym_Ib_K-{K}_{test_ses}_on_otherDatasets.tsv'
     else:
-        fname = f'/eval_all_asym_Ib_K-10_to_68_indivSess_on_otherDatasets.tsv'
+        fname = f'/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 def result_4_plot(fname, test_data=None, orderby=None, ck=True):
@@ -236,11 +256,8 @@ def plot_IBC_rel():
     plt.suptitle(f'IBC individual sessions performance, tested on otherData vs. leftSess')
     plt.show()
 
-def plot_fig1(save=False):
-    D = pd.read_csv(
-        model_dir + '/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets'
-                    '.tsv',
-        sep='\t')
+def plot_fig1(fname, save=False):
+    D = pd.read_csv(model_dir + fname, sep='\t')
     orderby = None
 
     plt.figure(figsize=(12, 6))
@@ -251,10 +268,10 @@ def plot_fig1(save=False):
             order = D.loc[(D['common_kappa'] == True)].groupby('session')[
                 c].mean().sort_values().keys().to_list()
         else:
-            order = D.groupby('session')[c].mean().sort_values().keys().to_list()
-        sb.barplot(data=D, x='session', y=c, order=order, hue='common_kappa',
-                   hue_order=[True, False], width=0.7, errorbar="se",
-                   palette=sb.color_palette()[1:3])
+            order = D.groupby('test_sess')[c].mean().sort_values().keys().to_list()
+        sb.barplot(data=D, x='test_sess', y=c, order=order, hue='model_type',
+                   width=0.7, errorbar="se",
+                   palette=sb.color_palette()[0:3])
 
         plt.xticks(rotation=45)
         plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
@@ -272,16 +289,16 @@ def plot_fig1(save=False):
 
 def plot_fig2(save=False):
     D = pd.read_csv(model_dir +
-                    '/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets'
+                    '/Models/Evaluation_01/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets'
                     '.tsv', sep='\t')
 
     plt.figure(figsize=(10, 5))
     crits = ['dcbc_group', 'dcbc_indiv']
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
-        sb.lineplot(data=D, x='K', y=c, hue='common_kappa', hue_order=[True, False],
-                    style='session', errorbar="se",
-                    palette=sb.color_palette()[1:3], err_style=None)
+        sb.lineplot(data=D, x='K', y=c, hue='model_type',
+                    style='test_sess', errorbar="se",
+                    palette=sb.color_palette()[0:3], err_style=None)
         if i == len(crits) - 1:
             plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0,
                        fontsize='small')
@@ -302,14 +319,16 @@ def plot_fig2(save=False):
 
 
 if __name__ == "__main__":
-    result_4_eval(K=[10,17,20,34,40,68,100], model_type=['01'],
-                  t_datasets=['MDTB', 'Pontine', 'Nishimoto',
-                              'WMFS', 'Demand', 'Somatotopic'])
+    # result_4_eval(K=[10,17,20,34,40,68,100], model_type=['01','03','04'],
+    #               t_datasets=['MDTB', 'Pontine', 'Nishimoto',
+    #                           'WMFS', 'Demand', 'Somatotopic'])
+    result_4_eval(K=[17], model_type=['01'],
+                  t_datasets=['MDTB'])
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
     # result_4_plot(fname, test_data='Pontine', orderby=False)
-
-    # plot_fig1(save=True)
-    # plot_fig2(save=True)
+    fname = '/Models/Evaluation_01/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
+    plot_fig1(fname, save=False)
+    plot_fig2(save=True)
 
     ######## Plot indiv sess vs fusion map ########
     # color_file = atlas_dir + '/tpl-SUIT/atl-NettekovenSym34.lut'

@@ -100,16 +100,16 @@ def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
             # remove the sessions were used to training to make test sessions
             this_sess = [i for i in sess if i not in [s1, s2]]
             # 1. Run DCBC individual
-            res_dcbc = run_dcbc_individual(model_name, 'IBC', this_sess, cond_ind=None,
-                                           part_ind=None, indivtrain_ind=None,
-                                           indivtrain_values=[0], device='cuda')
+            res = run_dcbc_IBC(model_name, 'IBC', this_sess, cond_ind=None,
+                               part_ind=None, indivtrain_ind=None,
+                               indivtrain_values=[0], device='cuda')
             # 2. Run coserr individual
-            res_coserr = run_prederror(model_name, 'IBC', this_sess, cond_ind=None,
-                                       part_ind=None, eval_types=['group', 'floor'],
-                                       indivtrain_ind=None, indivtrain_values=[0],
-                                       device='cuda')
+            # res_coserr = run_prederror(model_name, 'IBC', this_sess, cond_ind=None,
+            #                            part_ind=None, eval_types=['group', 'floor'],
+            #                            indivtrain_ind=None, indivtrain_values=[0],
+            #                            device='cuda')
             # 3. Merge the two dataframe
-            res = pd.merge(res_dcbc, res_coserr, how='outer')
+            # res = pd.merge(res_dcbc, res_coserr, how='outer')
             res['sess1_rel'] = reliability[s1]
             res['sess2_rel'] = reliability[s2]
             res['test_sess_out'] = this_s1 + '+' + this_s2
@@ -121,6 +121,85 @@ def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
         fname = f'/eval_all_asym_Ib_K-{K}_{ses1}+{ses2}_on_leftSess.tsv'
     else:
         fname = f'/eval_all_asym_Ib_K-{K}_twoSess_on_leftSess.tsv'
+    results.to_csv(wdir + fname, index=False, sep='\t')
+
+def result_3_eval_on_otherData(K=10, model_type=['03','04'], ses1=None, ses2=None,
+                               t_datasets = ['MDTB','Pontine','Nishimoto',
+                                             'WMFS', 'Demand', 'Somatotopic']):
+    """Result3: Evaluate group and individual DCBC and coserr
+       of IBC two single sessions and fusion on the IBC
+       left-out sessions.
+       i.e [sess1, sess2, sess1and2 fusion]
+    Args:
+        ses1: the first session. i.e 'ses-archi'
+        ses2: the second session. i.e 'ses-archi'
+    Returns:
+        Write in evaluation file
+    Notes:
+        if ses1 and ses2 are both None, the function performs
+        all 91 combination of IBC two sessions fusion.
+    """
+    # Calculate the session reliability value
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+                                 voxel_wise=False)
+    reliability = dict(zip(sess, rel[:, 0]))
+
+    # Making model list
+    model_name = []
+    for mt in model_type:
+        model_name += [f'Models_{mt}/asym_Ib_space-MNISymC3_K-{K}_{s}' for s in sess]
+
+    if (ses1 is not None) and (ses2 is not None):
+        for mt in model_type:
+            model_name += [f'Models_{mt}/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
+                           f'ses-{ses1}+{ses2}']
+
+    elif (ses1 is None) and (ses2 is None):
+        for (s1, s2) in list(combinations(sess, 2)):
+            this_s1 = s1.split('-')[1]
+            this_s2 = s2.split('-')[1]
+            for mt in model_type:
+                model_name += [f'Models_{mt}/IBC_sessFusion/asym_Ib_space-MNISymC3_K-{K}_'
+                               f'ses-{this_s1}+{this_s2}']
+
+    results = pd.DataFrame()
+    for ds in t_datasets:
+        print(f'Testdata: {ds}\n')
+
+        # Preparing atlas, cond_vec, part_vec
+        atlas, _ = am.get_atlas('MNISymC3', atlas_dir=base_dir + '/Atlases')
+        tdata, tinfo, tds = get_dataset(base_dir, ds, atlas='MNISymC3', sess='all')
+        cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )  # default from dataset class
+        part_vec = tinfo['half'].values
+        # part_vec = np.ones((tinfo.shape[0],), dtype=int)
+        CV_setting = [('half', 1), ('half', 2)]
+
+        ################ CV starts here ################
+        res = pd.DataFrame()
+        for (indivtrain_ind, indivtrain_values) in CV_setting:
+            # get train/test index for cross validation
+            train_indx = tinfo[indivtrain_ind] == indivtrain_values
+            test_indx = tinfo[indivtrain_ind] != indivtrain_values
+            # 1. Run DCBC individual
+            res_dcbc = run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device='cuda')
+            res_dcbc['indivtrain_ind'] = indivtrain_ind
+            res_dcbc['indivtrain_val'] = indivtrain_values
+            res_dcbc['test_data'] = ds
+            res = pd.concat([res, res_dcbc], ignore_index=True)
+
+        results = pd.concat([results, res], ignore_index=True)
+
+    # Save file
+    wdir = model_dir + f'/Models/Evaluation'
+    if (ses1 is not None) and (ses2 is not None):
+        fname = f'/eval_all_asym_Ib_K-{K}_{ses1}+{ses2}_on_leftSess.tsv'
+    else:
+        fname = f'/eval_all_asym_Ib_K-{K}_twoSess_on_otherDataset.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 def result_3_plot(D, train_model='IBC', ck=None, style=None, style_order=None,
@@ -355,8 +434,9 @@ def make_all_in_one_tsv(path, out_name):
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    # for k in [17]:
-    #     result_3_eval(K=k, model_type=['01','03'])
+    for k in [17]:
+        # result_3_eval(K=k, model_type=['01','03','04'])
+        result_3_eval_on_otherData(K=k, model_type=['01','03','04'])
 
     # make_all_in_one_tsv('Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01',
     #                     'Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01'
