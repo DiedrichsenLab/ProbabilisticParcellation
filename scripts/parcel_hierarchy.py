@@ -185,7 +185,7 @@ if __name__ == "__main__":
     space='MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
     mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
-    cl.save_guided_clustering(mname_fine, mname_coarse,'cosang')
+    cl.guided_clustering(mname_fine, mname_coarse,'cosang')
     # pass
     
     # export_merged(merged_models)
@@ -219,6 +219,9 @@ if __name__ == "__main__":
   
 
     # # Show MNISymC2 Parcellation
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_meth-cosang'
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
     Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
