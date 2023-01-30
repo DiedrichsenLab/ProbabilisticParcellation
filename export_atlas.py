@@ -15,6 +15,18 @@ import SUITPy as suit
 from ProbabilisticParcellation.util import *
 from copy import deepcopy
 
+def save_cortex_cifti(fname):
+    """Exports a cortical model as a surface-based CIFTI label file.
+    Args:
+        fname (str): model name
+    """
+    info, model = load_batch_best(fname)
+    Prop = model.marginal_prob()
+    par = pt.argmax(Prop, dim=0) + 1
+    atlas,_ = am.get_atlas('fs32k', atlas_dir)
+    img = nt.make_label_cifti(par.numpy(), atlas.get_brain_model_axis())
+    nb.save(img, model_dir + f'/Models/{fname}.dlabel.nii')
+
 def export_map(data,atlas,cmap,labels,base_name):
     """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file.
 
@@ -53,13 +65,14 @@ def export_map(data,atlas,cmap,labels,base_name):
                 label_names=labels,
                 label_RGBA = cmap)
 
-    nb.save(dseg,base_name + f'_space-{atlas}_dseg.nii')
-    nb.save(probseg,base_name + f'_space-{atlas}_probseg.nii')
+    nb.save(dseg,base_name + f'_dseg.nii')
+    nb.save(probseg,base_name + f'_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
-    save_lut(np.arange(len(labels)),cmap[:,0:4],labels, base_name + '.lut')
+    save_info(np.arange(len(labels)),cmap[:,0:4],labels, base_name)
+    print(f'Exported {base_name}.')
 
-def save_lut(index,colors,labels,fname):
-    """Save a set of colors and labels as a LUT file 
+def save_info(index,colors,labels,fname):
+    """Save a set of colors and labels as a LUT file and cmap file 
     Note: This should probably go into nitools 
 
     Args:
@@ -68,13 +81,17 @@ def save_lut(index,colors,labels,fname):
         labels (_type_): _description_
         fname (_type_): _description_
     """
+    # Save lut file
     L=pd.DataFrame({
             "key":index,
             "R":colors[:,0].round(4),
             "G":colors[:,1].round(4),
             "B":colors[:,2].round(4),
             "Name":labels})
-    L.to_csv(fname,header=None,sep=' ',index=False)
+    L.to_csv(fname + '.lut',header=None,sep=' ',index=False)
+    
+    # Save cmap file (in accordance with FSLeyes-accepted colour maps)
+    L.drop('key', axis=1).drop('Name', axis=1).to_csv(fname + '.cmap', header=None, sep=' ', index=False)
 
 def renormalize_probseg(probseg):
     """ Renormalizes a probsegmentation file 

@@ -393,95 +393,6 @@ def clear_models(K, model_type='04'):
                     print(f"skipping {fname}")
 
 
-def write_dlabel_cifti(data, atlas,
-                       labels=None,
-                       label_names=None,
-                       column_names=None,
-                       label_RGBA=None):
-    """Generates a label Cifti2Image from a numpy array
-
-    Args:
-        data (np.array):
-            num_vert x num_col data
-        atlas (obejct):
-            the cortical surface <atlasSurface> object
-        labels (list): Numerical values in data indicating the labels -
-            defaults to np.unique(data)
-        label_names (list):
-            List of strings for names for labels
-        column_names (list):
-            List of strings for names for columns
-        label_RGBA (list):
-            List of rgba vectors for labels
-    Returns:
-        gifti (GiftiImage): Label gifti image
-    """
-    if type(data) is pt.Tensor:
-        if pt.cuda.is_available() or pt.backends.mps.is_built():
-            data = data.cpu().numpy()
-        else:
-            data = data.numpy()
-
-    if data.ndim == 1:
-        # reshape to (1, num_vertices)
-        data = data.reshape(-1, 1)
-
-    num_verts, num_cols = data.shape
-    if labels is None:
-        labels = np.unique(data)
-    num_labels = len(labels)
-
-    # Create naming and coloring if not specified in varargin
-    # Make columnNames if empty
-    if column_names is None:
-        column_names = []
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i + 1))
-
-    # Determine color scale if empty
-    if label_RGBA is None:
-        label_RGBA = [(0.0, 0.0, 0.0, 0.0)]
-        if 0 in labels:
-            num_labels -= 1
-        hsv = plt.cm.get_cmap('hsv', num_labels)
-        color = hsv(np.linspace(0, 1, num_labels))
-        # Shuffle the order so that colors are more visible
-        color = color[np.random.permutation(num_labels)]
-        for i in range(num_labels):
-            label_RGBA.append((color[i][0],
-                               color[i][1],
-                               color[i][2],
-                               color[i][3]))
-
-    # Create label names from numerical values
-    if label_names is None:
-        label_names = ['???']
-        for i in labels:
-            if i == 0:
-                pass
-            else:
-                label_names.append("label-{:02d}".format(i))
-
-    assert len(label_RGBA) == len(label_names), \
-        "The number of parcel labels must match the length of colors!"
-    labelDict = []
-    for i, nam in enumerate(label_names):
-        labelDict.append((nam, label_RGBA[i]))
-
-    labelAxis = nb.cifti2.LabelAxis(column_names, dict(enumerate(labelDict)))
-    header = nb.Cifti2Header.from_axes((labelAxis, atlas.get_brain_model_axis()))
-    img = nb.Cifti2Image(dataobj=data.reshape(1, -1), header=header)
-
-    return img
-
-def save_cortex_cifti(fname):
-    info, model = load_batch_best(fname)
-    Prop = model.marginal_prob()
-    par = pt.argmax(Prop, dim=0) + 1
-    img = write_dlabel_cifti(par, am.get_atlas('fs32k', atlas_dir))
-    nb.save(img, model_dir + f'/Models/{fname}.dlabel.nii')
-
-
 def leave_one_out_fit(dataset=[0], model_type=['01'], K=10):
     # Define some constant
     nsubj = [24, 8, 6, 12, 100]
@@ -565,13 +476,76 @@ def fit_all_datasets(space = 'MNISymC2',
                     print(f'model {t} with K={k} already fitted as {fname}')
 
 
+def refit_model(model, new_info):
+    """Refits model.
+
+    Args:
+        model:      Model to be refitted
+        new_info:       Information for new model
+
+    Returns:
+        model: Refitted model
+
+    """
+
+    if type(model.arrange) is ar.ArrangeIndependentSymmetric:
+        M = fm.FullMultiModel(model.arrange, model.emissions)
+    else:
+        M = fm.FullMultiModel(model.arrange, model.emissions)
+
+    model_settings = {'Models_01': [True, True, False],
+                      'Models_02': [False, True, False],
+                      'Models_03': [True, False, False],
+                      'Models_04': [False, False, False],
+                      'Models_05': [False, True, True]}
+
+    # uniform_kappa = model_settings[new_info.model_type][0]
+    join_sess = model_settings[new_info.model_type][1]
+    join_sess_part = model_settings[new_info.model_type][2]
+
+    datasets = new_info.datasets.strip("'[").strip("]'").split("' '")
+    sessions = new_info.sess.strip("'[").strip("]'").split("' '")
+    types = new_info.type.strip("'[").strip("]'").split("' '")
+
+    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
+                                                         atlas=new_info.atlas,
+                                                         sess=sessions,
+                                                         type=types,
+                                                         join_sess=join_sess,
+                                                         join_sess_part=join_sess_part)
+
+    # Attach the data
+    M.initialize(data, subj_ind=subj_ind)
+
+    # Refit emission models
+    print(f'Freezing arrangement model and fitting emission models...\n')
+
+    M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
+                                            fit_emission=True,
+                                            fit_arrangement=False,
+                                            first_evidence=True)
+    
+    # make info from a Series back to a dataframe
+    new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    new_info['loglik'] = ll[-1].item()
+    # Plot ll
+    # 
+    # pt.Tensor.ndim = property(lambda self: len(self.shape))
+    # x = pt.linspace(0,ll.shape[0], ll.shape[0])
+    # plt.figure()
+    # plt.plot(x[1:], ll[1:])
+
+
+    return M, new_info
+
+
 if __name__ == "__main__":
     # datasets_list=[0,1,2,3,4,5,6]
     # K = 68
     # sym_type = ['asym']
     # model_type = '03'
     # space = 'MNISymC2'
-    #
+
     # fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
     #         sym_type=['sym'], space='MNISymC2')
 
