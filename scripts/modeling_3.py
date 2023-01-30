@@ -431,16 +431,65 @@ def make_all_in_one_tsv(path, out_name):
 
         D.to_csv(out_name, sep='\t', index=False)
 
+def result_3_plot_otherData(D, train_model='IBC', ck=None, style=None, style_order=None,
+                  relevant=None, print_relevancy=False):
+    D['relevant'] = ""
+    # D.rename(columns={'test_sess': 'session'}, inplace=True)
+
+    D = D.loc[D['K']==17]
+    if ck is not None:
+        D = D.loc[D['common_kappa']==ck]
+
+    T = pd.DataFrame()
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for s1,s2 in combinations(sess, 2):
+        df = D.loc[(D['test_sess'] == s1.split('-')[1] + '+' + s2.split('-')[1])]
+        df = df.replace(s1.split('-')[1] + '+' + s2.split('-')[1], 'Fusion')
+
+        ses1 = D.loc[(D['test_sess'] == s1.split('-')[1])]
+        ses1 = ses1.replace(s1.split('-')[1], 'sess1')
+        ses2 = D.loc[(D['test_sess'] == s2.split('-')[1])]
+        ses2 = ses2.replace(s2.split('-')[1], 'sess2')
+        T = pd.concat([T, ses1, ses2, df], ignore_index=True)
+
+    plt.figure(figsize=(8,5))
+    crits = ['dcbc_group','dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        sb.barplot(data=T, x='test_sess', y=c, hue='model_type',
+                   hue_order=['Models_01','Models_03','Models_04'], errorbar="se")
+        # if style is not None:
+        #     sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
+        #                 style=style, style_order=style_order, markers=True)
+        # else:
+        #     sb.lineplot(data=T, x="K", y=c, hue='session',
+        #                 hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        if c == 'dcbc_indiv':
+            plt.ylim(0, 0.18)
+        elif c == 'dcbc_group':
+            plt.ylim(0, 0.18)
+        plt.xticks(rotation=45)
+        plt.legend(loc='upper left')
+
+    plt.suptitle(f'IBC two sessions fusion - overall trend, K=17')
+    plt.tight_layout()
+    # plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
+    plt.show()
+
+
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    for k in [17]:
+    for k in [10,20,34,40,68,100]:
         # result_3_eval(K=k, model_type=['01','03','04'])
         result_3_eval_on_otherData(K=k, model_type=['01','03','04'])
 
-    # make_all_in_one_tsv('Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01',
-    #                     'Y:\data\Cerebellum\ProbabilisticParcellationModel\Models\Evaluation_01'
-    #                     '\model1.tsv')
+    D = pd.read_csv(model_dir +
+                     f'/Models/Evaluation/eval_all_asym_Ib_K-17_twoSess_on_otherDataset.tsv',
+                     delimiter='\t')
+    result_3_plot_otherData(D, ck=None, style='model_type',
+                  style_order=['Models_01','Models_03'], relevant=None)
+
     # fname = '/Models/Evaluation_01/model1.tsv'
     # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
     # result_3_plot(fname, style='common_kappa', style_order=[True, False], relevant=None)
@@ -455,11 +504,10 @@ if __name__ == "__main__":
     #
     # ##### 4. Plot sess-1, sess-2, Fusion (indiv/group DCBC and coserr)
     # # Option 1: overall trend (ignoring relevant/irrelevant sessions)
-    # D = pd.read_csv(model_dir + fname, delimiter='\t')
-    D2 = pd.read_csv(model_dir +
-                     f'/Models/Evaluation/eval_all_asym_Ib_K-17_twoSess_on_leftSess.tsv', delimiter='\t')
-    D2.rename(columns={'test_sess': 'session'}, inplace=True)
-    result_3_plot(D2, ck=None, style='model_type',
+    fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+    D.rename(columns={'test_sess': 'session'}, inplace=True)
+    result_3_plot(D, ck=None, style='model_type',
                   style_order=['Models_01','Models_03'], relevant=None)
     # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
