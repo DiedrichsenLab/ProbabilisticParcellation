@@ -27,18 +27,18 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True):
 
-    # Get model and atlas. 
+    # Get model and atlas.
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info,model = load_batch_best(mname)
-    atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
+    info, model = load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
 
-    # Get winner-take all parcels 
+    # Get winner-take all parcels
     Prob = np.array(model.arrange.marginal_prob())
-    parcel = Prob.argmax(axis=0)+1
+    parcel = Prob.argmax(axis=0) + 1
 
     # Get parcel similarity:
-    w_cos_sym,_,_ = cl.parcel_similarity(model,plot=True,sym=sym)
+    w_cos_sym, _, _ = cl.parcel_similarity(model, plot=True, sym=sym)
 
     # Do Clustering:
     if clustering == 'agglomative':
@@ -46,49 +46,54 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
-            labels,clusters,_ = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
+            labels, clusters, _ = cl.agglomative_clustering(
+                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
             logging.warning(
                 f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
     if clustering == 'model_guided':
         if cluster_by is None:
-            raise('Need to specify model that guides clustering')
+            raise ('Need to specify model that guides clustering')
         cluster_info, cluster_model = load_batch_best(cluster_by)
         clusters_half, clusters = cl.guided_clustering(
             mname, cluster_by)
         labels, cluster_counts = cl.cluster_labels(clusters)
-        print(f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
-        
+        print(
+            f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
 
     # Make a colormap
-    w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False)
-    W = sc.calc_mds(w_cos_sim,center=True)
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
+    W = sc.calc_mds(w_cos_sim, center=True)
 
     # Define color anchors
-    m,regions,colors = sc.get_target_points(atlas,parcel)
-    cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
+    m, regions, colors = sc.get_target_points(atlas, parcel)
+    cmap = sc.colormap_mds(W, target=(m, regions, colors),
+                           clusters=clusters, gamma=0)
 
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
-        cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
+        cl.agglomative_clustering(
+            w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Plot the parcellation
     if plot is True:
-        ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
-                        dtype='prob',
-                        labels=labels,
-                        render='plotly')
+        ax = plot_data_flat(Prob, atlas.name, cmap=cmap,
+                            dtype='prob',
+                            labels=labels,
+                            render='plotly')
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
 
-def make_sfn_atlas():
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # Quick hack - hard-code the labels:
-    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
-    ea.export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    ea.resample_atlas('atl-NettekovenSym34')
 
+def make_sfn_atlas():
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+    # Quick hack - hard-code the labels:
+    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L', 'I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L',
+                      'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
+    ea.export_map(Prob, atlas, cmap, labels, base_dir +
+                  '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
+    ea.resample_atlas('atl-NettekovenSym34')
 
 
 def merge_clusters(ks, space='MNISymC3'):
@@ -130,6 +135,7 @@ def export_merged(merged_models=None):
         ea.export_map(Prob, atlas.name, cmap, labels,
                       f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
 
+
 def compare_levels():
     """Compares different clustering levels.
         For a selection of merged models, calculate adjusted Rand index between original fine parcellation and merged parcellation (merged according to coarse parcellation).
@@ -145,17 +151,16 @@ def compare_levels():
     Prop_68 = np.array(model_68.marginal_prob())
     parcel_68 = Prop_68.argmax(axis=0) + 1
 
-
     merged_models = [
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
 
     m_models = []
     m_infos = []
@@ -192,7 +197,6 @@ if __name__ == "__main__":
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
 
-
     # # Agglomative clustering
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
     # basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
@@ -208,16 +212,13 @@ if __name__ == "__main__":
 
     # pass
 
-
-    
     # # Plot fine, coarse and merged model
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
-  
 
     # # Show MNISymC2 Parcellation
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
     output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
     ea.export_map(Prob, atlas.name, cmap, labels, output)
 
