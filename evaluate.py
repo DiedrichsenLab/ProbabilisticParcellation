@@ -351,10 +351,111 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
     return results
 
 
-def run_dcbc_individual(model_names, test_data, test_sess,
-                        cond_ind=None,part_ind=None,
-                        indivtrain_ind=None,indivtrain_values=[0],
-                        device=None, load_best=True):
+def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
+             part_vec, device=None, load_best=True):
+    """ Calculates DCBC using a test_data set. The test data splitted into
+        individual training and test set given by `train_indx` and `test_indx`.
+        First we use individual training data to derive an individual
+        parcellations (using the model) and evaluate it on test data.
+        By calling function `calc_test_dcbc`, the Means of the parcels are
+        always estimated on N-1 subjects and evaluated on the Nth left-out
+        subject.
+    Args:
+        model_names (list or str): Name of model fit (tsv/pickle file)
+        tdata (pt.Tensor or np.ndarray): test data set
+        atlas (atlas_map): The atlas map object for calculating voxel distance
+        train_indx (ndarray of index or boolean mask): index of individual
+            training data
+        test_indx (ndarray or index boolean mask): index of individual test
+            data
+        cond_vec (1d array): the condition vector in test-data info
+        part_vec (1d array): partition vector in test-data info
+        device (str): the device name to load trained model
+        load_best (str): I don't know
+    Returns:
+        data-frame with model evalution of both group and individual DCBC
+    Notes:
+        This function is modified for DCBC group and individual evaluation
+        in general case (not include IBC two sessions evaluation senario)
+        requested by Jorn.
+    """
+    # Calculate distance metric given by input atlas
+    dist = compute_dist(atlas.world.T,resolution=1)
+    # convert tdata to tensor
+    if type(tdata) is np.ndarray:
+        tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+
+    if not isinstance(model_names,list):
+        model_names = [model_names]
+
+    num_subj = tdata.shape[0]
+    results = pd.DataFrame()
+    # Now loop over possible models we want to evaluate
+    for i, model_name in enumerate(model_names):
+        print(f"Doing model {model_name}\n")
+        if load_best:
+            minfo, model = load_batch_best(f"{model_name}", device=device)
+        else:
+            minfo, model = load_batch_fit(f"{model_name}")
+            minfo = minfo.iloc[0]
+        
+        Prop = model.marginal_prob()
+        this_res = pd.DataFrame()
+        # ------------------------------------------
+        # Train an emission model on the individual training data
+        # and get a Uhat (individual parcellation) from it.
+        indivtrain_em = em.MixVMF(K=minfo.K, N=40,
+                                  P=model.emissions[0].P,
+                                  X=matrix.indicator(cond_vec[train_indx]),
+                                  part_vec=part_vec[train_indx],
+                                  uniform_kappa=model.emissions[0].uniform_kappa)
+        indivtrain_em.initialize(tdata[:,train_indx,:])
+        model.emissions = [indivtrain_em]
+        model.initialize()
+        # Gets us the individual parcellation
+        model,_,_,U_indiv = model.fit_em(iter=200, tol=0.1,
+                                         fit_emission=True,
+                                         fit_arrangement=False,
+                                         first_evidence=False)
+        U_indiv = model.remap_evidence(U_indiv)
+
+        # ------------------------------------------
+        # Now run the DCBC evaluation fo the group and individuals
+        Pgroup = pt.argmax(Prop, dim=0) + 1
+        Pindiv = pt.argmax(U_indiv, dim=1) + 1
+        dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
+        dcbc_indiv = calc_test_dcbc(Pindiv, tdata[:, test_indx, :], dist)
+
+        # ------------------------------------------
+        # Collect the information from the evaluation
+        # in a data frame
+        ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
+                        'atlas':[minfo.atlas]*num_subj,
+                        'K':[minfo.K]*num_subj,
+                        'train_data':[minfo.datasets]*num_subj,
+                        'train_loglik':[minfo.loglik]*num_subj,
+                        'subj_num':np.arange(num_subj),
+                        'common_kappa':[model.emissions[0].uniform_kappa]*num_subj})
+        # Add all the evaluations to the data frame
+        ev_df['dcbc_group']=dcbc_group.cpu()
+        ev_df['dcbc_indiv']=dcbc_indiv.cpu()
+        this_res = pd.concat([this_res, ev_df], ignore_index=True)
+
+        # Concate model type
+        this_res['model_type'] = model_name.split('/')[0]
+        # Add a column it's session fit
+        if len(model_name.split('ses-')) >= 2:
+            this_res['test_sess'] = model_name.split('ses-')[1]
+        else:
+            this_res['test_sess'] = 'all'
+        results = pd.concat([results, this_res], ignore_index=True)
+
+    return results
+
+def run_dcbc_IBC(model_names, test_data, test_sess,
+                 cond_ind=None, part_ind=None,
+                 indivtrain_ind=None, indivtrain_values=[0],
+                 device=None, load_best=True):
     """ Calculates DCBC using a test_data set
     and test_sess.
     if indivtrain_ind is given, it splits the test_data set
@@ -377,29 +478,29 @@ def run_dcbc_individual(model_names, test_data, test_sess,
     Returns:
         data-frame with model evalution
     """
-    tdata,tinfo,tds = get_dataset(base_dir,test_data,
-                              atlas='MNISymC3',sess=test_sess)
-    atlas, _ = am.get_atlas('MNISymC3',atlas_dir=base_dir + '/Atlases')
-    dist = compute_dist(atlas.world.T,resolution=1)
+    tdata, tinfo, tds = get_dataset(base_dir, test_data,
+                                    atlas='MNISymC3', sess=test_sess)
+    atlas, _ = am.get_atlas('MNISymC3', atlas_dir=base_dir + '/Atlases')
+    dist = compute_dist(atlas.world.T, resolution=1)
 
     # convert tdata to tensor
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
     # For testing: tdata=tdata[0:5,:,:]
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
-    if not isinstance(model_names,list):
+    if not isinstance(model_names, list):
         model_names = [model_names]
 
     # Get condition vector of test data
     if cond_ind is None:
         # get default cond_ind from testdataset
-        cond_vec = tinfo[tds.cond_ind].values.reshape(-1,)
+        cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )
     else:
-        cond_vec = tinfo[cond_ind].values.reshape(-1,)
+        cond_vec = tinfo[cond_ind].values.reshape(-1, )
 
     # Get partition vector of test data
     if part_ind is None:
-        part_vec = np.zeros((tinfo.shape[0],),dtype=int)
+        part_vec = np.ones((tinfo.shape[0],), dtype=int)
     else:
         part_vec = tinfo[part_ind].values
 
@@ -417,7 +518,7 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         else:
             minfo, model = load_batch_fit(f"{model_name}")
             minfo = minfo.iloc[0]
-        
+
         Prop = model.marginal_prob()
 
         this_res = pd.DataFrame()
@@ -427,18 +528,18 @@ def run_dcbc_individual(model_names, test_data, test_sess,
             # Train an emission model on the individual training data
             # and get a Uhat (individual parcellation) from it.
             if indivtrain_ind is not None:
-                train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
-                test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
+                train_indx = tinfo[indivtrain_ind] == indivtrain_values[n]
+                test_indx = tinfo[indivtrain_ind] != indivtrain_values[n]
                 indivtrain_em = em.MixVMF(K=minfo.K, N=40,
-                            P = model.emissions[0].P,
-                            X = matrix.indicator(cond_vec[train_indx]),
-                            part_vec=part_vec[train_indx],
-                            uniform_kappa=model.emissions[0].uniform_kappa)
-                indivtrain_em.initialize(tdata[:,train_indx,:])
+                                          P=model.emissions[0].P,
+                                          X=matrix.indicator(cond_vec[train_indx]),
+                                          part_vec=part_vec[train_indx],
+                                          uniform_kappa=model.emissions[0].uniform_kappa)
+                indivtrain_em.initialize(tdata[:, train_indx, :])
                 model.emissions = [indivtrain_em]
                 model.initialize()
                 # Gets us the individual parcellation
-                model,ll,theta,U_indiv = model.fit_em(
+                model, ll, theta, U_indiv = model.fit_em(
                     iter=200, tol=0.1,
                     fit_emission=True,
                     fit_arrangement=False,
@@ -449,34 +550,42 @@ def run_dcbc_individual(model_names, test_data, test_sess,
                 test_indx = np.ones((tinfo.shape[0],), dtype=bool)
                 trainsess = [idx for idx in eval(minfo.sess) if isinstance(idx, list)][0]
                 traind, info, _ = get_dataset(base_dir, test_data,
-                                           atlas='MNISymC3', sess=trainsess)
-                model.initialize([traind[:,info.sess == s,:] for s in trainsess])
-                U_indiv, _ = model.Estep()
+                                              atlas='MNISymC3', sess=trainsess)
+                # Check if the model was trained joint or separate sessions
+                if len(model.emissions) == 1:
+                    model.initialize([np.hstack([traind[:, info.sess == s, :] for s in trainsess])])
+                else:
+                    model.initialize([traind[:, info.sess == s, :] for s in trainsess])
+
+                # Get the individual parcellation on all training data
+                model, _, _, U_indiv = model.fit_em(iter=200, tol=0.1,
+                                                    fit_emission=True, fit_arrangement=False,
+                                                    first_evidence=False)
                 U_indiv = model.remap_evidence(U_indiv)
 
             # ------------------------------------------
             # Now run the DCBC evaluation fo the group
             Pgroup = pt.argmax(Prop, dim=0) + 1  # Get winner take all
             Pindiv = pt.argmax(U_indiv, dim=1) + 1  # Get winner take
-            dcbc_indiv = calc_test_dcbc(Pindiv,tdata[:,test_indx,:], dist)
-            dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
+            dcbc_indiv = calc_test_dcbc(Pindiv, tdata[:, test_indx, :], dist)
+            dcbc_group = calc_test_dcbc(Pgroup, tdata[:, test_indx, :], dist)
 
             # ------------------------------------------
             # Collect the information from the evaluation
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
-                            'atlas':[minfo.atlas]*num_subj,
-                            'K':[minfo.K]*num_subj,
-                            'train_data':[minfo.datasets]*num_subj,
-                            'train_loglik':[minfo.loglik]*num_subj,
-                            'test_data':[test_data]*num_subj,
-                            'indivtrain_ind':[indivtrain_ind]*num_subj,
-                            'indivtrain_val':[indivtrain_values[n]]*num_subj,
-                            'subj_num':np.arange(num_subj),
-                            'common_kappa':[model.emissions[0].uniform_kappa]*num_subj})
+            ev_df = pd.DataFrame({'model_name': [minfo['name']] * num_subj,
+                                  'atlas': [minfo.atlas] * num_subj,
+                                  'K': [minfo.K] * num_subj,
+                                  'train_data': [minfo.datasets] * num_subj,
+                                  'train_loglik': [minfo.loglik] * num_subj,
+                                  'test_data': [test_data] * num_subj,
+                                  'indivtrain_ind': [indivtrain_ind] * num_subj,
+                                  'indivtrain_val': [indivtrain_values[n]] * num_subj,
+                                  'subj_num': np.arange(num_subj),
+                                  'common_kappa': [model.emissions[0].uniform_kappa] * num_subj})
             # Add all the evaluations to the data frame
-            ev_df['dcbc_group']=dcbc_group.cpu()
-            ev_df['dcbc_indiv']=dcbc_indiv.cpu()
+            ev_df['dcbc_group'] = dcbc_group.cpu()
+            ev_df['dcbc_indiv'] = dcbc_indiv.cpu()
             this_res = pd.concat([this_res, ev_df], ignore_index=True)
 
         # Concate model type
@@ -485,11 +594,10 @@ def run_dcbc_individual(model_names, test_data, test_sess,
         if len(model_name.split('ses-')) >= 2:
             this_res['test_sess'] = model_name.split('ses-')[1]
         else:
-            this_res['tess_sess'] = 'all'
+            this_res['test_sess'] = 'all'
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
-
 
 def eval_all_prederror(model_type,prefix,K):
     models = ['Md','Po','Ni','Ib','MdPoNiIb']

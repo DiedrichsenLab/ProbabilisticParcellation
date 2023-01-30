@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import generativeMRF.evaluation as ev
 import generativeMRF.full_model as fm
 from pathlib import Path
+import ProbabilisticParcellation.similarity_colormap as sc
+import ProbabilisticParcellation.hierarchical_clustering as cl
 
 # Set directories for the entire project - just set here and import everywhere 
 # else  
@@ -124,8 +126,6 @@ def load_batch_best(fname, device=None):
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
-    if not isinstance(models,list):
-        return info.iloc[0],models
     
     j = info.loglik.argmax()
 
@@ -253,8 +253,10 @@ def plot_multi_flat(data,atlas,grid,
             plt.title(titles[i])
             if save_fig:
                 plt.savefig(f'rel_{titles[i]}.png', format='png')
+                # plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
+                #             bbox_inches='tight', pad_inches=0)
 
-def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
+def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     """  Load a bunch of model fits, selects the best from
     each of them and plots the flatmap of the parcellation
 
@@ -269,7 +271,7 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
 
     # Load models and produce titles
     for i,mn in enumerate(model_names):
-        info,model = load_batch_best(mn)
+        info,model = load_batch_best(mn, device=device)
         models.append(model)
         # Split the name and build titles
         fname = mn.split('/') # Get filename if directory is given
@@ -292,8 +294,8 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False):
     parc = np.argmax(Prob,axis=1)+1
 
 
-    plot_multi_flat(parc,atlas,grid=grid,
-                     cmap=cmap,
+    plot_multi_flat(Prob,atlas,grid=grid,
+                     cmap=cmap, dtype='prob',
                      titles=titles)
 
 def _compute_var_cov(data, cond='all', mean_centering=True):
