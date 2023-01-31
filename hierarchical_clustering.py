@@ -22,7 +22,9 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
+
 from ProbabilisticParcellation.util import *
+
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import torch as pt
 from matplotlib import pyplot as plt
@@ -260,8 +262,13 @@ def plot_parcel_size(Prob,cmap,labels,wta=True):
     return D 
 
 
-def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
+def plot_parcel_mapping(fine_prob,coarse_prob,mapping,fine_labels=None):
     # get new probabilities
+    if not fine_labels is None:
+        ind = np.argsort(fine_labels)
+        fine_prob=fine_prob[ind,:]
+        fine_labels = np.array(fine_labels)[ind]
+
 
     K1=fine_prob.shape[0]
     K2=coarse_prob.shape[0]
@@ -276,7 +283,7 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
         sumV.append(b)
 
     fig = plt.figure(figsize=(10,10))
-    gs = fig.add_gridspec(3)
+    gs = fig.add_gridspec((3)
     axs = gs.subplots(sharey=True)
     for i in range(3):
         K=len(sumP[i])
@@ -290,8 +297,10 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
         con = ConnectionPatch(xyA=xyA, xyB=xyB, coordsA="data", coordsB="data", axesA=axs[0], axesB=axs[1], color="blue")
         axs[1].add_artist(con)
     pass 
+    if not fine_labels is None:
+        axs[0].set_xticklabels(fine_labels)
 
-def guided_clustering(mname_fine, mname_coarse,method):
+def guided_clustering(mname_fine, mname_coarse,method,fine_labels=None):
     """Maps parcels of a fine parcellation to parcels of a coarse parcellation guided by functional fusion model.
 
     Args:
@@ -359,7 +368,7 @@ def guided_clustering(mname_fine, mname_coarse,method):
 
     plot_parcel_mapping(fine_probabilities.numpy(),
                        coarse_probabilities.numpy(),
-                       fine_coarse_mapping)
+                       fine_coarse_mapping,fine_labels)
 
     return fine_coarse_mapping, fine_coarse_mapping_full
 
