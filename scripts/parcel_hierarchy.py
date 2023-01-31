@@ -203,14 +203,27 @@ def similarity_matrices(mname, sym=True):
     if sym:
         K = int(K / 2)
         Prob = Prob[:K, :]
-    labels = labels[1:K + 1]
+    labels = np.array(labels[1:K + 1])
 
     # Get parcel similarity:
-    w_cos_sym, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
+    w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=sym)
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
 
-    l = labels[1:K]
-    return
+    spatial_sim = P @ P.T
+
+    ind = np.argsort(labels)
+    labels = labels[ind]
+    w_cos_sim = w_cos_sim[:, ind][ind, :]
+    spatial_sim = spatial_sim[:, ind][ind, :]
+    return labels, w_cos_sim, spatial_sim, ind
+
+
+def query_similarity(mname, label):
+    labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
+    ind = np.nonzero(labels == label)[0]
+    D = pd.DataFrame(
+        {'labels': labels, 'w_cos_sim': w_cos_sim[ind[0], :], 'spatial_sim': spatial_sim[ind[0], :]})
+    return D
 
 
 def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic', 'Demand'], save_task_maps=False):
@@ -365,10 +378,13 @@ if __name__ == "__main__":
     # save_pmaps(mname)
 
     # Merge C2 models
-    # space='MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
-    # cl.guided_clustering(mname_fine, mname_coarse,'cosang')
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-20'
+    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+                                      f'sym_MdPoNiIbWmDeSo_space-{space}_K-68.lut')
+    map, _ = cl.guided_clustering(
+        mname_fine, mname_coarse, 'cosang', labels[1:35])
     # pass
 
     # export_merged(merged_models)
