@@ -13,8 +13,8 @@ from pathlib import Path
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.hierarchical_clustering as cl
 
-# Set directories for the entire project - just set here and import everywhere 
-# else  
+# Set directories for the entire project - just set here and import everywhere
+# else
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
@@ -45,7 +45,7 @@ atlas_dir = base_dir + f'/Atlases'
 if pt.cuda.is_available():
     default_device = pt.device('cuda')
     pt.set_default_tensor_type(pt.cuda.FloatTensor)
-else: 
+else:
     default_device = pt.device('cpu')
     pt.set_default_tensor_type(pt.FloatTensor)
 
@@ -62,14 +62,15 @@ def cal_corr(Y_target, Y_source):
     """
     K = Y_target.shape[0]
     # Compute the row x row correlation matrix
-    Y_tar = Y_target - Y_target.mean(dim=1,keepdim=True)
-    Y_sou = Y_source - Y_source.mean(dim=1,keepdim=True)
+    Y_tar = Y_target - Y_target.mean(dim=1, keepdim=True)
+    Y_sou = Y_source - Y_source.mean(dim=1, keepdim=True)
     Cov = pt.matmul(Y_tar, Y_sou.t())
-    Var1 = pt.sum(Y_tar*Y_tar, dim=1)
-    Var2 = pt.sum(Y_sou*Y_sou, dim=1)
+    Var1 = pt.sum(Y_tar * Y_tar, dim=1)
+    Var2 = pt.sum(Y_sou * Y_sou, dim=1)
     Corr = Cov / pt.sqrt(pt.outer(Var1, Var2))
 
     return Corr
+
 
 def load_batch_fit(fname):
     """ Loads a batch of fits and extracts marginal probability maps
@@ -81,10 +82,11 @@ def load_batch_fit(fname):
         models: List of models
     """
     wdir = model_dir + '/Models/'
-    info = pd.read_csv(wdir + fname + '.tsv',sep='\t')
-    with open(wdir + fname + '.pickle','rb') as file:
+    info = pd.read_csv(wdir + fname + '.tsv', sep='\t')
+    with open(wdir + fname + '.pickle', 'rb') as file:
         models = pickle.load(file)
-    return info,models
+    return info, models
+
 
 def clear_batch(fname):
     """Ensures that pickle file does not contain superflous data
@@ -92,14 +94,15 @@ def clear_batch(fname):
         fname (): filename
     """
     wdir = base_dir + '/Models/'
-    with open(wdir + fname + '.pickle','rb') as file:
+    with open(wdir + fname + '.pickle', 'rb') as file:
         models = pickle.load(file)
     # Clear models
     for m in models:
         m.clear()
 
-    with open(wdir + fname + '.pickle','wb') as file:
-        pickle.dump(models,file)
+    with open(wdir + fname + '.pickle', 'wb') as file:
+        pickle.dump(models, file)
+
 
 def move_batch_to_device(fname, device='cpu'):
     """Overwrite all tensors in the batch fitted models
@@ -120,13 +123,14 @@ def move_batch_to_device(fname, device='cpu'):
     with open(wdir + fname + '.pickle', 'wb') as file:
         pickle.dump(models, file)
 
+
 def load_batch_best(fname, device=None):
     """ Loads a batch of model fits and selects the best one
     Args:
         fname (str): File name
     """
     info, models = load_batch_fit(fname)
-    
+
     j = info.loglik.argmax()
 
     best_model = models[j]
@@ -135,6 +139,7 @@ def load_batch_best(fname, device=None):
 
     info_reduced = info.iloc[j]
     return info_reduced, best_model
+
 
 def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     """ Makes a color map from a *.lut file
@@ -145,18 +150,18 @@ def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
         _type_: _description_
     """
     color_info = pd.read_csv(fname, sep=' ', header=None)
-    color_map = np.zeros((color_info.shape[0]+1, 3))
+    color_map = np.zeros((color_info.shape[0] + 1, 3))
     color_map = color_info.iloc[:, 1:4].to_numpy()
     return color_map
 
 
-def plot_data_flat(data,atlas,
-                    cmap = None,
-                    dtype = 'label',
-                    cscale = None,
-                    labels = None,
-                    render='matplotlib',
-                    colorbar = False):
+def plot_data_flat(data, atlas,
+                   cmap=None,
+                   dtype='label',
+                   cscale=None,
+                   labels=None,
+                   render='matplotlib',
+                   colorbar=False):
     """ Maps data from an atlas space to a full volume and
     from there onto the surface - then plots it.
 
@@ -172,56 +177,57 @@ def plot_data_flat(data,atlas,
         ax: Axis / figure of plot
     """
     # Plot Data from a specific atlas space on the flatmap
-    suit_atlas, ainf = am.get_atlas(atlas,base_dir + '/Atlases')
+    suit_atlas, ainf = am.get_atlas(atlas, base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(data)
 
-
-    # Mapping labels directly by the mode 
-    if dtype =='label':
+    # Mapping labels directly by the mode
+    if dtype == 'label':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='mode',
-            space=ainf['normspace'],ignore_zeros=True)
+                                             space=ainf['normspace'], ignore_zeros=True)
         ax = suit.flatmap.plot(surf_data,
-                render=render,
-                cmap=cmap,
-                new_figure=False,
-                label_names = labels,
-                overlay_type='label',
-                colorbar= colorbar)
+                               render=render,
+                               cmap=cmap,
+                               new_figure=False,
+                               label_names=labels,
+                               overlay_type='label',
+                               colorbar=colorbar)
     # Plotting one series of functional data
-    elif dtype== 'func':
+    elif dtype == 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
                                              space=ainf['normspace'])
         ax = suit.flatmap.plot(surf_data,
-                render=render,
-                cmap=cmap,
-                cscale = cscale,
-                new_figure=False,
-                overlay_type='func',
-                colorbar= colorbar)
-    # Mapping probabilities on the flatmap and then 
+                               render=render,
+                               cmap=cmap,
+                               cscale=cscale,
+                               new_figure=False,
+                               overlay_type='func',
+                               colorbar=colorbar)
+    # Mapping probabilities on the flatmap and then
     # determining a winner from this (slightly better than label)
-    elif dtype== 'prob':
+    elif dtype == 'prob':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
-            space=ainf['normspace'])
-        label = np.argmax(surf_data,axis=1)+1
+                                             space=ainf['normspace'])
+        label = np.argmax(surf_data, axis=1) + 1
         ax = suit.flatmap.plot(label,
-                render=render,
-                cmap=cmap,
-                new_figure=False,
-                label_names = labels,
-                overlay_type='label',
-                colorbar= colorbar)
+                               render=render,
+                               cmap=cmap,
+                               new_figure=False,
+                               label_names=labels,
+                               overlay_type='label',
+                               colorbar=colorbar)
     else:
-        raise(NameError('Unknown data type'))
+        raise (NameError('Unknown data type'))
     return ax
 
-def plot_multi_flat(data,atlas,grid,
-                    cmap = None,
-                    dtype = 'label',
-                    cscale = None,
+
+def plot_multi_flat(data, atlas, grid,
+                    cmap=None,
+                    dtype='label',
+                    cscale=None,
                     titles=None,
                     colorbar=False,
-                    save_fig=True):
+                    save_fig=True,
+                    save_under=None):
     """Plots a grid of flatmaps with some data
 
     Args:
@@ -237,56 +243,61 @@ def plot_multi_flat(data,atlas,grid,
         n_subplots = data.shape[0]
     elif isinstance(data, list):
         n_subplots = len(data)
-    
+
     if not isinstance(cmap, list):
         cmap = [cmap] * n_subplots
 
     for i in np.arange(n_subplots):
-        plt.subplot(grid[0],grid[1],i+1)
-        plot_data_flat(data[i],atlas,
-                    cmap = cmap[i],
-                    dtype = dtype,
-                    cscale = cscale,
-                    render='matplotlib',
-                    colorbar = (i==0) & colorbar)
+        plt.subplot(grid[0], grid[1], i + 1)
+        plot_data_flat(data[i], atlas,
+                       cmap=cmap[i],
+                       dtype=dtype,
+                       cscale=cscale,
+                       render='matplotlib',
+                       colorbar=(i == 0) & colorbar)
         if titles is not None:
             plt.title(titles[i])
             if save_fig:
-                plt.savefig(f'rel_{titles[i]}.png', format='png')
+                fname = f'rel_{titles[i]}.png'
+                if save_under is not None:
+                    fname = save_under
+                plt.savefig(fname, format='png')
                 # plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
                 #             bbox_inches='tight', pad_inches=0)
 
-def hard_max(Prob):
-    K,P = Prob.shape
-    parcel = np.argmax(Prob,axis=0)
-    U = np.zeros((K,P))
-    U[parcel,np.arange(P)] = 1
-    return U 
 
-def plot_model_pmaps(Prob, atlas,sym=True, labels=None,subset=None,grid=None):
-    K,P = Prob.shape
+def hard_max(Prob):
+    K, P = Prob.shape
+    parcel = np.argmax(Prob, axis=0)
+    U = np.zeros((K, P))
+    U[parcel, np.arange(P)] = 1
+    return U
+
+
+def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None):
+    K, P = Prob.shape
     if not sym:
-        raise(NameError('only for symmetric models right now'))
+        raise (NameError('only for symmetric models right now'))
     else:
-        K = int(K/2)
-        PL = Prob[:K,:]
-        PR = Prob[K:,:]
+        K = int(K / 2)
+        PL = Prob[:K, :]
+        PR = Prob[K:, :]
         Prob = PL + PR
-        Prob[Prob>1]=1 # Exclude problems in the vermis
+        Prob[Prob > 1] = 1  # Exclude problems in the vermis
     if subset is None:
         subset = np.arange(K)
-    if grid is None: 
+    if grid is None:
         a = int(np.ceil(np.sqrt(len(subset))))
-        grid = (a,a)
-    plot_multi_flat(Prob[subset,:],atlas,grid,
-                    dtype = 'func',
-                    cscale = [0,0.2],
+        grid = (a, a)
+    plot_multi_flat(Prob[subset, :], atlas, grid,
+                    dtype='func',
+                    cscale=[0, 0.2],
                     titles=labels[subset],
                     colorbar=False,
                     save_fig=False)
 
 
-def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
+def plot_model_parcel(model_names, grid, cmap='tab20b', align=False, device=None):
     """  Load a bunch of model fits, selects the best from
     each of them and plots the flatmap of the parcellation
 
@@ -300,18 +311,18 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     models = []
 
     # Load models and produce titles
-    for i,mn in enumerate(model_names):
-        info,model = load_batch_best(mn, device=device)
+    for i, mn in enumerate(model_names):
+        info, model = load_batch_best(mn, device=device)
         models.append(model)
         # Split the name and build titles
-        fname = mn.split('/') # Get filename if directory is given
+        fname = mn.split('/')  # Get filename if directory is given
         split_mn = fname[-1].split('_')
         atlas = split_mn[2][6:]
         titles.append(split_mn[1] + ' ' + split_mn[3])
 
     # Align models if requested
     if align:
-        Prob = ev.align_models(models,in_place=False)
+        Prob = ev.align_models(models, in_place=False)
     else:
         Prob = ev.extract_marginal_prob(models)
 
@@ -321,12 +332,12 @@ def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
         else:
             Prob = Prob.numpy()
 
-    parc = np.argmax(Prob,axis=1)+1
+    parc = np.argmax(Prob, axis=1) + 1
 
+    plot_multi_flat(Prob, atlas, grid=grid,
+                    cmap=cmap, dtype='prob',
+                    titles=titles)
 
-    plot_multi_flat(Prob,atlas,grid=grid,
-                     cmap=cmap, dtype='prob',
-                     titles=titles)
 
 def _compute_var_cov(data, cond='all', mean_centering=True):
     """
@@ -346,7 +357,7 @@ def _compute_var_cov(data, cond='all', mean_centering=True):
                  var - the variance matrix of current subject data. shape [N * N]
     """
     if mean_centering:
-        data = data - pt.mean(data, dim=1, keepdim=True) # mean centering
+        data = data - pt.mean(data, dim=1, keepdim=True)  # mean centering
     else:
         data = data
 
@@ -360,11 +371,12 @@ def _compute_var_cov(data, cond='all', mean_centering=True):
                         " or the column indices of expected task conditions")
 
     k = data.shape[1]
-    cov = pt.matmul(data, data.T) / (k-1)
-    sd = data.std(dim=1).reshape(-1,1)  # standard deviation
+    cov = pt.matmul(data, data.T) / (k - 1)
+    sd = data.std(dim=1).reshape(-1, 1)  # standard deviation
     var = pt.matmul(sd, sd.T)
 
     return cov, var
+
 
 def compute_dist(coord, resolution=2):
     """
@@ -383,6 +395,7 @@ def compute_dist(coord, resolution=2):
     for i in range(3):
         D = D + (coord[:, i].reshape(-1, 1) - coord[:, i]) ** 2
     return pt.sqrt(D) * resolution
+
 
 def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
                  func=None, dist=None, weighting=True):
@@ -414,21 +427,24 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
     par = parcellation
     num_within, num_between, corr_within, corr_between = [], [], [], []
     for i in range(numBins):
-        inBin = pt.where((distance > i * binWidth) & (distance <= (i + 1) * binWidth))[0]
+        inBin = pt.where((distance > i * binWidth) &
+                         (distance <= (i + 1) * binWidth))[0]
 
         # lookup the row/col index of within and between vertices
         within = pt.where((par[row[inBin]] == par[col[inBin]]) == True)[0]
         between = pt.where((par[row[inBin]] == par[col[inBin]]) == False)[0]
 
         # retrieve and append the number of vertices for within/between in current bin
-        num_within.append(pt.tensor(within.numel(), dtype=pt.get_default_dtype()))
-        num_between.append(pt.tensor(between.numel(), dtype=pt.get_default_dtype()))
+        num_within.append(
+            pt.tensor(within.numel(), dtype=pt.get_default_dtype()))
+        num_between.append(
+            pt.tensor(between.numel(), dtype=pt.get_default_dtype()))
 
         # Compute and append averaged within- and between-parcel correlations in current bin
         this_corr_within = pt.nanmean(cov[row[inBin[within]], col[inBin[within]]]) \
-                           / pt.nanmean(var[row[inBin[within]], col[inBin[within]]])
+            / pt.nanmean(var[row[inBin[within]], col[inBin[within]]])
         this_corr_between = pt.nanmean(cov[row[inBin[between]], col[inBin[between]]]) \
-                            / pt.nanmean(var[row[inBin[between]], col[inBin[between]]])
+            / pt.nanmean(var[row[inBin[between]], col[inBin[between]]])
 
         corr_within.append(this_corr_within)
         corr_between.append(this_corr_between)
@@ -436,9 +452,10 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
         del inBin
 
     if weighting:
-        weight = 1/(1/pt.stack(num_within) + 1/pt.stack(num_between))
+        weight = 1 / (1 / pt.stack(num_within) + 1 / pt.stack(num_between))
         weight = weight / pt.sum(weight)
-        DCBC = pt.nansum(pt.multiply((pt.stack(corr_within) - pt.stack(corr_between)), weight))
+        DCBC = pt.nansum(pt.multiply(
+            (pt.stack(corr_within) - pt.stack(corr_between)), weight))
     else:
         DCBC = pt.nansum(pt.stack(corr_within) - pt.stack(corr_between))
         weight = pt.nan
@@ -455,4 +472,3 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
     }
 
     return D
-

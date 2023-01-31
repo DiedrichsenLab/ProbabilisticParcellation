@@ -19,6 +19,7 @@ import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
+import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
 import logging
 
@@ -208,23 +209,92 @@ def similarity_matrices(mname, sym=True):
     w_cos_sym, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
 
-    spatial_sym
     l = labels[1:K]
     return
 
 
-def get_highest_taskmaps(n_tasks, dataset):
-    colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
-    profile = pd.read_csv(f"{model_dir}/Atlases/{colour_file}", sep="\t")
+def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic', 'Demand'], save_task_maps=False):
+    """Plots taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
 
-    colour = profile[profile.condition == word].dataset_colour.iloc[-1]
+    Returns:
+        fig: task map plot
 
-    return colour
+    """
+    profile = pd.read_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+    atlas = mname.split('space-')[1].split('_')[0]
+    Prob, parcel, _, labels, cmap = analyze_parcel(mname, sym=True)
+    labels_sorted = sorted(labels)
+
+    for dataset in datasets:
+        # Select dataset
+        dataset = datasets[0]
+        profile_dataset = profile[profile.dataset == dataset]
+
+        # Get highest scoring task of this dataset
+        conditions = profile_dataset.condition
+        tasks = {}
+        for region in labels_sorted[1:]:
+            weights = profile_dataset[region]
+            conditions_weighted = [(con, w)
+                                   for con, w in sorted(zip(weights, conditions), reverse=True)]
+            high = conditions_weighted[:n_highest]
+            low = conditions_weighted[-n_lowest:]
+            tasks[region] = high + low
+            print(
+                f'\n\n\n{region}\nHighest: \t{[el[1] for el in high]}\n\t\t{[el[0] for el in high]}\n\nLowest: \t{[el[1] for el in low]}\n\t\t{[el[0] for el in low]}')
+
+        if save_task_maps:
+            # Get task maps
+            data, info, _ = ds.get_dataset(base_dir, dataset, atlas=atlas)
+            grid = (int(np.ceil((n_highest + n_lowest) / 2)), 2)
+            for region in tasks.keys():
+                task = tasks[region]
+                activity = np.full((len(task), data.shape[2]), np.nan)
+                for i, t in enumerate(task):
+                    task_name = t[1]
+                    activity[i, :] = np.nanmean(
+                        data[:, info.cond_name.tolist().index(task_name), :], axis=0)
+
+                titles = [
+                    f'{name} V: {np.round(weight,2)}' for weight, name in task]
+
+                cscale = [np.percentile(activity[np.where(~np.isnan(activity))], 5), np.percentile(
+                    activity[np.where(~np.isnan(activity))], 95)]
+                plot_multi_flat(activity, atlas, grid,
+                                cmap='hot',
+                                dtype='func',
+                                cscale=cscale,
+                                titles=titles,
+                                colorbar=False,
+                                save_fig=True,
+                                save_under=f'task_maps/{dataset}_{region}.png')
+
+    pass
+
+
+def save_taskmaps(mname):
+    """Saves taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
+        datasets:
+    """
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+
+    plt.figure(figsize=(7, 10))
+    plot_model_taskmaps(mname, n_highest=3, n_lowest=3)
+    plt.savefig(f'tmaps_01.png', format='png')
 
 
 if __name__ == "__main__":
+    # Save 3 highest and 2 lowest task maps
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    similarity_matrices(mname)
+    save_taskmaps(mname)
+
+    # similarity_matrices(mname)
     #
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # save_pmaps(mname)
