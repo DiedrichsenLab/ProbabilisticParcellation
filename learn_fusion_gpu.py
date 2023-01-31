@@ -246,7 +246,7 @@ def batch_fit(datasets, sess,
             tol=0.01,
             fit_arrangement=True,
             n_inits=n_inits,
-            first_iter=first_iter)
+            first_iter=first_iter, verbose=False)
         info.loglik.at[i] = ll[-1].cpu().numpy() # Convert to numpy
         m.clear()
 
@@ -330,6 +330,10 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         uniform_kappa = False
         join_sess = True
         join_sess_part = True
+    elif model_type == '06':
+        uniform_kappa = True
+        join_sess = True
+        join_sess_part = True
 
     # Generate a dataname from first two letters of each training data set
     dataname = ''.join(T.two_letter_code[set_ind])
@@ -387,95 +391,6 @@ def clear_models(K, model_type='04'):
                     print(f"cleared {fname}")
                 except:
                     print(f"skipping {fname}")
-
-
-def write_dlabel_cifti(data, atlas,
-                       labels=None,
-                       label_names=None,
-                       column_names=None,
-                       label_RGBA=None):
-    """Generates a label Cifti2Image from a numpy array
-
-    Args:
-        data (np.array):
-            num_vert x num_col data
-        atlas (obejct):
-            the cortical surface <atlasSurface> object
-        labels (list): Numerical values in data indicating the labels -
-            defaults to np.unique(data)
-        label_names (list):
-            List of strings for names for labels
-        column_names (list):
-            List of strings for names for columns
-        label_RGBA (list):
-            List of rgba vectors for labels
-    Returns:
-        gifti (GiftiImage): Label gifti image
-    """
-    if type(data) is pt.Tensor:
-        if pt.cuda.is_available() or pt.backends.mps.is_built():
-            data = data.cpu().numpy()
-        else:
-            data = data.numpy()
-
-    if data.ndim == 1:
-        # reshape to (1, num_vertices)
-        data = data.reshape(-1, 1)
-
-    num_verts, num_cols = data.shape
-    if labels is None:
-        labels = np.unique(data)
-    num_labels = len(labels)
-
-    # Create naming and coloring if not specified in varargin
-    # Make columnNames if empty
-    if column_names is None:
-        column_names = []
-        for i in range(num_cols):
-            column_names.append("col_{:02d}".format(i + 1))
-
-    # Determine color scale if empty
-    if label_RGBA is None:
-        label_RGBA = [(0.0, 0.0, 0.0, 0.0)]
-        if 0 in labels:
-            num_labels -= 1
-        hsv = plt.cm.get_cmap('hsv', num_labels)
-        color = hsv(np.linspace(0, 1, num_labels))
-        # Shuffle the order so that colors are more visible
-        color = color[np.random.permutation(num_labels)]
-        for i in range(num_labels):
-            label_RGBA.append((color[i][0],
-                               color[i][1],
-                               color[i][2],
-                               color[i][3]))
-
-    # Create label names from numerical values
-    if label_names is None:
-        label_names = ['???']
-        for i in labels:
-            if i == 0:
-                pass
-            else:
-                label_names.append("label-{:02d}".format(i))
-
-    assert len(label_RGBA) == len(label_names), \
-        "The number of parcel labels must match the length of colors!"
-    labelDict = []
-    for i, nam in enumerate(label_names):
-        labelDict.append((nam, label_RGBA[i]))
-
-    labelAxis = nb.cifti2.LabelAxis(column_names, dict(enumerate(labelDict)))
-    header = nb.Cifti2Header.from_axes((labelAxis, atlas.get_brain_model_axis()))
-    img = nb.Cifti2Image(dataobj=data.reshape(1, -1), header=header)
-
-    return img
-
-def save_cortex_cifti(fname):
-    info, model = load_batch_best(fname)
-    Prop = model.marginal_prob()
-    par = pt.argmax(Prop, dim=0) + 1
-    img = write_dlabel_cifti(par, am.get_atlas('fs32k', atlas_dir))
-    nb.save(img, model_dir + f'/Models/{fname}.dlabel.nii')
 
 
 def leave_one_out_fit(dataset=[0], model_type=['01'], K=10):
@@ -636,35 +551,34 @@ if __name__ == "__main__":
 
 
     ########## Reliability map
-    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
-    #                              voxel_wise=True)
-    # plt.figure(figsize=(25, 18))
-    # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
-    #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+                                 voxel_wise=True)
+    plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
+                    cscale=[-0.3, 0.7], colorbar=True, titles=sess)
 
     # ########## IBC selected sessions fusion fit ##########
-    # sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    # sess_2 = DataSetIBC(base_dir + '/IBC').sessions
-    # for s1 in sess_1:
-    #     sess_2.remove(s1)
-    #     for s2 in sess_2:
-    #         this_s1 = s1.split('-')[1]
-    #         this_s2 = s2.split('-')[1]
-    #         for k in [40, 68]:
-    #             for t in ['03','04']:
-    #                 wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
-    #                 fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
-    #                 if not os.path.isfile(fname):
-    #                     fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-    #                     print(f'-Done type {t}, K={k}, IBC session {s1} and {s2} fusion.')
+    from itertools import combinations
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for (s1, s2) in reversed(list(combinations(sess, 2))):
+            this_s1 = s1.split('-')[1]
+            this_s2 = s2.split('-')[1]
+            for k in [17]:
+                for t in ['06']:
+                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                    if not os.path.isfile(fname):
+                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                        print(f'-Done type {t}, K={k}, IBC session {this_s1} and {this_s2} fusion.')
 
     ########## IBC all sessions fit ##########
-    # fit_indv_sess(3, model_type='03', K=40)
+    # for k in [17]:
+    #     fit_indv_sess(3, model_type='06', K=k)
     # fit_indv_sess(3, model_type='04', K=40)
     # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
 
     ########## IBC all fit ##########
-    # fit_all([3], 34, model_type='04', repeats=100, sym_type=[0])
+    # for k in [10,17,20,34,40,68,100]:
+    #     fit_all([3], k, model_type='01', repeats=100, sym_type=['asym'])
 
 
     ########## Leave-one-oout ##########
@@ -693,41 +607,41 @@ if __name__ == "__main__":
     # plt.show()
 
     
-    # ########## Higher K ##########
-    space = 'MNISymC3' # Set atlas space
-    # space = 'MNISymC2' # Set atlas space
-    msym = 'sym' # Set model symmetry
-    # ks = [10, 20, 34]
-    ks = [14, 28, 48, 56, 60]
-    # ks = [34, 40, 68, 80]
-    # ks=[80]
-
-
-    # # -- Build dataset list --
-    n_dsets = 7 # without HCP
-    alldatasets = np.arange(n_dsets).tolist()
-    loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    individual_datasets = [ [d] for d in alldatasets ]
-
-    dataset_list = []
-    dataset_list.extend([alldatasets])
-    dataset_list.extend(individual_datasets)
-    # dataset_list.extend(loo_datasets)
-
-
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    for t in ['03']:
-        for datasets in dataset_list:
-            for k in ks:
-                datanames = ''.join(T.two_letter_code[datasets])
-                wdir = model_dir + f'/Models/Models_{t}'
-                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
-
-                if not Path(wdir+fname).exists():
-                    print(f'fitting model {t} with K={k} as {fname}...')
-                    fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym], space=space)
-                else:
-                    print(f'model {t} with K={k} already fitted as {fname}')
+    # # ########## Higher K ##########
+    # space = 'MNISymC3' # Set atlas space
+    # # space = 'MNISymC2' # Set atlas space
+    # msym = 'sym' # Set model symmetry
+    # # ks = [10, 20, 34]
+    # ks = [14, 28, 48, 56, 60]
+    # # ks = [34, 40, 68, 80]
+    # # ks=[80]
+    #
+    #
+    # # # -- Build dataset list --
+    # n_dsets = 7 # without HCP
+    # alldatasets = np.arange(n_dsets).tolist()
+    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
+    # individual_datasets = [ [d] for d in alldatasets ]
+    #
+    # dataset_list = []
+    # dataset_list.extend([alldatasets])
+    # dataset_list.extend(individual_datasets)
+    # # dataset_list.extend(loo_datasets)
+    #
+    #
+    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    # for t in ['03']:
+    #     for datasets in dataset_list:
+    #         for k in ks:
+    #             datanames = ''.join(T.two_letter_code[datasets])
+    #             wdir = model_dir + f'/Models/Models_{t}'
+    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+    #
+    #             if not Path(wdir+fname).exists():
+    #                 print(f'fitting model {t} with K={k} as {fname}...')
+    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym], space=space)
+    #             else:
+    #                 print(f'model {t} with K={k} already fitted as {fname}')
 
     # # # -- Build dataset list with HCP--
     # n_dsets = 8 # with HCP

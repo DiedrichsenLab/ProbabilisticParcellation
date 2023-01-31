@@ -42,7 +42,7 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Do Clustering:
     if clustering == 'agglomative':
-        labels, clusters, _ = cl.agglomative_clustering(
+        labels, clusters, leaves = cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
@@ -68,15 +68,17 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     m, regions, colors = sc.get_target_points(atlas, parcel)
     cmap = sc.colormap_mds(W, target=(m, regions, colors),
                            clusters=clusters, gamma=0)
+    sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
         cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
-    sc.plot_colorspace(cmap(np.arange(model.K)))
+    plt.figure(figsize=(5, 10))
+    cl.plot_parcel_size(Prob, cmap, labels, wta=True)
 
     # Plot the parcellation
-    if plot is True:
+    if plot:
         ax = plot_data_flat(Prob, atlas.name, cmap=cmap,
                             dtype='prob',
                             labels=labels,
@@ -84,16 +86,6 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
-
-
-def make_sfn_atlas():
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
-    # Quick hack - hard-code the labels:
-    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L', 'I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L',
-                      'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
-    ea.export_map(Prob, atlas, cmap, labels, base_dir +
-                  '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    ea.resample_atlas('atl-NettekovenSym34')
 
 
 def merge_clusters(ks, space='MNISymC3'):
@@ -185,14 +177,59 @@ def compare_levels():
         pass
 
 
+def save_pmaps(mname):
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+    plt.figure(figsize=(7, 10))
+    plot_model_pmaps(Prob, atlas.name,
+                     labels=labels[1:],
+                     subset=[30, 31, 32, 33, 33, 33],
+                     grid=(3, 2))
+    plt.savefig(f'pmaps_01.png', format='png')
+
+
+def similarity_matrices(mname, sym=True):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info, model = load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.arrange.marginal_prob())
+    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+                                      fileparts[-1] + '.lut')
+    K, P = Prob.shape
+    if sym:
+        K = int(K / 2)
+        Prob = Prob[:K, :]
+    labels = labels[1:K + 1]
+
+    # Get parcel similarity:
+    w_cos_sym, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
+    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
+
+    spatial_sym
+    l = labels[1:K]
+    return
+
+
 if __name__ == "__main__":
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    similarity_matrices(mname)
+    #
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # save_pmaps(mname)
+
     # Merge C2 models
-    # space = 'MNISymC2'
-    # ks = [48, 60]
-    # merged_models = merge_clusters(ks, space)
+    # space='MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
+    # cl.guided_clustering(mname_fine, mname_coarse,'cosang')
+    # pass
+
     # export_merged(merged_models)
 
-    export_merged()
+    # export_merged()
 
     # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
     # sc.read_cmap(cmap_file)
@@ -217,10 +254,12 @@ if __name__ == "__main__":
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
 
     # # Show MNISymC2 Parcellation
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
-    output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    ea.export_map(Prob, atlas.name, cmap, labels, output)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_meth-cosang'
+
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
+
+    # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    # ea.export_map(Prob, atlas.name, cmap, labels, output)
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
