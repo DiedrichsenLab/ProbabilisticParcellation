@@ -42,7 +42,7 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Do Clustering:
     if clustering == 'agglomative':
-        labels, clusters, _ = cl.agglomative_clustering(
+        labels, clusters, leaves = cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
@@ -75,13 +75,13 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     cl.plot_parcel_size(Prob,cmap,labels,wta=True)
 
     # Plot the parcellation
-    if plot is True:
+    if plot:
         ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
                         dtype='prob',
                         labels=labels,
                         render='plotly')
         ax.show()
-
+    
     return Prob, parcel, atlas, labels, cmap
 
 def make_sfn_atlas():
@@ -180,12 +180,52 @@ def compare_levels():
         pass
 
 
+def save_pmaps(mname):
+    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    plt.figure(figsize=(7,10))
+    plot_model_pmaps(Prob,atlas.name,
+            labels=labels[1:],
+            subset=[30,31,32,33,33,33],
+            grid=(3,2))
+    plt.savefig(f'pmaps_01.png', format='png')
+
+def similarity_matrices(mname,sym=True):
+     # Get model and atlas. 
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info,model = load_batch_best(mname)
+    atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
+
+    # Get winner-take all parcels 
+    Prob = np.array(model.arrange.marginal_prob())
+    index,cmap,labels = nt.read_lut(model_dir + '/Atlases/' + 
+                                    fileparts[-1] + '.lut')
+    K,P = Prob.shape
+    if sym:
+        K=int(K/2)
+        Prob=Prob[:K,:]
+    labels=labels[1:K+1]
+
+    # Get parcel similarity:
+    w_cos_sym,_,_ = cl.parcel_similarity(model,plot=False,sym=sym)
+    P = Prob / np.sqrt(np.sum(Prob**2,axis=1).reshape(-1,1))
+    
+    spatial_sym     
+    l = labels[1:K]
+    return 
+
 if __name__ == "__main__":
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    similarity_matrices(mname)
+    # 
+    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
+    # save_pmaps(mname)    
+
     # Merge C2 models
-    space='MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
-    cl.guided_clustering(mname_fine, mname_coarse,'cosang')
+    # space='MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
+    # cl.guided_clustering(mname_fine, mname_coarse,'cosang')
     # pass
     
     # export_merged(merged_models)
@@ -219,12 +259,11 @@ if __name__ == "__main__":
   
 
     # # Show MNISymC2 Parcellation
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_meth-cosang'
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_meth-cosang'
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
+
+# output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
     # ea.export_map(Prob, atlas.name, cmap, labels, output)
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'

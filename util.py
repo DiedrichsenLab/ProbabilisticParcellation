@@ -256,6 +256,36 @@ def plot_multi_flat(data,atlas,grid,
                 # plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
                 #             bbox_inches='tight', pad_inches=0)
 
+def hard_max(Prob):
+    K,P = Prob.shape
+    parcel = np.argmax(Prob,axis=0)
+    U = np.zeros((K,P))
+    U[parcel,np.arange(P)] = 1
+    return U 
+
+def plot_model_pmaps(Prob, atlas,sym=True, labels=None,subset=None,grid=None):
+    K,P = Prob.shape
+    if not sym:
+        raise(NameError('only for symmetric models right now'))
+    else:
+        K = int(K/2)
+        PL = Prob[:K,:]
+        PR = Prob[K:,:]
+        Prob = PL + PR
+        Prob[Prob>1]=1 # Exclude problems in the vermis
+    if subset is None:
+        subset = np.arange(K)
+    if grid is None: 
+        a = int(np.ceil(np.sqrt(len(subset))))
+        grid = (a,a)
+    plot_multi_flat(Prob[subset,:],atlas,grid,
+                    dtype = 'func',
+                    cscale = [0,0.2],
+                    titles=labels[subset],
+                    colorbar=False,
+                    save_fig=False)
+
+
 def plot_model_parcel(model_names,grid,cmap='tab20b',align=False,device=None):
     """  Load a bunch of model fits, selects the best from
     each of them and plots the flatmap of the parcellation
