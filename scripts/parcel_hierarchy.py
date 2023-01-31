@@ -213,6 +213,15 @@ def similarity_matrices(mname, sym=True):
     return
 
 
+def get_highest_taskmaps(n_tasks, dataset):
+    colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
+    profile = pd.read_csv(f"{model_dir}/Atlases/{colour_file}", sep="\t")
+
+    colour = profile[profile.condition == word].dataset_colour.iloc[-1]
+
+    return colour
+
+
 if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     similarity_matrices(mname)

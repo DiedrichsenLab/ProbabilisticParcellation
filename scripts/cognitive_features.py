@@ -32,20 +32,31 @@ def inspect_cognitive_tags():
     )
 
     # Load IBC feature tags
+    # ibc_features = pd.read_csv(
+    #     f'{model_dir}/../../ibc/all_contrasts_corr.csv', sep=","
+    # )
     ibc_features = pd.read_csv(
-        f'{model_dir}/../../ibc/all_contrasts_corr.csv', sep=","
-    )
-
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/ibc_cognitive_features.csv')
     # --- Inspect IBC cognitive feature tags ---
 
     # Find ibc conditions that are used for the fusion atlas
     ibc_profile = profile[profile.dataset == 'IBC'].drop_duplicates(subset=[
                                                                     'condition'])
     ibc = pd.DataFrame(columns=ibc_features.columns)
-    for cond in ibc_profile.condition:
-        match = ibc_features['contrast'].str.match(cond.replace('-', '_'))
-        row = ibc_features[match == True]
-        ibc = ibc.append(other=row, ignore_index=True)
+    ibc_profile['tags'] = None
+    column = ibc_profile.columns.tolist().index('tags')
+    for c, cond in enumerate(ibc_profile.condition):
+        fusion_condition = cond.replace('-', '_')
+        match = ibc_features['contrast'].str.match(fusion_condition)
+        if len(ibc_features[match == True].contrast) > 2:
+            # find exact match
+            for ibc_condition in ibc_features[match == True].contrast.tolist():
+                if fusion_condition == ibc_condition:
+                    row = ibc_features[ibc_features.contrast == ibc_condition]
+                    ibc = ibc.append(other=row, ignore_index=True)
+                    ibc_profile.at[c, column] = str(row['tags'].tolist()[0])
+                    print(ibc_profile.iloc[c]['tags'])
+    ibc_profile[['dataset', 'session', 'condition', 'tags']].iloc[30:]
 
     ibc = ibc.drop_duplicates(subset=['contrast'])
 
@@ -57,7 +68,7 @@ def inspect_cognitive_tags():
             tag = tag.split(']')[0] + ']'
             tags.extend(eval(tag.split("]")[0] + ']'))
 
-    # ibc.to_csv(f'{model_dir}/../../ibc/ibc_features.tsv', sep="\t", index=None)
+    # ibc.to_csv('/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/ibc_features.tsv', sep="\t", index=None)
 
     # Tag frequency
     unique_tags = set(tags)
@@ -120,7 +131,7 @@ def get_unique_tags():
     mdtb_tags = pd.read_csv(
         '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/mdtb_ibc_feature_map.csv')
     ibc_tags = pd.read_csv(
-        f'{model_dir}/../../ibc/ibc_features.tsv', sep="\t")
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/ibc_features.tsv', sep="\t")
 
     tags_ibc = []
     for t, tag in enumerate(ibc_tags.tags):
@@ -159,7 +170,7 @@ def get_missing_tags():
     mdtb_tags = pd.read_csv(
         '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/mdtb_ibc_feature_map.csv')
     ibc_tags = pd.read_csv(
-        f'{model_dir}/../../ibc/ibc_features.tsv', sep="\t")
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/ibc_features.tsv', sep="\t")
     # Ensure that all ibc conditions are in the ibc feature tag list
     atlas = 'MNISymC2'
     fine_model = f'/Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68'
@@ -207,14 +218,16 @@ def get_unique_conditions():
 
     pass
 
+    pass
+
 
 if __name__ == "__main__":
 
-    # inspect_cognitive_tags()
+    inspect_cognitive_tags()
 
     # Load IBC feature tags
     ibc_features = pd.read_csv(
         f'{model_dir}/../../ibc/all_contrasts_corr.csv', sep=","
     )
     # get_unique_conditions()
-    get_unique_tags()
+    # get_unique_tags()
