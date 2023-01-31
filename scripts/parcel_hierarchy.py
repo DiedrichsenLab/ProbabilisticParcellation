@@ -289,10 +289,75 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
+def save_mixed_clustering(mname_fine, mname_coarse, method):
+    """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
+
+    Args:
+        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
+
+    Returns:
+        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        mname_merged:   Name of merged model
+        mapping:        Mapping of fine parcels to coarse parcels.
+
+    """
+    # -- Import models --
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo, fine_model = load_batch_best(mname_fine)
+    if split_mn[0] == 'sym':
+        sym = True
+    else:
+        sym = False
+
+    # -- Cluster fine model --
+    print(
+        f'\n--- Assigning {mname_fine.split("/")[1]} to {mname_coarse.split("/")[1]} ---\n\n Fine Model: \t\t{finfo.K} Prob Parcels \n Coarse Model: \t\t{cinfo.K} Prob Parcels')
+
+    # Get mapping between fine parcels and coarse parcels
+    mapping, mapping_all = guided_clustering(mname_fine, mname_coarse, method)
+
+    # -- Merge model --
+    merged_model = merge_model(fine_model, mapping)
+
+    # Make new info
+    new_info = deepcopy(finfo)
+    new_info['K_coarse'] = int(cinfo.K)
+    new_info['model_type'] = mname_fine.split('/')[0]
+    new_info['K_original'] = int(new_info.K)
+    if sym:
+        new_info['K'] = int(len(np.unique(mapping)) * 2)
+    else:
+        new_info['K'] = int(len(np.unique(mapping)))
+
+    # Refit reduced model
+    new_model, new_info = lf.refit_model(merged_model, new_info)
+
+    # -- Save model --
+    # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
+    mname_merged = f'{mname_fine}_Kclus-{int(new_info.K_coarse)}_meth-{method}'
+
+    # save new model
+    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+        pickle.dump([new_model], file)
+
+    # save new info
+    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+                    sep='\t', index=False)
+
+    print(
+        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+
+    return new_model, mname_merged
+
+
 if __name__ == "__main__":
     # Save 3 highest and 2 lowest task maps
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     save_taskmaps(mname)
+
+    # Merge functionally and spatially clustered scree parcels
 
     # similarity_matrices(mname)
     #
