@@ -207,7 +207,7 @@ def similarity_matrices(mname,sym=True):
     labels=np.array(labels[1:K+1])
 
     # Get parcel similarity:
-    w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False,sym=sym)
+    w_cos_sim,cos_sim,_ = cl.parcel_similarity(model,plot=False,sym=sym)
     P = Prob / np.sqrt(np.sum(Prob**2,axis=1).reshape(-1,1))
     
     spatial_sim = P @ P.T
@@ -226,8 +226,10 @@ def query_similarity(mname,label):
 
 
 if __name__ == "__main__":
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # D = 
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    similarity_matrices(mname)
+
+    D = query_similarity(mname,'C1L')
     # 
     # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
     # save_pmaps(mname)    
@@ -235,10 +237,9 @@ if __name__ == "__main__":
     # Merge C2 models
     space='MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
+    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-20'
     index,cmap,labels = nt.read_lut(model_dir + '/Atlases/' + 
                                     f'sym_MdPoNiIbWmDeSo_space-{space}_K-68.lut')
-
     map,_ = cl.guided_clustering(mname_fine, mname_coarse,'cosang',labels[1:35])
     # pass
     

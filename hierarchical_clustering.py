@@ -24,6 +24,8 @@ import sys
 import pickle
 
 from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
+
 
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import torch as pt
@@ -202,7 +204,7 @@ def draw_cmap(ax,cmap,leaves,sym):
 def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info,model = load_batch_best(mname)
+    info,model = ut.load_batch_best(mname)
 
     # Get winner take-all
     Prob = np.array(model.marginal_prob())
@@ -264,9 +266,10 @@ def plot_parcel_size(Prob,cmap,labels,wta=True):
 
 def plot_parcel_mapping(fine_prob,coarse_prob,mapping,fine_labels=None):
     # get new probabilities
+    ind = np.argsort(mapping)
+    fine_prob=fine_prob[ind,:]
+    mapping = mapping[ind]
     if not fine_labels is None:
-        ind = np.argsort(fine_labels)
-        fine_prob=fine_prob[ind,:]
         fine_labels = np.array(fine_labels)[ind]
 
 
@@ -282,8 +285,8 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping,fine_labels=None):
         sumP.append(a)
         sumV.append(b)
 
-    fig = plt.figure(figsize=(10,10))
-    gs = fig.add_gridspec((3)
+    fig = plt.figure(figsize=(20,8))
+    gs = fig.add_gridspec(3)
     axs = gs.subplots(sharey=True)
     for i in range(3):
         K=len(sumP[i])
@@ -298,6 +301,7 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping,fine_labels=None):
         axs[1].add_artist(con)
     pass 
     if not fine_labels is None:
+        axs[0].set_xticks(np.arange(K1))
         axs[0].set_xticklabels(fine_labels)
 
 def guided_clustering(mname_fine, mname_coarse,method,fine_labels=None):
@@ -315,12 +319,12 @@ def guided_clustering(mname_fine, mname_coarse,method,fine_labels=None):
     # Import fine model
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    _, fine_model = load_batch_best(mname_fine)
+    _, fine_model = ut.load_batch_best(mname_fine)
 
     # Import coarse model
     fileparts = mname_coarse.split('/')
     split_mn = fileparts[-1].split('_')
-    _, coarse_model = load_batch_best(mname_coarse)
+    _, coarse_model = ut.load_batch_best(mname_coarse)
 
     # Get winner take all assignment for fine model
     fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
@@ -493,7 +497,7 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     # Import fine model
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    finfo, fine_model = load_batch_best(mname_fine)
+    finfo, fine_model = ut.load_batch_best(mname_fine)
     if split_mn[0] == 'sym':
         sym = True
     else:
@@ -502,7 +506,7 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     # Import coarse model
     fileparts = mname_coarse.split('/')
     split_mn = fileparts[-1].split('_')
-    cinfo, _ = load_batch_best(mname_coarse)
+    cinfo, _ = ut.load_batch_best(mname_coarse)
 
     # -- Cluster fine model --
     print(
