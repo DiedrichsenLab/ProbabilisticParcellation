@@ -5,7 +5,7 @@
 Created on 11/17/2022 at 2:16 PM
 Author: dzhi, jdiedrichsen
 """
-from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
 from time import gmtime
 from pathlib import Path
 import pandas as pd
@@ -70,7 +70,7 @@ def build_data_list(datasets,
     sub = 0
     # Run over datasets get data + design
     for i in range(n_sets):
-        dat, info, ds = get_dataset(base_dir, datasets[i],
+        dat, info, ds = get_dataset(ut.base_dir, datasets[i],
                                     atlas=atlas,
                                     sess=sess[i],
                                     type=type[i])
@@ -291,7 +291,7 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=['asym', 'sym'], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     datasets = T.name.to_numpy()
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
@@ -306,7 +306,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
     if space is None:
         space = 'MNISymC3'
 
-    atlas, _ = am.get_atlas(space, atlas_dir)
+    atlas, _ = am.get_atlas(space, ut.atlas_dir)
 
     # Provide different setttings for the different model types
     join_sess_part = False
@@ -363,14 +363,14 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
                                  weighting=weighting)
 
         # Save the fits and information
-        wdir = model_dir + f'/Models/Models_{model_type}'
+        wdir = ut.model_dir + f'/Models/Models_{model_type}'
         fname = f'/{name}_space-{atlas.name}_K-{K}'
 
         if this_sess is not None:
             return wdir, fname, info, models
 
         if subj_list is not None:
-            wdir = model_dir + f'/Models/Models_{model_type}/leaveNout'
+            wdir = ut.model_dir + f'/Models/Models_{model_type}/leaveNout'
             fname = f'/{name}_space-{atlas.name}_K-{K}'
             return wdir, fname, info, models
 
@@ -389,7 +389,7 @@ def clear_models(K, model_type='04'):
                       'MdPoNiIbHc_10']:  # Md','Po','Ni','Hc','Ib','MdPoNiIb','MdPoNiIbHc','MdPoNiIbHc_00']:
                 fname = f"Models_{model_type}/{t}_{s}_space-MNISymC3_K-{k}"
                 try:
-                    clear_batch(fname)
+                    ut.clear_batch(fname)
                     print(f"cleared {fname}")
                 except:
                     print(f"skipping {fname}")
@@ -419,10 +419,10 @@ def fit_indv_sess(indx=3, model_type='01', K=10):
     datasets = np.array(['MDTB', 'Pontine', 'Nishimoto',
                          'IBC', 'WMFS', 'Demand', 'Somatotopic'],
                         dtype=object)
-    _, _, my_dataset = get_dataset(base_dir, datasets[indx])
+    _, _, my_dataset = get_dataset(ut.base_dir, datasets[indx])
     sess = my_dataset.sessions
     for indv_sess in sess:
-        ibc_dir = model_dir + f'/Models/Models_{model_type}'
+        ibc_dir = ut.model_dir + f'/Models/Models_{model_type}'
         nam = f'/asym_Ib_space-MNISymC3_K-{K}_{indv_sess}'
 
         if not Path(ibc_dir + nam + '.tsv').exists():
@@ -440,7 +440,7 @@ def fit_indv_sess(indx=3, model_type='01', K=10):
 
 
 def fit_two_IBC_sessions(K=10, sess1='clips4', sess2='rsvplanguage', model_type='04'):
-    ibc_dir = model_dir + f'/Models/Models_{model_type}/IBC_sessFusion'
+    ibc_dir = ut.model_dir + f'/Models/Models_{model_type}/IBC_sessFusion'
     nam = f'/asym_Ib_space-MNISymC3_K-{K}_ses-{sess1}+{sess2}'
 
     if not Path(ibc_dir + nam + '.tsv').exists():
@@ -462,7 +462,7 @@ def fit_all_datasets(space='MNISymC2',
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
 
-    T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
@@ -470,7 +470,7 @@ def fit_all_datasets(space='MNISymC2',
         for k in K:
             for t in ['03', '04']:
                 datanames = ''.join(T.two_letter_code[datasets])
-                wdir = model_dir + f'/Models'
+                wdir = ut.model_dir + f'/Models'
                 fname = f'/Models_{t}/{msym}_{datanames}_space-{space}_K-{k}'
 
                 # inf, m = load_batch_fit(fname)
@@ -558,7 +558,7 @@ if __name__ == "__main__":
     #         sym_type=['sym'], space='MNISymC2')
 
     # Reliability map
-    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
+    rel, sess = reliability_maps(ut.base_dir, 'IBC', subtract_mean=False,
                                  voxel_wise=True)
     plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
                     cscale=[-0.3, 0.7], colorbar=True, titles=sess)
@@ -571,7 +571,7 @@ if __name__ == "__main__":
         this_s2 = s2.split('-')[1]
         for k in [17]:
             for t in ['06']:
-                wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                wdir = ut.model_dir + f'/Models/Models_{t}/IBC_sessFusion'
                 fname = wdir + \
                     f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
                 if not os.path.isfile(fname):
@@ -595,7 +595,7 @@ if __name__ == "__main__":
 
     ########## Plot the flatmap results ##########
     # # Read the MDTB colors
-    # color_file = atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
+    # color_file = ut.atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
     # color_info = pd.read_csv(color_file, sep=' ', header=None)
     # MDTBcolors = color_info.iloc[:, 1:4].to_numpy()
     #
@@ -642,7 +642,7 @@ if __name__ == "__main__":
     #     for datasets in dataset_list:
     #         for k in ks:
     #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = model_dir + f'/Models/Models_{t}'
+    #             wdir = ut.model_dir + f'/Models/Models_{t}'
     #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
     #
     #             if not Path(wdir+fname).exists():
@@ -668,7 +668,7 @@ if __name__ == "__main__":
     #         for k in ks:
 
     #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = model_dir + f'/Models/Models_{t}'
+    #             wdir = ut.model_dir + f'/Models/Models_{t}'
     #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
 
     #             if not Path(wdir+fname).exists():

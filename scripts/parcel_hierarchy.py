@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from copy import deepcopy
-from ProbabilisticParcellation.set_globals import *
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
@@ -185,7 +184,7 @@ def compare_levels():
 
 def save_pmaps(Prob,labels):
     plt.figure(figsize=(7, 10))
-    subset = [0,1,2,3,4,5]
+    subset = [6,7,8,9,10,11]
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
                      subset=subset,
@@ -308,7 +307,9 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
-def mixed_clustering(mname_fine, fine_labels=None):
+def mixed_clustering(mname_fine, 
+                        fine_labels=None,
+                        f_assignment='mixed_assignment_68_18.csv'):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
     specified in mixed_assignment.csv.
 
@@ -330,10 +331,10 @@ def mixed_clustering(mname_fine, fine_labels=None):
 
     # Get mapping
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-                                      f'sym_MdPoNiIbWmDeSo_space-{space}_K-68.lut')
+                                      f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
 
     mixed_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/mixed_assignment.csv')
+        model_dir + '/Atlases/' + '/' + f_assignment)
 
     assignment = dict(zip(mixed_assignment.parcel_fine.tolist(),
                           mixed_assignment.parcel_assigned_idx.tolist()))
@@ -422,20 +423,20 @@ def save_mixed_clustering(mname_fine, method='mixed'):
 
 if __name__ == "__main__":
     # Save 3 highest and 2 lowest task maps
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # D = query_similarity(mname, 'B5L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    save_mixed_clustering(mname_fine, method='mixed')
+    # space = 'MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # save_mixed_clustering(mname_fine, method='mixed')
 
-    # mapping, labels = mixed_clustering(mname_fine)
+    mapping, labels = mixed_clustering(mname)
 
-    # mname_clustered = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
-    # Prob, parcel, atlas, labels, cmap = analyze_parcel(
-    #     mname_clustered, sym=True,labels=labels)
-    # save_pmaps(Prob,labels)
+    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
+    save_pmaps(Prob,labels)
 
     # similarity_matrices(mname)
     #
