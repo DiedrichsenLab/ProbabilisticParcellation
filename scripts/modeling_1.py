@@ -242,14 +242,14 @@ def result_1_plot_flatmap(Us, sub=0, cmap='tab20', save_folder=None):
 
 
 if __name__ == "__main__":
-    # for t in ['03']:
-    #     for k in [17]:
-    #         model_type = f'Models_{t}'
-    #         model_name = f'asym_Md_space-MNISymC3_K-{k}'
-    #         fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
-    #         # D, Us = result_1_eval(model_type=model_type, model_name=model_name, oname=fname)
-    #
-    # result_1_plot_curve(fname, oname=model_type + f'_{model_name}.pdf', save=True)
+    for t in ['03']:
+        for k in [17]:
+            model_type = f'Models_{t}'
+            model_name = f'asym_Md_space-MNISymC3_K-{k}'
+            fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
+            # D, Us = result_1_eval(model_type=model_type, model_name=model_name, oname=fname)
+
+    result_1_plot_curve(fname, oname=model_type + f'_{model_name}.pdf', save=True)
 
     ########## Making color map ##########
     D, Us = result_1_eval(model_type='Models_03', model_name='asym_Md_space-MNISymC3_K-17',
