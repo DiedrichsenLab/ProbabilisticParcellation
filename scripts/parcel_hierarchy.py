@@ -184,7 +184,7 @@ def compare_levels():
 
 def save_pmaps(Prob,labels):
     plt.figure(figsize=(7, 10))
-    subset = [6,7,8,9,10,11]
+    subset = [12,13,14,15,16,17]
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
                      subset=subset,
@@ -309,7 +309,7 @@ def save_taskmaps(mname):
 
 def mixed_clustering(mname_fine, 
                         fine_labels=None,
-                        f_assignment='mixed_assignment_68_18.csv'):
+                        f_assignment='mixed_assignment_68_17.csv'):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
     specified in mixed_assignment.csv.
 
@@ -362,7 +362,7 @@ def mixed_clustering(mname_fine,
     return fine_coarse_mapping,labels
 
 
-def save_mixed_clustering(mname_fine, method='mixed'):
+def save_mixed_clustering(mname_fine, method='mixed',mname_new=None):
     """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
 
     Args:
@@ -405,36 +405,37 @@ def save_mixed_clustering(mname_fine, method='mixed'):
 
     # -- Save model --
     # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
-    mname_merged = f'{mname_fine}_meth-{method}'
+    if mname_new is None:
+        mname_new = f'{mname_fine}_meth-{method}'
 
     # save new model
-    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+    with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+    new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
                     sep='\t', index=False)
 
     print(
-        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+        f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
 
-    return new_model, mname_merged
+    return new_model, mname_new
 
 
 if __name__ == "__main__":
     # Save 3 highest and 2 lowest task maps
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # D = query_similarity(mname, 'B5L')
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # D = query_similarity(mname, 'C13L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # save_mixed_clustering(mname_fine, method='mixed')
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-34_meth-mixed'
+    save_mixed_clustering(mname_fine, method='mixed',mname_new=mname_new)
 
     mapping, labels = mixed_clustering(mname)
 
-    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
     Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
     save_pmaps(Prob,labels)
 
