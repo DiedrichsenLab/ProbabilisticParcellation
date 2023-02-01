@@ -1,4 +1,5 @@
 import torch as pt
+from pathlib import Path
 
 pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
@@ -23,4 +24,4 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
+    raise (NameError('Could not find base_dir'))
