@@ -306,11 +306,11 @@ def save_taskmaps(mname):
 
 
 def mixed_clustering(mname_fine, fine_labels=None):
-    """Maps parcels of a fine parcellation to parcels of a coarse parcellation guided by functional fusion model.
+    """ Maps parcels of a parcellation using a hand-coded merging of parcels
+    specified in mixed_assignment.csv.
 
     Args:
-        fine_probabilities: Probabilstic parcellation of a fine model (fine parcellation)
-        coarse_probabilities: Probabilstic parcellation of a coarse model (coarse parcellation)
+        mname_fine: Based parcellation map
 
     Returns:
         fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
@@ -337,7 +337,7 @@ def mixed_clustering(mname_fine, fine_labels=None):
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
     left_labels = int((len(labels) - 1) / 2)
-    labels_hem = labels[1:left_labels]
+    labels_hem = labels[1:left_labels+1] 
     labels_hem = [label.strip('L') for label in labels_hem]
     for parcel_idx, parcel_label in enumerate(labels_hem):
         fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
@@ -417,9 +417,9 @@ if __name__ == "__main__":
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # save_mixed_clustering(mname_fine, method='mixed')
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    save_mixed_clustering(mname_fine, method='mixed')
 
     mname_clustered = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
