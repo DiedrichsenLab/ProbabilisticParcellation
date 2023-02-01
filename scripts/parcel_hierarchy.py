@@ -27,7 +27,7 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True,labels=None):
 
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -44,11 +44,11 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Do Clustering:
     if clustering == 'agglomative':
-        labels, clusters, leaves = cl.agglomative_clustering(
+        labels_new, clusters, leaves = cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
-            labels, clusters, _ = cl.agglomative_clustering(
+            labels_new, clusters, _ = cl.agglomative_clustering(
                 w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
             logging.warning(
                 f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
@@ -72,10 +72,14 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
                            clusters=clusters, gamma=0)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
+
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
-        cl.agglomative_clustering(
-            w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
+        if labels is None:
+            labels = labels_new
+            cl.agglomative_clustering(
+                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
+
     plt.figure(figsize=(5, 10))
     cl.plot_parcel_size(Prob, cmap, labels, wta=True)
 
@@ -179,15 +183,14 @@ def compare_levels():
         pass
 
 
-def save_pmaps(mname):
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+def save_pmaps(Prob,labels):
     plt.figure(figsize=(7, 10))
-    # subset = [30, 31, 32, 33, 33, 33]
+    subset = [0,1,2,3,4,5]
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
-                     subset=None,
-                     grid=None)
-    plt.savefig(f'pmaps_01.png', format='png')
+                     subset=subset,
+                     grid=(3,2))
+    # plt.savefig(f'pmaps_01.png', format='png')
     pass
 
 
@@ -349,7 +352,13 @@ def mixed_clustering(mname_fine, fine_labels=None):
     #                          fine_coarse_mapping.tolist()))
     # for keys, value in mapping_check.items():
     #    print(keys, value)
-    return fine_coarse_mapping
+
+    labels = [] 
+    for i in np.unique(fine_coarse_mapping): 
+        ind = np.nonzero((mixed_assignment.parcel_assigned_idx==i).to_numpy())[0]
+        labels.append(mixed_assignment.parcel_assigned[ind[0]])
+    labels = [0] + labels + labels
+    return fine_coarse_mapping,labels
 
 
 def save_mixed_clustering(mname_fine, method='mixed'):
@@ -375,7 +384,7 @@ def save_mixed_clustering(mname_fine, method='mixed'):
         sym = False
 
     # Get mapping between fine parcels and coarse parcels
-    mapping = mixed_clustering(
+    mapping,labels = mixed_clustering(
         mname_fine)
 
     # -- Merge model --
@@ -421,10 +430,12 @@ if __name__ == "__main__":
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
     save_mixed_clustering(mname_fine, method='mixed')
 
-    mname_clustered = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_clustered, sym=True)
-    save_pmaps(mname_clustered)
+    # mapping, labels = mixed_clustering(mname_fine)
+
+    # mname_clustered = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
+    # Prob, parcel, atlas, labels, cmap = analyze_parcel(
+    #     mname_clustered, sym=True,labels=labels)
+    # save_pmaps(Prob,labels)
 
     # similarity_matrices(mname)
     #

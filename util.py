@@ -275,6 +275,8 @@ def hard_max(Prob):
 
 
 def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None):
+    if isinstance(labels,list):
+        labels = np.array(labels)
     K, P = Prob.shape
     if not sym:
         raise (NameError('only for symmetric models right now'))

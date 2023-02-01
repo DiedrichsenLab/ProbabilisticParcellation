@@ -5,6 +5,7 @@
 Created on 11/17/2022 at 2:16 PM
 Author: dzhi, jdiedrichsen
 """
+from ProbabilisticParcellation.util import *
 from time import gmtime
 from pathlib import Path
 import pandas as pd
@@ -18,7 +19,6 @@ import generativeMRF.spatial as sp
 import generativeMRF.arrangements as ar
 import generativeMRF.emissions as em
 import generativeMRF.evaluation as ev
-from ProbabilisticParcellation.util import *
 import torch as pt
 import matplotlib.pyplot as plt
 import pickle
