@@ -61,7 +61,7 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
         print(
             f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
 
-    # Make a colormap
+    # Make a colormap...
     w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
     W = sc.calc_mds(w_cos_sim, center=True)
 
@@ -438,94 +438,29 @@ if __name__ == "__main__":
     #         mname_new=mname_new,
     #         f_assignment='mixed_assignment_68_16.csv',
     #         refit_model=True)
+    # space = 'MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+    #         mname_new=mname_new,
+    #         f_assignment='mixed_assignment_68_16.csv',
+    #         refit_model=True)
 
-    #mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # mapping, labels = mixed_clustering(mname)
-
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    mname_new = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     f_assignment = 'mixed_assignment_68_16.csv'
     df_assignment = pd.read_csv(
         model_dir + '/Atlases/' + '/' + f_assignment)
-    mapping, labels = mixed_clustering(
-        mname_fine, df_assignment)
+
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
+
+    mapping, labels = mixed_clustering(mname, df_assignment)
+
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5])
-    save_pmaps(Prob, labels, subset=[6, 7, 8, 9, 10, 11])
-    save_pmaps(Prob, labels, subset=[12, 13, 14, 15])
-
-    # similarity_matrices(mname)
-    #
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # save_pmaps(mname)
-
-    # Merge C2 models
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-20'
-    # index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-    #                                   f'sym_MdPoNiIbWmDeSo_space-{space}_K-68.lut')
-    # map, _ = cl.guided_clustering(
-    #     mname_fine, mname_coarse, 'cosang', labels[1:35])
-    # pass
-
-    # export_merged(merged_models)
-
-    # export_merged()
-
-    # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
-    # sc.read_cmap(cmap_file)
-
-    # # Agglomative clustering
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    # basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # ea.export_map(Prob,atlas.name,cmap,labels,basename)
-
-    # # Guided clustering
-    # cluster_by = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-14'
-    # Prob, parcel, atlas, labels, cmap = analyze_parcel(
-    #     mname, sym=True, clustering='model_guided', cluster_by=cluster_by)
-    # clustername = f'{model_dir}/Atlases/{mname.split("/")[1]}_C-{cluster_by.split("-")[-1]}'
-    # ea.export_map(Prob, atlas.name, cmap, labels, clustername)
-
-    # pass
-
-    # # Plot fine, coarse and merged model
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
-
-    # # Show MNISymC2 Parcellation
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_meth-cosang'
-
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
-
-    # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    # ea.export_map(Prob, atlas.name, cmap, labels, output)
-
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname)
-
-    # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
-
-    # --> Model 03, K=68
-
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
-
-    # mname = 'Models_04/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
-
-    # resample_atlas(mname)
-    # make_asymmetry_map(mname)
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # cmap = mpl.cm.get_cmap('tab20')
-    # rgb=cmap(np.arange(20))
-    # plot_colormap(rgb)
-    pass
+        mname, sym=True, labels=labels)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{model_dir}/Atlases/{mname.split("/")[1]}')
