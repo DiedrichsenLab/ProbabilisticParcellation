@@ -218,16 +218,53 @@ def get_unique_conditions():
 
     pass
 
-    pass
+
+def compile_tags():
+    """Compile tags for Nishimoto, Working Memory, Demand, Somatotopic and IBC."""
+    # Load profile data
+
+    tags_all = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/cognitive_features_NiIbWmDeSo.csv', sep=','
+    )
+
+    tags_ibc = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/ibc_cognitive_features.csv', sep=','
+    )
+    ibc_contrasts = tags_ibc.contrast.tolist()
+
+    ibc_translation = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/missing_ibc_conditions_alp.tsv', sep='\t')
+    translated_conditions = ibc_translation.condition.tolist()
+
+    tags_filled = deepcopy(tags_all)
+    for c, condition in enumerate(tags_filled.Condition):
+        if tags_filled.iloc[c].Dataset == 'IBC' and condition in translated_conditions:
+            t = translated_conditions.index(condition)
+            condition_old = ibc_translation.iloc[t].contrast
+            if condition_old in ibc_contrasts:
+                i = condition_old.index(condition_old)
+                tags_filled.at[c, 'tags'] = tags_ibc.iloc[i].tags
+        elif condition.replace('-', '_') in ibc_contrasts:
+            i = ibc_contrasts.index(condition.replace('-', '_'))
+            tags_filled.at[c, 'tags'] = tags_ibc.iloc[i].tags
+        else:
+            print(f'not found: \t{condition}')
+
+    tags_filled.to_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/cognitive_features_NiIbWmDeSo_filled_1.csv', sep='\t', index=None)
+
+    return tags_filled
 
 
 if __name__ == "__main__":
 
-    inspect_cognitive_tags()
+    # inspect_cognitive_tags()
 
     # Load IBC feature tags
-    ibc_features = pd.read_csv(
-        f'{model_dir}/../../ibc/all_contrasts_corr.csv', sep=","
-    )
-    # get_unique_conditions()
+    # ibc_features = pd.read_csv(
+    #     f'{model_dir}/../../ibc/all_contrasts_corr.csv', sep=","
+    # )
+    # # get_unique_conditions()
     # get_unique_tags()
+
+    compile_tags()
