@@ -25,7 +25,6 @@ import logging
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-
 def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True,labels=None):
 
     # Get model and atlas.
@@ -61,7 +60,7 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
         print(
             f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
 
-    # Make a colormap
+    # Make a colormap...
     w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
     W = sc.calc_mds(w_cos_sim, center=True)
 
@@ -431,20 +430,29 @@ if __name__ == "__main__":
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
-            mname_new=mname_new,
-            f_assignment='mixed_assignment_68_16.csv',
-            refit_model=True)
+    # space = 'MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+    #         mname_new=mname_new,
+    #         f_assignment='mixed_assignment_68_16.csv',
+    #         refit_model=True)
 
-    #mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # mapping, labels = mixed_clustering(mname)
+    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    f_assignment='mixed_assignment_68_16.csv'
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
+
+    mapping, labels = mixed_clustering(mname,df_assignment)
 
     mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    
     Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
-    save_pmaps(Prob,labels,subset=[0,1,2,3,4,5])
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                      f'{model_dir}/Atlases/{mname.split("/")[1]}')
+    
+    
+    # save_pmaps(Prob,labels,subset=[0,1,2,3,4,5])
 
     # similarity_matrices(mname)
     #
