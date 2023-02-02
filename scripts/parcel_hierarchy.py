@@ -26,7 +26,7 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True,labels=None):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None):
 
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -70,7 +70,6 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     cmap = sc.colormap_mds(W, target=(m, regions, colors),
                            clusters=clusters, gamma=0)
     sc.plot_colorspace(cmap(np.arange(model.K)))
-
 
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
@@ -182,13 +181,13 @@ def compare_levels():
         pass
 
 
-def save_pmaps(Prob,labels,subset=[0,1,2,3,4,5]):
+def save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5]):
     plt.figure(figsize=(7, 10))
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
                      subset=subset,
-                     grid=(3,2))
-    # plt.savefig(f'pmaps_01.png', format='png')
+                     grid=(3, 2))
+    plt.savefig(f'pmaps_01.png', format='png')
     pass
 
 
@@ -307,8 +306,8 @@ def save_taskmaps(mname):
 
 
 def mixed_clustering(mname_fine,
-                df_assignment,
-                fine_labels=None):
+                     df_assignment,
+                     fine_labels=None):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
     specified in mixed_assignment.csv.
 
@@ -337,7 +336,7 @@ def mixed_clustering(mname_fine,
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
     left_labels = int((len(labels) - 1) / 2)
-    labels_hem = labels[1:left_labels+1] 
+    labels_hem = labels[1:left_labels + 1]
     labels_hem = [label.strip('L') for label in labels_hem]
     for parcel_idx, parcel_label in enumerate(labels_hem):
         fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
@@ -350,15 +349,16 @@ def mixed_clustering(mname_fine,
     # for keys, value in mapping_check.items():
     #    print(keys, value)
 
-    labels = [] 
-    for i in np.unique(fine_coarse_mapping): 
-        ind = np.nonzero((df_assignment.parcel_assigned_idx==i).to_numpy())[0]
+    labels = []
+    for i in np.unique(fine_coarse_mapping):
+        ind = np.nonzero(
+            (df_assignment.parcel_assigned_idx == i).to_numpy())[0]
         labels.append(df_assignment.parcel_assigned[ind[0]])
     labels = [0] + labels + labels
-    return fine_coarse_mapping,labels
+    return fine_coarse_mapping, labels
 
 
-def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment='mixed_assignment_68_17',refit_model=True):
+def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True):
     """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
 
     Args:
@@ -383,8 +383,8 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment
     # Get mapping between fine parcels and coarse parcels
     df_assignment = pd.read_csv(
         model_dir + '/Atlases/' + '/' + f_assignment)
-    mapping,labels = mixed_clustering(
-        mname_fine,df_assignment)
+    mapping, labels = mixed_clustering(
+        mname_fine, df_assignment)
 
     # -- Merge model --
     merged_model = cl.merge_model(fine_model, mapping)
@@ -404,7 +404,7 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment
     else:
         new_model = merged_model
         new_info = pd.DataFrame(new_info.to_dict(), index=[0])
-    # 
+    #
     # -- Save model --
     # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
     if mname_new is None:
@@ -421,7 +421,7 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment
     print(
         f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
 
-    return new_model, mname_new,labels
+    return new_model, mname_new, labels
 
 
 if __name__ == "__main__":
@@ -431,20 +431,29 @@ if __name__ == "__main__":
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
-            mname_new=mname_new,
-            f_assignment='mixed_assignment_68_16.csv',
-            refit_model=True)
+    # space = 'MNISymC2'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+    #         mname_new=mname_new,
+    #         f_assignment='mixed_assignment_68_16.csv',
+    #         refit_model=True)
 
     #mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # mapping, labels = mixed_clustering(mname)
 
-    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
-    save_pmaps(Prob,labels,subset=[0,1,2,3,4,5])
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    mname_new = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
+    mapping, labels = mixed_clustering(
+        mname_fine, df_assignment)
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5])
+    save_pmaps(Prob, labels, subset=[6, 7, 8, 9, 10, 11])
+    save_pmaps(Prob, labels, subset=[12, 13, 14, 15])
 
     # similarity_matrices(mname)
     #
