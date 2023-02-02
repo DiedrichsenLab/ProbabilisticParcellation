@@ -15,7 +15,6 @@ from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from copy import deepcopy
-from ProbabilisticParcellation.set_globals import *
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
@@ -27,7 +26,7 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True,labels=None):
 
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -44,11 +43,11 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Do Clustering:
     if clustering == 'agglomative':
-        labels, clusters, leaves = cl.agglomative_clustering(
+        labels_new, clusters, leaves = cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
-            labels, clusters, _ = cl.agglomative_clustering(
+            labels_new, clusters, _ = cl.agglomative_clustering(
                 w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
             logging.warning(
                 f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
@@ -72,10 +71,14 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
                            clusters=clusters, gamma=0)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
+
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
-        cl.agglomative_clustering(
-            w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
+        if labels is None:
+            labels = labels_new
+            cl.agglomative_clustering(
+                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
+
     plt.figure(figsize=(5, 10))
     cl.plot_parcel_size(Prob, cmap, labels, wta=True)
 
@@ -179,15 +182,13 @@ def compare_levels():
         pass
 
 
-def save_pmaps(mname):
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True)
+def save_pmaps(Prob,labels,subset=[0,1,2,3,4,5]):
     plt.figure(figsize=(7, 10))
-    # subset = [30, 31, 32, 33, 33, 33]
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
-                     subset=None,
-                     grid=None)
-    plt.savefig(f'pmaps_01.png', format='png')
+                     subset=subset,
+                     grid=(3,2))
+    # plt.savefig(f'pmaps_01.png', format='png')
     pass
 
 
@@ -305,12 +306,14 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
-def mixed_clustering(mname_fine, fine_labels=None):
-    """Maps parcels of a fine parcellation to parcels of a coarse parcellation guided by functional fusion model.
+def mixed_clustering(mname_fine,
+                df_assignment,
+                fine_labels=None):
+    """ Maps parcels of a parcellation using a hand-coded merging of parcels
+    specified in mixed_assignment.csv.
 
     Args:
-        fine_probabilities: Probabilstic parcellation of a fine model (fine parcellation)
-        coarse_probabilities: Probabilstic parcellation of a coarse model (coarse parcellation)
+        mname_fine: Based parcellation map
 
     Returns:
         fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
@@ -327,17 +330,14 @@ def mixed_clustering(mname_fine, fine_labels=None):
 
     # Get mapping
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-                                      f'sym_MdPoNiIbWmDeSo_space-{space}_K-68.lut')
+                                      f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
 
-    mixed_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/mixed_assignment.csv')
-
-    assignment = dict(zip(mixed_assignment.parcel_fine.tolist(),
-                          mixed_assignment.parcel_assigned_idx.tolist()))
+    assignment = dict(zip(df_assignment.parcel_fine.tolist(),
+                          df_assignment.parcel_assigned_idx.tolist()))
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
     left_labels = int((len(labels) - 1) / 2)
-    labels_hem = labels[1:left_labels]
+    labels_hem = labels[1:left_labels+1] 
     labels_hem = [label.strip('L') for label in labels_hem]
     for parcel_idx, parcel_label in enumerate(labels_hem):
         fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
@@ -349,10 +349,16 @@ def mixed_clustering(mname_fine, fine_labels=None):
     #                          fine_coarse_mapping.tolist()))
     # for keys, value in mapping_check.items():
     #    print(keys, value)
-    return fine_coarse_mapping
+
+    labels = [] 
+    for i in np.unique(fine_coarse_mapping): 
+        ind = np.nonzero((df_assignment.parcel_assigned_idx==i).to_numpy())[0]
+        labels.append(df_assignment.parcel_assigned[ind[0]])
+    labels = [0] + labels + labels
+    return fine_coarse_mapping,labels
 
 
-def save_mixed_clustering(mname_fine, method='mixed'):
+def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment='mixed_assignment_68_17',refit_model=True):
     """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
 
     Args:
@@ -375,8 +381,10 @@ def save_mixed_clustering(mname_fine, method='mixed'):
         sym = False
 
     # Get mapping between fine parcels and coarse parcels
-    mapping = mixed_clustering(
-        mname_fine)
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
+    mapping,labels = mixed_clustering(
+        mname_fine,df_assignment)
 
     # -- Merge model --
     merged_model = cl.merge_model(fine_model, mapping)
@@ -391,40 +399,52 @@ def save_mixed_clustering(mname_fine, method='mixed'):
         new_info['K'] = int(len(np.unique(mapping)))
 
     # Refit reduced model
-    new_model, new_info = lf.refit_model(merged_model, new_info)
-
+    if refit_model:
+        new_model, new_info = lf.refit_model(merged_model, new_info)
+    else:
+        new_model = merged_model
+        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    # 
     # -- Save model --
     # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
-    mname_merged = f'{mname_fine}_meth-{method}'
+    if mname_new is None:
+        mname_new = f'{mname_fine}_meth-{method}'
 
     # save new model
-    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+    with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+    new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
                     sep='\t', index=False)
 
     print(
-        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+        f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
 
-    return new_model, mname_merged
+    return new_model, mname_new,labels
 
 
 if __name__ == "__main__":
     # Save 3 highest and 2 lowest task maps
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # D = query_similarity(mname, 'E3L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # save_mixed_clustering(mname_fine, method='mixed')
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+            mname_new=mname_new,
+            f_assignment='mixed_assignment_68_16.csv',
+            refit_model=True)
 
-    mname_clustered = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_meth-mixed'
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_clustered, sym=True)
-    save_pmaps(mname_clustered)
+    #mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # mapping, labels = mixed_clustering(mname)
+
+    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
+    save_pmaps(Prob,labels,subset=[0,1,2,3,4,5])
 
     # similarity_matrices(mname)
     #
