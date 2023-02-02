@@ -182,9 +182,8 @@ def compare_levels():
         pass
 
 
-def save_pmaps(Prob,labels):
+def save_pmaps(Prob,labels,subset=[0,1,2,3,4,5]):
     plt.figure(figsize=(7, 10))
-    subset = [12,13,14,15,16,17]
     plot_model_pmaps(Prob, atlas.name,
                      labels=labels[1:],
                      subset=subset,
@@ -307,9 +306,9 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
-def mixed_clustering(mname_fine, 
-                        fine_labels=None,
-                        f_assignment='mixed_assignment_68_17.csv'):
+def mixed_clustering(mname_fine,
+                df_assignment,
+                fine_labels=None):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
     specified in mixed_assignment.csv.
 
@@ -333,11 +332,8 @@ def mixed_clustering(mname_fine,
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
                                       f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
 
-    mixed_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/' + f_assignment)
-
-    assignment = dict(zip(mixed_assignment.parcel_fine.tolist(),
-                          mixed_assignment.parcel_assigned_idx.tolist()))
+    assignment = dict(zip(df_assignment.parcel_fine.tolist(),
+                          df_assignment.parcel_assigned_idx.tolist()))
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
     left_labels = int((len(labels) - 1) / 2)
@@ -356,13 +352,13 @@ def mixed_clustering(mname_fine,
 
     labels = [] 
     for i in np.unique(fine_coarse_mapping): 
-        ind = np.nonzero((mixed_assignment.parcel_assigned_idx==i).to_numpy())[0]
-        labels.append(mixed_assignment.parcel_assigned[ind[0]])
+        ind = np.nonzero((df_assignment.parcel_assigned_idx==i).to_numpy())[0]
+        labels.append(df_assignment.parcel_assigned[ind[0]])
     labels = [0] + labels + labels
     return fine_coarse_mapping,labels
 
 
-def save_mixed_clustering(mname_fine, method='mixed',mname_new=None):
+def save_mixed_clustering(mname_fine, method='mixed',mname_new=None,f_assignment='mixed_assignment_68_17',refit_model=True):
     """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
 
     Args:
@@ -385,8 +381,10 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None):
         sym = False
 
     # Get mapping between fine parcels and coarse parcels
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
     mapping,labels = mixed_clustering(
-        mname_fine)
+        mname_fine,df_assignment)
 
     # -- Merge model --
     merged_model = cl.merge_model(fine_model, mapping)
@@ -401,8 +399,12 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None):
         new_info['K'] = int(len(np.unique(mapping)))
 
     # Refit reduced model
-    new_model, new_info = lf.refit_model(merged_model, new_info)
-
+    if refit_model:
+        new_model, new_info = lf.refit_model(merged_model, new_info)
+    else:
+        new_model = merged_model
+        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    # 
     # -- Save model --
     # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
     if mname_new is None:
@@ -419,25 +421,30 @@ def save_mixed_clustering(mname_fine, method='mixed',mname_new=None):
     print(
         f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
 
-    return new_model, mname_new
+    return new_model, mname_new,labels
 
 
 if __name__ == "__main__":
     # Save 3 highest and 2 lowest task maps
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # D = query_similarity(mname, 'C13L')
+    # D = query_similarity(mname, 'E3L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
     space = 'MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-34_meth-mixed'
-    save_mixed_clustering(mname_fine, method='mixed',mname_new=mname_new)
+    mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+            mname_new=mname_new,
+            f_assignment='mixed_assignment_68_16.csv',
+            refit_model=True)
 
-    mapping, labels = mixed_clustering(mname)
+    #mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # mapping, labels = mixed_clustering(mname)
 
+    mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     Prob, parcel, atlas, labels, cmap = analyze_parcel(mname, sym=True,labels=labels)
-    save_pmaps(Prob,labels)
+    save_pmaps(Prob,labels,subset=[0,1,2,3,4,5])
 
     # similarity_matrices(mname)
     #
