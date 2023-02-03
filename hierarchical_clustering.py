@@ -25,9 +25,8 @@ import pickle
 
 from ProbabilisticParcellation.util import *
 import ProbabilisticParcellation.util as ut
-
-
 import ProbabilisticParcellation.learn_fusion_gpu as lf
+
 import torch as pt
 from matplotlib import pyplot as plt
 from matplotlib.patches import ConnectionPatch
@@ -105,6 +104,36 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
         plt.title(f"Merged")
 
     return w_cos_sim,cos_sim,kappa
+
+
+def similarity_matrices(mname, sym=True):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info, model = ut.load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.arrange.marginal_prob())
+    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                      fileparts[-1] + '.lut')
+    K, P = Prob.shape
+    if sym:
+        K = int(K / 2)
+        Prob = Prob[:K, :]
+    labels = np.array(labels[1:K + 1])
+
+    # Get parcel similarity:
+    w_cos_sim, cos_sim, _ = parcel_similarity(model, plot=False, sym=sym)
+    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
+
+    spatial_sim = P @ P.T
+
+    ind = np.argsort(labels)
+    labels = labels[ind]
+    w_cos_sim = w_cos_sim[:, ind][ind, :]
+    spatial_sim = spatial_sim[:, ind][ind, :]
+    return labels, w_cos_sim, spatial_sim, ind
 
 
 def get_clusters(Z,K,num_cluster):
@@ -217,7 +246,7 @@ def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     indx2 = np.concatenate([v+model.K_sym,v])
     sym_score = w_cos[indx1,indx2]
 
-    suit_atlas, _ = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas('MNISymC3',ut.base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
     surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
             space='MNISymC',ignore_zeros=True)
@@ -537,15 +566,15 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     mname_merged = f'{mname_fine}_Kclus-{int(new_info.K_coarse)}_meth-{method}'
 
     # save new model
-    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+    with open(f'{ut.model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+    new_info.to_csv(f'{ut.model_dir}/Models/{mname_merged}.tsv',
                     sep='\t', index=False)
 
     print(
-        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
 
     return new_model, mname_merged
 

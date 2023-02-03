@@ -191,35 +191,6 @@ def save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5]):
     pass
 
 
-def similarity_matrices(mname, sym=True):
-    # Get model and atlas.
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
-    info, model = load_batch_best(mname)
-    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
-
-    # Get winner-take all parcels
-    Prob = np.array(model.arrange.marginal_prob())
-    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-                                      fileparts[-1] + '.lut')
-    K, P = Prob.shape
-    if sym:
-        K = int(K / 2)
-        Prob = Prob[:K, :]
-    labels = np.array(labels[1:K + 1])
-
-    # Get parcel similarity:
-    w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=sym)
-    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
-
-    spatial_sim = P @ P.T
-
-    ind = np.argsort(labels)
-    labels = labels[ind]
-    w_cos_sim = w_cos_sim[:, ind][ind, :]
-    spatial_sim = spatial_sim[:, ind][ind, :]
-    return labels, w_cos_sim, spatial_sim, ind
-
 
 def query_similarity(mname, label):
     labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
@@ -331,8 +302,8 @@ def mixed_clustering(mname_fine,
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
                                       f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
 
-    assignment = dict(zip(df_assignment.parcel_fine.tolist(),
-                          df_assignment.parcel_assigned_idx.tolist()))
+    assignment = dict(zip(df_assignment.parcel_orig.tolist(),
+                          df_assignment.parcel_med_idx.tolist()))
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
     left_labels = int((len(labels) - 1) / 2)
@@ -352,8 +323,8 @@ def mixed_clustering(mname_fine,
     labels = []
     for i in np.unique(fine_coarse_mapping):
         ind = np.nonzero(
-            (df_assignment.parcel_assigned_idx == i).to_numpy())[0]
-        labels.append(df_assignment.parcel_assigned[ind[0]])
+            (df_assignment.parcel_med_idx == i).to_numpy())[0]
+        labels.append(df_assignment.parcel_medium[ind[0]])
     labels = [0] + labels + labels
     return fine_coarse_mapping, labels
 
@@ -423,44 +394,45 @@ def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignme
 
     return new_model, mname_new, labels
 
+def make_NettekovenSym68c32():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new  = 'Models_03/NettekovenSym68c32'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+              mname_new=mname_new,
+              f_assignment='mixed_assignment_68_16.csv',
+              refit_model=True)
+
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                   f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
+
 
 if __name__ == "__main__":
+    make_NettekovenSym68c32()
+   
     # Save 3 highest and 2 lowest task maps
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # D = query_similarity(mname, 'E3L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    # _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
-    #         mname_new=mname_new,
-    #         f_assignment='mixed_assignment_68_16.csv',
-    #         refit_model=True)
-    # space = 'MNISymC2'
-    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    # mname_new  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    # _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
-    #         mname_new=mname_new,
-    #         f_assignment='mixed_assignment_68_16.csv',
-    #         refit_model=True)
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    f_assignment = 'mixed_assignment_68_16.csv'
-    df_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/' + f_assignment)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    f_assignment = 'mixed_assignment_68_16.csv'
-    df_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/' + f_assignment)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # f_assignment = 'mixed_assignment_68_16.csv'
+    # df_assignment = pd.read_csv(
+    #     model_dir + '/Atlases/' + '/' + f_assignment)
 
-    mapping, labels = mixed_clustering(mname, df_assignment)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # f_assignment = 'mixed_assignment_68_16.csv'
+    # df_assignment = pd.read_csv(
+    #     model_dir + '/Atlases/' + '/' + f_assignment)
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # mapping, labels = mixed_clustering(mname, df_assignment)
 
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname, sym=True, labels=labels)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{model_dir}/Atlases/{mname.split("/")[1]}')
+    pass
