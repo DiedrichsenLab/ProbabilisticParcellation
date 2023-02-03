@@ -408,11 +408,16 @@ def make_NettekovenSym68c32():
         mname_new, sym=True, labels=labels)
     ea.export_map(Prob, atlas.name, cmap, labels,
                    f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
+    ea.resample_atlas('NettekovenSym68c32',
+            atlas='MNISymC2',
+            target_space='SUIT')
 
 
 if __name__ == "__main__":
-    make_NettekovenSym68c32()
-   
+    # make_NettekovenSym68c32()
+    ea.resample_atlas('NettekovenSym68c32',
+            atlas='MNISymC2',
+            target_space='MNI152NLin6AsymC')
     # Save 3 highest and 2 lowest task maps
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # D = query_similarity(mname, 'E3L')

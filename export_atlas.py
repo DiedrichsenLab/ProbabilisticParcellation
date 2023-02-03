@@ -68,30 +68,8 @@ def export_map(data,atlas,cmap,labels,base_name):
     nb.save(dseg,base_name + f'_dseg.nii')
     nb.save(probseg,base_name + f'_probseg.nii')
     nb.save(Gifti,base_name + '_dseg.label.gii')
-    save_info(np.arange(len(labels)),cmap[:,0:4],labels, base_name)
+    nt.save_lut(base_name,np.arange(len(labels)),cmap[:,0:4],labels)
     print(f'Exported {base_name}.')
-
-def save_info(index,colors,labels,fname):
-    """Save a set of colors and labels as a LUT file and cmap file 
-    Note: This should probably go into nitools 
-
-    Args:
-        index (_type_): _description_
-        colors (_type_): _description_
-        labels (_type_): _description_
-        fname (_type_): _description_
-    """
-    # Save lut file
-    L=pd.DataFrame({
-            "key":index,
-            "R":colors[:,0].round(4),
-            "G":colors[:,1].round(4),
-            "B":colors[:,2].round(4),
-            "Name":labels})
-    L.to_csv(fname + '.lut',header=None,sep=' ',index=False)
-    
-    # Save cmap file (in accordance with FSLeyes-accepted colour maps)
-    L.drop('key', axis=1).drop('Name', axis=1).to_csv(fname + '.cmap', header=None, sep=' ', index=False)
 
 def renormalize_probseg(probseg):
     """ Renormalizes a probsegmentation file 
@@ -106,7 +84,7 @@ def renormalize_probseg(probseg):
     """
     X = probseg.get_fdata()
     xs = np.sum(X,axis=3)
-    xs[xs<0.5]=np.nan
+    xs[xs<0.3]=np.nan
     X = X/np.expand_dims(xs,3)
     X[np.isnan(X)]=0
     probseg_img = nb.Nifti1Image(X,probseg.affine)
@@ -119,32 +97,31 @@ def renormalize_probseg(probseg):
     # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
     return probseg_img,dseg_img
 
-def resample_atlas(base_name):
-    """ Resamples probabilistic atlas into 1mm resolution and
-    SUIT space
-    Note: Refactorize and make more universal 
+def resample_atlas(fname,
+        atlas='MNISymC2',
+        target_space='MNI152NLin2009cSymC'):
+    """ Resamples probabilistic atlas from MNISymC2 to a new atlas space 1mm resolution
     """
-    mnisym_dir=base_dir + '/Atlases/tpl-MNI152NLin2000cSymC'
-    suit_dir=base_dir + '/Atlases/tpl-SUIT'
-
-    # Reslice to 1mm MNI and 1mm SUIT space
-    print('reslicing to 1mm')
-    sym3 = nb.load(mnisym_dir + f'/{base_name}_space-MNISymC3_probseg.nii')
-    tmp1 = nb.load(mnisym_dir + f'/tpl-MNISymC_res-1_gmcmask.nii')
-    shap = tmp1.shape+sym3.shape[3:]
-    sym1 = ns.resample_from_to(sym3,(shap,tmp1.affine),3)
+    a,ainf = am.get_atlas(atlas,atlas_dir)
+    src_dir= model_dir + '/Atlases/'
+    targ_dir= base_dir + f'/Atlases/tpl-{target_space}'
+    srcs_dir = base_dir + '/Atlases/' + ainf['dir']
+    nii_atlas = nb.load(src_dir + f'/{fname}_probseg.nii')
+    # Reslice to 1mm MNI
+    if ainf['space'] != target_space:
+        print(f"deforming from {ainf['space']} to {target_space}")
+        deform = nb.load(srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii")
+        nii_res = nt.deform_image(nii_atlas,deform,1)
+    else:
+        mname = ainf['mask']
+        mname = mname.replace('res-2','res-1')
+        nii_mask = nb.load(targ_dir + '/' + mname)
+        # Make new shape 
+        shap = nii_mask.shape+nii_atlas.shape[3:]
+        nii_res = ns.resample_from_to(nii_atlas,(shap,nii_mask.affine),1)
     print('normalizing')
-    sym1,dsym1= renormalize_probseg(sym1)
+    nii,dnii= renormalize_probseg(nii_res)
     print('saving')
-    nb.save(sym1,mnisym_dir + f'/{base_name}_space-MNISymC_probseg.nii')
-    nb.save(dsym1,mnisym_dir + f'/{base_name}_space-MNISymC_dseg.nii')
+    nb.save(nii,targ_dir + f'/atl-{fname}_space-{target_space}_probseg.nii')
+    nb.save(dnii,targ_dir + f'/atl-{fname}_space-{target_space}_dseg.nii')
 
-    # Now put the image into SUIT space
-    print('reslicing to SUIT')
-    deform = nb.load(mnisym_dir + '/tpl-MNI152NLin2009cSymC_space-SUIT_xfm.nii')
-    suit1 = nt.deform_image(sym1,deform,1)
-    print('normalizing')
-    suit1,dsuit1= renormalize_probseg(suit1)
-    print('saving')
-    nb.save(suit1,suit_dir + f'/{base_name}_space-SUIT_probseg.nii')
-    nb.save(dsuit1,suit_dir + f'/{base_name}_space-SUIT_dseg.nii')
