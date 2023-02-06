@@ -426,7 +426,7 @@ def make_all_in_one_tsv(path, out_name):
 
         D.to_csv(out_name, sep='\t', index=False)
 
-def result_3_plot_otherData(D, K=None, train_model='IBC', ck=None, style=None, style_order=None,
+def result_3_plot_otherData_1(D, K=None, train_model='IBC', ck=None, style=None, style_order=None,
                   relevant=None, print_relevancy=False):
     D['relevant'] = ""
     # D.rename(columns={'test_sess': 'session'}, inplace=True)
@@ -448,7 +448,9 @@ def result_3_plot_otherData(D, K=None, train_model='IBC', ck=None, style=None, s
         ses2 = ses2.replace(s2.split('-')[1], 'sess2')
         T = pd.concat([T, ses1, ses2, df], ignore_index=True)
 
-    plt.figure(figsize=(8,5))
+    T.loc[((T.test_sess == 'sess1') | (T.test_sess == 'sess2')) & (T['model_type'] == 'Models_01'),
+          'model_type'] = 'Models_03'
+    plt.figure(figsize=(10,8))
     crits = ['dcbc_group','dcbc_indiv']
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
@@ -469,7 +471,56 @@ def result_3_plot_otherData(D, K=None, train_model='IBC', ck=None, style=None, s
 
     plt.suptitle(f'IBC two sessions fusion - overall trend, K={K}')
     plt.tight_layout()
-    # plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
+    plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
+    plt.show()
+
+def result_3_plot_otherData_2(D, K=None, ck=None, style=None, style_order=None,
+                  relevant=None, print_relevancy=False):
+    D['relevant'] = ""
+    # D.rename(columns={'test_sess': 'session'}, inplace=True)
+    if K is not None:
+        D = D.loc[D['K']==K]
+
+    if ck is not None:
+        D = D.loc[D['common_kappa']==ck]
+
+    T = pd.DataFrame()
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for s1,s2 in combinations(sess, 2):
+        df = D.loc[(D['test_sess'] == s1.split('-')[1] + '+' + s2.split('-')[1])]
+        df = df.replace(s1.split('-')[1] + '+' + s2.split('-')[1], 'Fusion')
+
+        ses1 = D.loc[(D['test_sess'] == s1.split('-')[1])]
+        ses1 = ses1.replace(s1.split('-')[1], 'sess1')
+        ses2 = D.loc[(D['test_sess'] == s2.split('-')[1])]
+        ses2 = ses2.replace(s2.split('-')[1], 'sess2')
+        T = pd.concat([T, ses1, ses2, df], ignore_index=True)
+
+    # averaged individual dataset training across model 1 and 3
+    T.loc[((T.test_sess == 'sess1') | (T.test_sess == 'sess2')) & (T['model_type'] == 'Models_01'),
+          'model_type'] = 'Models_03'
+    plt.figure(figsize=(10,8))
+    crits = ['dcbc_group','dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        if style is not None:
+            sb.lineplot(data=T, x="K", y=c, hue='model_type',
+                        hue_order=['Models_01','Models_03','Models_04'],
+                        style=style, style_order=style_order, err_style='bars',
+                        errorbar='se', markers=False)
+        else:
+            sb.lineplot(data=T, x="K", y=c, hue='session',
+                        hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        # if c == 'dcbc_indiv':
+        #     plt.ylim(0, 0.20)
+        # elif c == 'dcbc_group':
+        #     plt.ylim(0, 0.20)
+        plt.xticks(rotation=45)
+        plt.legend(loc='lower right')
+
+    plt.suptitle(f'IBC two sessions fusion - overall trend, K={K}')
+    plt.tight_layout()
+    plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
     plt.show()
 
 
@@ -483,8 +534,10 @@ if __name__ == "__main__":
     D = pd.read_csv(model_dir +
                      f'/Models/Evaluation/eval_all_asym_Ib_K-10to100_twoSess_on_otherDataset.tsv',
                      delimiter='\t')
-    result_3_plot_otherData(D, K=17, ck=None, style='model_type',
-                  style_order=['Models_01','Models_03'], relevant=None)
+    # result_3_plot_otherData_1(D, K=17, ck=None, style='model_type',
+    #               style_order=['Models_01','Models_03'], relevant=None)
+    result_3_plot_otherData_2(D, K=None, ck=None, style='test_sess',
+                  style_order=['Fusion','sess1','sess2'], relevant=None)
 
     # fname = '/Models/Evaluation_01/model1.tsv'
     # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'

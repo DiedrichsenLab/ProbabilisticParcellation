@@ -868,7 +868,7 @@ def compare_diffK(generate_ck=False, save=False):
         result = res_plot.pivot(index='K_true', columns='K_fit', values=c + '_dif')
         rdgn = sb.color_palette("vlag", as_cmap=True)
         # rdgn = sb.color_palette("Spectral", as_cmap=True)
-        sb.heatmap(result, annot=True, cmap=rdgn, center=0.00, fmt='.2g')
+        sb.heatmap(result, annot=False, cmap=rdgn, vmin=-0.03, vmax=0.03, center=0.00, fmt='.2g')
         plt.title(c)
 
     plt.suptitle(f'Simulation 4, different region signal strength, iter=100')
@@ -909,11 +909,11 @@ if __name__ == '__main__':
     # compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
 
     ########## Comparing model 3 and 4 ##########
-    fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
-    # fname = f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
-    D = pd.read_csv(fname, delimiter='\t')
-    # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)]
-    compare_model_3_4(D, title='K_true=20, K_fit=20, relevant=False, model3 and model4')
+    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
+    # # fname = f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
+    # D = pd.read_csv(fname, delimiter='\t')
+    # # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)]
+    # compare_model_3_4(D, title='K_true=20, K_fit=20, relevant=False, model3 and model4')
 
     # example_fusion_group(K_true=20, K=20, width=50, nsub_list=np.array([10,10]),
     #                      M=np.array([40,20],dtype=int), num_part=1, sigma2=[0.3,0.6],
