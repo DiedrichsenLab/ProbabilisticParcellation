@@ -194,10 +194,15 @@ def plot_diffK_benchmark(fname, benchmark='MDTB', save=False):
         sb.lineplot(data=df, x='K', y=c,
                     hue='common_kappa', hue_order=[True, False],
                     style="train_data",
-                    style_order=["['Pontine']", "['Nishimoto']", "['IBC']",
-                                 "['WMFS']", "['Demand']", "['Somatotopic']", "all"],
+                    style_order=["all", "['Pontine']", "['Nishimoto']", "['IBC']",
+                                 "['WMFS']", "['Demand']", "['Somatotopic']"],
                     palette=sb.color_palette()[1:3],
-                    errorbar=None)
+                    errorbar=None, err_style="bars", markers=False)
+        if c == 'dcbc_group':
+            plt.ylim(0.01, 0.1)
+        elif c == 'dcbc_indiv':
+            plt.ylim(0.1, 0.19)
+
         if i == len(crits)-1:
             plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
         else:
@@ -260,6 +265,24 @@ def get_cmap(mname, load_best=True, sym=False):
 
     return cmap.colors
 
+def gmm_vs_vmf(m_name, save=True):
+    t_datasets = ['Pontine', 'Nishimoto', 'IBC',
+                  'WMFS', 'Demand', 'Somatotopic']
+
+    results = pd.DataFrame()
+    for ds in t_datasets:
+        print(f'Testdata: {ds}\n')
+        # 1. Run DCBC individual
+        res_dcbc = run_dcbc_IBC(m_name, ds, 'all', cond_ind=None,
+                                part_ind='half', indivtrain_ind='half',
+                                indivtrain_values=[1,2], device='cuda')
+
+        results = pd.concat([results, res_dcbc], ignore_index=True)
+
+    if save:
+        wdir = model_dir + f'/Models/Evaluation'
+        fname = f'/eval_all_asym_K-17_VMFvsGMM.tsv'
+        results.to_csv(wdir + fname, index=False, sep='\t')
 
 if __name__ == "__main__":
     ############# Evaluating indiv datasets vs fusion #############
@@ -282,19 +305,23 @@ if __name__ == "__main__":
     # D.to_csv(wdir + fname, index=False, sep='\t')
 
     ############# Plot results #############
-    # fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
+    fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
     # # result_5_plot(fname, model_type='Models_03')
-    # result_5_benchmark(fname, benchmark='MDTB', save=True)
+    result_5_benchmark(fname, benchmark='MDTB', save=False)
     # plot_diffK_benchmark(fname, save=True)
 
     ############# Plot fusion atlas #############
-    indiv_dataset = ['Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
-    m_fusion = ''.join(indiv_dataset)
-    datasets = [m_fusion] + indiv_dataset
-    # Making color map
-    colors = get_cmap(f'Models_03/asym_{m_fusion}_space-MNISymC3_K-34')
-    model_names = [f'Models_03/asym_{s}_space-MNISymC3_K-34' for s in datasets]
+    # indiv_dataset = ['Po', 'Ni', 'Ib', 'Wm', 'De', 'So']
+    # m_fusion = ''.join(indiv_dataset)
+    # datasets = [m_fusion] + indiv_dataset
+    # # Making color map
+    # colors = get_cmap(f'Models_03/asym_{m_fusion}_space-MNISymC3_K-34')
+    # model_names = [f'Models_03/asym_{s}_space-MNISymC3_K-34' for s in datasets]
+    #
+    # # plt.figure(figsize=(20, 10))
+    # plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
+    # plt.show()
 
-    # plt.figure(figsize=(20, 10))
-    plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
-    plt.show()
+    m_name = ['Models_03/asym_Md_space-MNISymC3_K-17',
+              'Models_03/asym_Md_space-MNISymC3_K-17_GMM']
+    gmm_vs_vmf(m_name, save=True)

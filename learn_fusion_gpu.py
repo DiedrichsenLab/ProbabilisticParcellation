@@ -139,6 +139,10 @@ def build_model(K,arrange,sym_type,emission,atlas,
                                  X=matrix.indicator(cond_vec[j]),
                                  part_vec=part_vec[j],
                                  uniform_kappa=uniform_kappa)
+        elif emission == 'GMM':
+            em_model = em.MixGaussian(K=K, P=atlas.P,
+                                      X=matrix.indicator(cond_vec[j]),
+                                      std_V=False)
         elif emission == 'wVMF':
             em_model = em.wMixVMF(K=K, P=atlas.P,
                                   X=matrix.indicator(cond_vec[j]),
@@ -362,7 +366,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas.name}_K-{K}'
+        fname = f'/{name}_space-{atlas.name}_K-{K}_GMM'
 
         if this_sess is not None:
             return wdir, fname, info, models
@@ -540,73 +544,16 @@ def refit_model(model, new_info):
 
 
 if __name__ == "__main__":
-    # datasets_list=[0,1,2,3,4,5,6]
-    # K = 68
-    # sym_type = ['asym']
-    # model_type = '03'
-    # space = 'MNISymC2'
+    datasets_list=[0]
+    K = 17
+    sym_type = ['asym']
+    model_type = '03'
+    space = 'MNISymC3'
 
-    # fit_all(set_ind=datasets_list, K=K, repeats=100, model_type=model_type,
-    #         sym_type=['sym'], space='MNISymC2')
+    for k in [10,20,34,40,68,100]:
+        fit_all(set_ind=datasets_list, K=k, repeats=100, model_type=model_type,
+                sym_type=['asym'], space='MNISymC3')
 
-
-    ########## Reliability map
-    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
-                                 voxel_wise=True)
-    plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
-                    cscale=[-0.3, 0.7], colorbar=True, titles=sess)
-
-    # ########## IBC selected sessions fusion fit ##########
-    from itertools import combinations
-    sess = DataSetIBC(base_dir + '/IBC').sessions
-    for (s1, s2) in reversed(list(combinations(sess, 2))):
-            this_s1 = s1.split('-')[1]
-            this_s2 = s2.split('-')[1]
-            for k in [17]:
-                for t in ['06']:
-                    wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
-                    fname = wdir+f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
-                    if not os.path.isfile(fname):
-                        fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
-                        print(f'-Done type {t}, K={k}, IBC session {this_s1} and {this_s2} fusion.')
-
-    ########## IBC all sessions fit ##########
-    # for k in [17]:
-    #     fit_indv_sess(3, model_type='06', K=k)
-    # fit_indv_sess(3, model_type='04', K=40)
-    # dataset_list = [[0], [1], [2], [3], [0,1,2,3]]
-
-    ########## IBC all fit ##########
-    # for k in [10,17,20,34,40,68,100]:
-    #     fit_all([3], k, model_type='01', repeats=100, sym_type=['asym'])
-
-
-    ########## Leave-one-oout ##########
-    # leave_one_out_fit(dataset=dataset_list, model_type=type_list, K=10)
-
-    ########## Plot the flatmap results ##########
-    # # Read the MDTB colors
-    # color_file = atlas_dir + '/tpl-SUIT/atl-MDTB10.lut'
-    # color_info = pd.read_csv(color_file, sep=' ', header=None)
-    # MDTBcolors = color_info.iloc[:, 1:4].to_numpy()
-    #
-    # # Make IBC session model file names
-    # # fnames = []
-    # # sess = DataSetIBC(base_dir + '/IBC').sessions
-    # # for s in sess:
-    # #     fnames.append(f'Models_05/asym_Ib_space-MNISymC3_K-10_{s}')
-    #
-    # plt.figure(figsize=(50, 10))
-    # plot_model_parcel(['Models_01/asym_Ib_space-MNISymC3_K-20',
-    #                    'Models_02/asym_Ib_space-MNISymC3_K-20',
-    #                    'Models_03/asym_Ib_space-MNISymC3_K-20',
-    #                    'Models_04/asym_Ib_space-MNISymC3_K-20',
-    #                    'Models_05/asym_Ib_space-MNISymC3_K-20'], [1,5], cmap='tab20',
-    #                   align=True)
-    # plt.savefig('ib_k-20_allsess.png', format='png')
-    # plt.show()
-
-    
     # # ########## Higher K ##########
     # space = 'MNISymC3' # Set atlas space
     # # space = 'MNISymC2' # Set atlas space

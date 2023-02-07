@@ -58,6 +58,22 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results' + '/3.IBC_two_sessions'
 
+def fit_IBC_twoSess():
+    # ########## IBC selected sessions fusion fit ##########
+    from itertools import combinations
+
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for (s1, s2) in reversed(list(combinations(sess, 2))):
+        this_s1 = s1.split('-')[1]
+        this_s2 = s2.split('-')[1]
+        for k in [17]:
+            for t in ['06']:
+                wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                fname = wdir + f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                if not os.path.isfile(fname):
+                    fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                    print(f'-Done type {t}, K={k}, IBC session {this_s1} and {this_s2} fusion.')
+
 def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
     """Result3: Evaluate group and individual DCBC and coserr
        of IBC two single sessions and fusion on the IBC
