@@ -19,77 +19,78 @@ import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
+import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
 import logging
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None):
 
-    # Get model and atlas. 
+    # Get model and atlas.
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info,model = load_batch_best(mname)
-    atlas,ainf = am.get_atlas(info.atlas,atlas_dir)
+    info, model = load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
 
-    # Get winner-take all parcels 
+    # Get winner-take all parcels
     Prob = np.array(model.arrange.marginal_prob())
-    parcel = Prob.argmax(axis=0)+1
+    parcel = Prob.argmax(axis=0) + 1
 
     # Get parcel similarity:
-    w_cos_sym,_,_ = cl.parcel_similarity(model,plot=True,sym=sym)
+    w_cos_sym, _, _ = cl.parcel_similarity(model, plot=True, sym=sym)
 
     # Do Clustering:
     if clustering == 'agglomative':
-        labels, clusters, _ = cl.agglomative_clustering(
+        labels_new, clusters, leaves = cl.agglomative_clustering(
             w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
         while np.unique(clusters).shape[0] < 2:
             num_cluster = num_cluster - 1
-            labels,clusters,_ = cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=False)
+            labels_new, clusters, _ = cl.agglomative_clustering(
+                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
             logging.warning(
                 f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
     if clustering == 'model_guided':
         if cluster_by is None:
-            raise('Need to specify model that guides clustering')
+            raise ('Need to specify model that guides clustering')
         cluster_info, cluster_model = load_batch_best(cluster_by)
         clusters_half, clusters = cl.guided_clustering(
             mname, cluster_by)
         labels, cluster_counts = cl.cluster_labels(clusters)
-        print(f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
-        
+        print(
+            f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
 
-    # Make a colormap
-    w_cos_sim,_,_ = cl.parcel_similarity(model,plot=False)
-    W = sc.calc_mds(w_cos_sim,center=True)
+    # Make a colormap...
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
+    W = sc.calc_mds(w_cos_sim, center=True)
 
     # Define color anchors
-    m,regions,colors = sc.get_target_points(atlas,parcel)
-    cmap = sc.colormap_mds(W,target=(m,regions,colors),clusters=clusters,gamma=0)
+    m, regions, colors = sc.get_target_points(atlas, parcel)
+    cmap = sc.colormap_mds(W, target=(m, regions, colors),
+                           clusters=clusters, gamma=0)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     # Replot the Clustering dendrogram, this time with the correct color map
     if clustering == 'agglomative':
-        cl.agglomative_clustering(w_cos_sym,sym=sym,num_clusters=num_cluster,plot=True,cmap=cmap)
-    plt.figure(figsize=(5,10))
-    cl.plot_parcel_size(Prob,cmap,labels,wta=True)
+        if labels is None:
+            labels = labels_new
+            cl.agglomative_clustering(
+                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
+
+    plt.figure(figsize=(5, 10))
+    cl.plot_parcel_size(Prob, cmap, labels, wta=True)
 
     # Plot the parcellation
-    if plot is True:
-        ax = plot_data_flat(Prob,atlas.name,cmap = cmap,
-                        dtype='prob',
-                        labels=labels,
-                        render='plotly')
+    if plot:
+        ax = plot_data_flat(Prob, atlas.name, cmap=cmap,
+                            dtype='prob',
+                            labels=labels,
+                            render='plotly')
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
 
-def make_sfn_atlas():
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # Quick hack - hard-code the labels:
-    labels = np.array(['0', 'O1L', 'W1L', 'A2L', 'A3L', 'L1L', 'O2L', 'D1L', 'L2L', 'M2L','I1L', 'D2L', 'M3L', 'M4L', 'M1L', 'W4L', 'A1L', 'W2L', 'O1R', 'W1R', 'A2R', 'A3R', 'L1R', 'O2R', 'D1R', 'L2R', 'M2R', 'I1R', 'D2R', 'M3R', 'M4R', 'M1R', 'W4R', 'A1R', 'W2R'], dtype=object)
-    ea.export_map(Prob,atlas,cmap,labels,base_dir + '/Atlases/tpl-MNI152NLin2000cSymC/atl-NettekovenSym34')
-    ea.resample_atlas('atl-NettekovenSym34')
 
 def merge_clusters(ks, space='MNISymC3'):
     # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
@@ -130,6 +131,7 @@ def export_merged(merged_models=None):
         ea.export_map(Prob, atlas.name, cmap, labels,
                       f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
 
+
 def compare_levels():
     """Compares different clustering levels.
         For a selection of merged models, calculate adjusted Rand index between original fine parcellation and merged parcellation (merged according to coarse parcellation).
@@ -145,17 +147,16 @@ def compare_levels():
     Prop_68 = np.array(model_68.marginal_prob())
     parcel_68 = Prop_68.argmax(axis=0) + 1
 
-
     merged_models = [
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
-    f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
+        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
 
     m_models = []
     m_infos = []
@@ -180,72 +181,263 @@ def compare_levels():
         pass
 
 
-if __name__ == "__main__":
-    # Merge C2 models
-    space='MNISymC2'
+def save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5]):
+    plt.figure(figsize=(7, 10))
+    plot_model_pmaps(Prob, atlas.name,
+                     labels=labels[1:],
+                     subset=subset,
+                     grid=(3, 2))
+    plt.savefig(f'pmaps_01.png', format='png')
+    pass
+
+
+
+def query_similarity(mname, label):
+    labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
+    ind = np.nonzero(labels == label)[0]
+    D = pd.DataFrame(
+        {'labels': labels, 'w_cos_sim': w_cos_sim[ind[0], :], 'spatial_sim': spatial_sim[ind[0], :]})
+    return D
+
+
+def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic', 'Demand'], save_task_maps=False):
+    """Plots taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
+
+    Returns:
+        fig: task map plot
+
+    """
+    profile = pd.read_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+    atlas = mname.split('space-')[1].split('_')[0]
+    Prob, parcel, _, labels, cmap = analyze_parcel(mname, sym=True)
+    labels_sorted = sorted(labels)
+
+    for dataset in datasets:
+        # Select dataset
+        dataset = datasets[0]
+        profile_dataset = profile[profile.dataset == dataset]
+
+        # Get highest scoring task of this dataset
+        conditions = profile_dataset.condition
+        tasks = {}
+        for region in labels_sorted[1:]:
+            weights = profile_dataset[region]
+            conditions_weighted = [(con, w)
+                                   for con, w in sorted(zip(weights, conditions), reverse=True)]
+            high = conditions_weighted[:n_highest]
+            low = conditions_weighted[-n_lowest:]
+            tasks[region] = high + low
+            print(
+                f'\n\n\n{region}\nHighest: \t{[el[1] for el in high]}\n\t\t{[el[0] for el in high]}\n\nLowest: \t{[el[1] for el in low]}\n\t\t{[el[0] for el in low]}')
+
+        if save_task_maps:
+            # Get task maps
+            data, info, _ = ds.get_dataset(base_dir, dataset, atlas=atlas)
+            grid = (int(np.ceil((n_highest + n_lowest) / 2)), 2)
+            for region in tasks.keys():
+                task = tasks[region]
+                activity = np.full((len(task), data.shape[2]), np.nan)
+                for i, t in enumerate(task):
+                    task_name = t[1]
+                    activity[i, :] = np.nanmean(
+                        data[:, info.cond_name.tolist().index(task_name), :], axis=0)
+
+                titles = [
+                    f'{name} V: {np.round(weight,2)}' for weight, name in task]
+
+                cscale = [np.percentile(activity[np.where(~np.isnan(activity))], 5), np.percentile(
+                    activity[np.where(~np.isnan(activity))], 95)]
+                plot_multi_flat(activity, atlas, grid,
+                                cmap='hot',
+                                dtype='func',
+                                cscale=cscale,
+                                titles=titles,
+                                colorbar=False,
+                                save_fig=True,
+                                save_under=f'task_maps/{dataset}_{region}.png')
+
+    pass
+
+
+def save_taskmaps(mname):
+    """Saves taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
+        datasets:
+    """
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+
+    plt.figure(figsize=(7, 10))
+    plot_model_taskmaps(mname, n_highest=3, n_lowest=3)
+    plt.savefig(f'tmaps_01.png', format='png')
+
+
+def mixed_clustering(mname_fine,
+                     df_assignment,
+                     fine_labels=None):
+    """ Maps parcels of a parcellation using a hand-coded merging of parcels
+    specified in mixed_assignment.csv.
+
+    Args:
+        mname_fine: Based parcellation map
+
+    Returns:
+        fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
+        fine_coarse_mapping_full: Winner-take-all assignment of fine parcels to coarse parcels for all parcels (same as fine_coarse_mapping for asym model)
+
+    """
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    _, fine_model = load_batch_best(mname_fine)
+
+   # Get winner take all assignment for fine model
+    fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
+
+    # Get mapping
+    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+                                      f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
+
+    assignment = dict(zip(df_assignment.parcel_orig.tolist(),
+                          df_assignment.parcel_med_idx.tolist()))
+
+    fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
+    left_labels = int((len(labels) - 1) / 2)
+    labels_hem = labels[1:left_labels + 1]
+    labels_hem = [label.strip('L') for label in labels_hem]
+    for parcel_idx, parcel_label in enumerate(labels_hem):
+        fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
+        print(
+            f'{parcel_idx} parcel {parcel_label} belongs to {assignment[parcel_label]}')
+
+    # Spot checks
+    # mapping_check = dict(zip(labels_hem,
+    #                          fine_coarse_mapping.tolist()))
+    # for keys, value in mapping_check.items():
+    #    print(keys, value)
+
+    labels = []
+    for i in np.unique(fine_coarse_mapping):
+        ind = np.nonzero(
+            (df_assignment.parcel_med_idx == i).to_numpy())[0]
+        labels.append(df_assignment.parcel_medium[ind[0]])
+    labels = [0] + labels + labels
+    return fine_coarse_mapping, labels
+
+
+def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True):
+    """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
+
+    Args:
+        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
+
+    Returns:
+        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
+        mname_merged:   Name of merged model
+        mapping:        Mapping of fine parcels to coarse parcels.
+
+    """
+    # -- Import models --
+    # Import fine model
+    fileparts = mname_fine.split('/')
+    split_mn = fileparts[-1].split('_')
+    finfo, fine_model = load_batch_best(mname_fine)
+    if split_mn[0] == 'sym':
+        sym = True
+    else:
+        sym = False
+
+    # Get mapping between fine parcels and coarse parcels
+    df_assignment = pd.read_csv(
+        model_dir + '/Atlases/' + '/' + f_assignment)
+    mapping, labels = mixed_clustering(
+        mname_fine, df_assignment)
+
+    # -- Merge model --
+    merged_model = cl.merge_model(fine_model, mapping)
+
+    # Make new info
+    new_info = deepcopy(finfo)
+    new_info['model_type'] = mname_fine.split('/')[0]
+    new_info['K_original'] = int(new_info.K)
+    if sym:
+        new_info['K'] = int(len(np.unique(mapping)) * 2)
+    else:
+        new_info['K'] = int(len(np.unique(mapping)))
+
+    # Refit reduced model
+    if refit_model:
+        new_model, new_info = lf.refit_model(merged_model, new_info)
+    else:
+        new_model = merged_model
+        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+    #
+    # -- Save model --
+    # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
+    if mname_new is None:
+        mname_new = f'{mname_fine}_meth-{method}'
+
+    # save new model
+    with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
+        pickle.dump([new_model], file)
+
+    # save new info
+    new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
+                    sep='\t', index=False)
+
+    print(
+        f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+
+    return new_model, mname_new, labels
+
+def make_NettekovenSym68c32():
+    space = 'MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-40'
-    cl.save_guided_clustering(mname_fine, mname_coarse,'cosang')
-    # pass
-    
-    # export_merged(merged_models)
+    mname_new  = 'Models_03/NettekovenSym68c32'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
+              mname_new=mname_new,
+              f_assignment='mixed_assignment_68_16.csv',
+              refit_model=True)
 
-    # export_merged()
-
-    # cmap_file = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_C-14.cmap'
-    # sc.read_cmap(cmap_file)
-
-
-    # # Agglomative clustering
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
-    # basename = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # ea.export_map(Prob,atlas.name,cmap,labels,basename)
-
-    # # Guided clustering
-    # cluster_by = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-14'
-    # Prob, parcel, atlas, labels, cmap = analyze_parcel(
-    #     mname, sym=True, clustering='model_guided', cluster_by=cluster_by)
-    # clustername = f'{model_dir}/Atlases/{mname.split("/")[1]}_C-{cluster_by.split("-")[-1]}'
-    # ea.export_map(Prob, atlas.name, cmap, labels, clustername)
-
-    # pass
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                   f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
+    ea.resample_atlas('NettekovenSym68c32',
+            atlas='MNISymC2',
+            target_space='SUIT')
 
 
-    
-    # # Plot fine, coarse and merged model
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_fine,sym=True)
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname_coarse,sym=True)
-  
+if __name__ == "__main__":
+    # make_NettekovenSym68c32()
+    ea.resample_atlas('NettekovenSym68c32',
+            atlas='MNISymC2',
+            target_space='MNI152NLin6AsymC')
+    # Save 3 highest and 2 lowest task maps
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # D = query_similarity(mname, 'E3L')
+    # save_taskmaps(mname)
 
-    # # Show MNISymC2 Parcellation
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-40'
-    Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # output = f'{model_dir}/Atlases/{mname.split("/")[1]}'
-    # ea.export_map(Prob, atlas.name, cmap, labels, output)
+    # Merge functionally and spatially clustered scree parcels
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels, save_dir + '/exported/' + mname)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
 
-    # mname = 'Models_04/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # f_assignment = 'mixed_assignment_68_16.csv'
+    # df_assignment = pd.read_csv(
+    #     model_dir + '/Atlases/' + '/' + f_assignment)
 
-    # --> Model 03, K=68
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
+    # f_assignment = 'mixed_assignment_68_16.csv'
+    # df_assignment = pd.read_csv(
+    #     model_dir + '/Atlases/' + '/' + f_assignment)
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
+    # mapping, labels = mixed_clustering(mname, df_assignment)
 
-    # mname = 'Models_04/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # export_map(Prob,atlas,cmap,labels,save_dir + '/exported/' + mname)
-
-    # resample_atlas(mname)
-    # make_asymmetry_map(mname)
-    # Prob,parcel,atlas,labels,cmap = analyze_parcel(mname,sym=True)
-    # cmap = mpl.cm.get_cmap('tab20')
-    # rgb=cmap(np.arange(20))
-    # plot_colormap(rgb)
     pass

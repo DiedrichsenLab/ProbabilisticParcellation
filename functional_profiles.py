@@ -273,22 +273,15 @@ def dataset_colours(word, font_size, position, orientation, random_state=None, *
 
 
 if __name__ == "__main__":
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    info, model = load_batch_best(mname)
+    info = recover_info(info, model, mname)
+    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+                                      fileparts[-1] + '.lut')
 
-    space = "MNISymC2"
-    K = 68
-    mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}"
-    export_profile(mname)
+    # get functional profiles
+    parcel_profiles, profile_data = get_profiles(model=model, info=info)
 
-    # # Make word cloud
-    region = "C3L"
-    selected_region = {
-        "points": [{"text": region}]
-    }  # weird formatting is due to compatibility with mouseclick data for dash app
-
-    profile = pd.read_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
-    )
-    parcel_profiles(profile, parcels='all', colour_by_dataset=False)
 
     # profile = pd.read_csv(
     #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"

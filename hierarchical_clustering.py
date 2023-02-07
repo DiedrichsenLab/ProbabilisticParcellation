@@ -22,8 +22,11 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
+
 from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.learn_fusion_gpu as lf
+
 import torch as pt
 from matplotlib import pyplot as plt
 from matplotlib.patches import ConnectionPatch
@@ -101,6 +104,36 @@ def parcel_similarity(model,plot=False,sym=False, weighting=None):
         plt.title(f"Merged")
 
     return w_cos_sim,cos_sim,kappa
+
+
+def similarity_matrices(mname, sym=True):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info, model = ut.load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.arrange.marginal_prob())
+    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                      fileparts[-1] + '.lut')
+    K, P = Prob.shape
+    if sym:
+        K = int(K / 2)
+        Prob = Prob[:K, :]
+    labels = np.array(labels[1:K + 1])
+
+    # Get parcel similarity:
+    w_cos_sim, cos_sim, _ = parcel_similarity(model, plot=False, sym=sym)
+    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
+
+    spatial_sim = P @ P.T
+
+    ind = np.argsort(labels)
+    labels = labels[ind]
+    w_cos_sim = w_cos_sim[:, ind][ind, :]
+    spatial_sim = spatial_sim[:, ind][ind, :]
+    return labels, w_cos_sim, spatial_sim, ind
 
 
 def get_clusters(Z,K,num_cluster):
@@ -200,7 +233,7 @@ def draw_cmap(ax,cmap,leaves,sym):
 def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info,model = load_batch_best(mname)
+    info,model = ut.load_batch_best(mname)
 
     # Get winner take-all
     Prob = np.array(model.marginal_prob())
@@ -213,7 +246,7 @@ def make_asymmetry_map(mname, cmap='hot', cscale=[0.3,1]):
     indx2 = np.concatenate([v+model.K_sym,v])
     sym_score = w_cos[indx1,indx2]
 
-    suit_atlas, _ = am.get_atlas('MNISymC3',base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas('MNISymC3',ut.base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
     surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
             space='MNISymC',ignore_zeros=True)
@@ -256,12 +289,19 @@ def plot_parcel_size(Prob,cmap,labels,wta=True):
                     'sumV':sumV,
                     'cnum':np.arange(Prob.shape[0])+1})
     D=D.sort_values(by='region')
-    sb.barplot(data=D,y='region',x='sumV',palette=cmap(D.cnum))
+    pal = {d.region: cmap(d.cnum) for i,d in D.iterrows()}
+    sb.barplot(data=D,y='region',x='sumV',palette=pal)
     return D 
 
 
-def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
+def plot_parcel_mapping(fine_prob,coarse_prob,mapping,fine_labels=None):
     # get new probabilities
+    ind = np.argsort(mapping)
+    fine_prob=fine_prob[ind,:]
+    mapping = mapping[ind]
+    if not fine_labels is None:
+        fine_labels = np.array(fine_labels)[ind]
+
 
     K1=fine_prob.shape[0]
     K2=coarse_prob.shape[0]
@@ -275,7 +315,7 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
         sumP.append(a)
         sumV.append(b)
 
-    fig = plt.figure(figsize=(10,10))
+    fig = plt.figure(figsize=(20,8))
     gs = fig.add_gridspec(3)
     axs = gs.subplots(sharey=True)
     for i in range(3):
@@ -290,8 +330,11 @@ def plot_parcel_mapping(fine_prob,coarse_prob,mapping):
         con = ConnectionPatch(xyA=xyA, xyB=xyB, coordsA="data", coordsB="data", axesA=axs[0], axesB=axs[1], color="blue")
         axs[1].add_artist(con)
     pass 
+    if not fine_labels is None:
+        axs[0].set_xticks(np.arange(K1))
+        axs[0].set_xticklabels(fine_labels)
 
-def guided_clustering(mname_fine, mname_coarse,method):
+def guided_clustering(mname_fine, mname_coarse,method,fine_labels=None):
     """Maps parcels of a fine parcellation to parcels of a coarse parcellation guided by functional fusion model.
 
     Args:
@@ -306,12 +349,12 @@ def guided_clustering(mname_fine, mname_coarse,method):
     # Import fine model
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    _, fine_model = load_batch_best(mname_fine)
+    _, fine_model = ut.load_batch_best(mname_fine)
 
     # Import coarse model
     fileparts = mname_coarse.split('/')
     split_mn = fileparts[-1].split('_')
-    _, coarse_model = load_batch_best(mname_coarse)
+    _, coarse_model = ut.load_batch_best(mname_coarse)
 
     # Get winner take all assignment for fine model
     fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
@@ -359,7 +402,7 @@ def guided_clustering(mname_fine, mname_coarse,method):
 
     plot_parcel_mapping(fine_probabilities.numpy(),
                        coarse_probabilities.numpy(),
-                       fine_coarse_mapping)
+                       fine_coarse_mapping,fine_labels)
 
     return fine_coarse_mapping, fine_coarse_mapping_full
 
@@ -484,7 +527,7 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     # Import fine model
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    finfo, fine_model = load_batch_best(mname_fine)
+    finfo, fine_model = ut.load_batch_best(mname_fine)
     if split_mn[0] == 'sym':
         sym = True
     else:
@@ -493,7 +536,7 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     # Import coarse model
     fileparts = mname_coarse.split('/')
     split_mn = fileparts[-1].split('_')
-    cinfo, _ = load_batch_best(mname_coarse)
+    cinfo, _ = ut.load_batch_best(mname_coarse)
 
     # -- Cluster fine model --
     print(
@@ -523,15 +566,15 @@ def save_guided_clustering(mname_fine, mname_coarse,method):
     mname_merged = f'{mname_fine}_Kclus-{int(new_info.K_coarse)}_meth-{method}'
 
     # save new model
-    with open(f'{model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
+    with open(f'{ut.model_dir}/Models/{mname_merged}.pickle', 'wb') as file:
         pickle.dump([new_model], file)
 
     # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_merged}.tsv',
+    new_info.to_csv(f'{ut.model_dir}/Models/{mname_merged}.tsv',
                     sep='\t', index=False)
 
     print(
-        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+        f'Done. Saved merged model as: \n\t{mname_merged} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
 
     return new_model, mname_merged
 
