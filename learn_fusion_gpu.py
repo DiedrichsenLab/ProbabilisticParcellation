@@ -366,7 +366,7 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
 
         # Save the fits and information
         wdir = model_dir + f'/Models/Models_{model_type}'
-        fname = f'/{name}_space-{atlas.name}_K-{K}_GMM'
+        fname = f'/{name}_space-{atlas.name}_K-{K}'
 
         if this_sess is not None:
             return wdir, fname, info, models
