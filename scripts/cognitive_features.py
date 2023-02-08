@@ -219,7 +219,7 @@ def get_unique_conditions():
     pass
 
 
-def compile_tags():
+def compile_tags_selftagged_datasets():
     """Compile tags for Nishimoto, Working Memory, Demand, Somatotopic and IBC."""
     # Load profile data
 
@@ -256,9 +256,9 @@ def compile_tags():
     return tags_filled
 
 
-def compile_features():
+def compile_tags_all_datasets():
     """Import cognitive features for all datasets."""
-
+    # --- Load MDTB Tags ---
     # Load data
     tags_mdtb = pd.read_csv(
         '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/cognitive_features_mdtb.txt', sep='\t'
@@ -271,10 +271,11 @@ def compile_features():
                     for column in tags_mdtb.columns.tolist()]
     tags_mdtb.columns = mdtb_columns
 
-    # find all columns that contain a tag
+    # find all columns in mdtb dataframe that contain a tag
     first_tag = 'left_hand_response_execution'
     t_idx = mdtb_columns.index(first_tag)
 
+    # --- Load All Other Tags ---
     pontine_mdtb_taskmap = pd.read_csv(
         '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/mdtb_pontine_task_matching.txt', sep='\t'
     )
@@ -290,49 +291,43 @@ def compile_features():
     for t, tags in enumerate(tags_other.tags):
         tags_other.tags[t] = eval(tags)
 
-    # Make a list of all tags, starting with the mdtb tags
+    # --- Get Unique Tags ---
+    # Make a list of all unique tags, starting with the mdtb tags
     all_tags = mdtb_columns[t_idx:]
     for tags in tags_other.tags:
         for tag in tags:
             if tag not in all_tags:
                 all_tags.append(tag)
 
+    # --- Make Tags into indicators ---
     # Make tags into indicators
     tags_other['tags_other'] = tags_other.tags.apply(
         lambda x: [1 if tag in x else 0 for tag in all_tags])
     tags_other = tags_other.drop(columns=['tags'])
 
-    # Loop through conditions in profile and collect tags from pcm indicator matrix
-    # (according to tag indicator in tags_other)
-    # Look at how many tags appear only once
-    # concatenate all
-    # make sure that the xxx conditions are deleted
-    # make sure that the response_execution tag from the original column overrides the one from the pcm indicator matrix
-
-    # concatenate pontine and mdtb tags
+    # --- Concatenate Pontine and MDTB Tags ---
     tags = deepcopy(profile[['dataset', 'session', 'condition']])
     tags = tags.reindex(columns=tags.columns.tolist() +
                         all_tags)
 
     mdtb_conditions = tags_mdtb.conditionName.tolist()
 
-    # for c, cond in enumerate(profile.condition[profile.dataset == 'MDTB']):
-    #     if cond in mdtb_conditions:
-    #         print(mdtb_conditions.index(cond))
-    #     else:
-    #         print(cond, mdtb_conditions[c])
-
     # ignore conditions that should not be included
     ignore_conditions = ['p-startup', 'neutral']
 
+    # --- Map old MDTB condition names to new MDTB condition names ---
     # gotta take care of renaming mdtb conditions (new names:  VideoAct, VisualSearchSmall, VisualSearchLarge, SpatialMedDiff)
     mdtb_new = ['VideoAct', 'VisualSearchSmall',
                 'VisualSearchLarge', 'SpatialMedDiff', 'rest']
     mdtb_old = ['VideoActions', 'VisualSearchEasy',
                 'VisualSearchMed', 'SpatialMapDiff', 'Rest']
     mdtb_new2old = dict(zip(mdtb_new, mdtb_old))
+
+    # --- Initialize empty tags for mdtb conditions ---
     tags_mdtb_zeros = pd.Series(
         [0] * (len(all_tags) - len(mdtb_columns[t_idx:])), index=all_tags[len(mdtb_columns[t_idx:]):])
+
+    # --- Compile tags for all datasets ---
     for r, row in tags.iterrows():
         # extract dataset, session and condition
         dset, ses, cond = row[['dataset', 'session', 'condition']].values
@@ -396,6 +391,8 @@ def compile_features():
                         'dataset', 'session', 'condition'])
         full_row = pd.concat([inf, tag_row], axis=0)
         tags.iloc[r, :] = full_row
+
+    # --- Save tags ---
     tags.to_csv(
         f'/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/tags.csv', index=False, sep="\t")
     # tags.to_csv(f'{base_dir}/Atlases/tags.csv', index=False, sep="\t")
@@ -413,5 +410,5 @@ if __name__ == "__main__":
     # # get_unique_conditions()
     # get_unique_tags()
 
-    # compile_tags()
-    compile_features()
+    # compile_tags_selftagged_datasets()
+    compile_tags_all_datasets()
