@@ -274,9 +274,7 @@ def dataset_colours(word, font_size, position, orientation, random_state=None, *
 
 if __name__ == "__main__":
 
-    space = "MNISymC2"
-    K = 68
-    mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{K}"
+    mname = f"Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
     export_profile(mname)
 
     # # Make word cloud

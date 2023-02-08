@@ -256,6 +256,152 @@ def compile_tags():
     return tags_filled
 
 
+def compile_features():
+    """Import cognitive features for all datasets."""
+
+    # Load data
+    tags_mdtb = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/cognitive_features_mdtb.txt', sep='\t'
+    )
+    # remove superfluous columns
+    tags_mdtb = tags_mdtb.drop(columns=['taskNumUni', 'condNumUni'])
+
+    # remove superfluous brackets in column names
+    mdtb_columns = [eval(column)[0] if '[' in column else column
+                    for column in tags_mdtb.columns.tolist()]
+    tags_mdtb.columns = mdtb_columns
+
+    # find all columns that contain a tag
+    first_tag = 'left_hand_response_execution'
+    t_idx = mdtb_columns.index(first_tag)
+
+    pontine_mdtb_taskmap = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/mdtb_pontine_task_matching.txt', sep='\t'
+    )
+
+    profile = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_task_profile_data.tsv', sep='\t')
+
+    # Collect tags of Nishimoto, Working Memory, Demand, Somatotopic and IBC
+    tags_other = pd.read_csv(
+        '/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/cognitive_features_NiIbWmDeSo.csv', sep=','
+    )
+
+    for t, tags in enumerate(tags_other.tags):
+        tags_other.tags[t] = eval(tags)
+
+    # Make a list of all tags, starting with the mdtb tags
+    all_tags = mdtb_columns[t_idx:]
+    for tags in tags_other.tags:
+        for tag in tags:
+            if tag not in all_tags:
+                all_tags.append(tag)
+
+    # Make tags into indicators
+    tags_other['tags_other'] = tags_other.tags.apply(
+        lambda x: [1 if tag in x else 0 for tag in all_tags])
+    tags_other = tags_other.drop(columns=['tags'])
+
+    # Loop through conditions in profile and collect tags from pcm indicator matrix
+    # (according to tag indicator in tags_other)
+    # Look at how many tags appear only once
+    # concatenate all
+    # make sure that the xxx conditions are deleted
+    # make sure that the response_execution tag from the original column overrides the one from the pcm indicator matrix
+
+    # concatenate pontine and mdtb tags
+    tags = deepcopy(profile[['dataset', 'session', 'condition']])
+    tags = tags.reindex(columns=tags.columns.tolist() +
+                        all_tags)
+
+    mdtb_conditions = tags_mdtb.conditionName.tolist()
+
+    # for c, cond in enumerate(profile.condition[profile.dataset == 'MDTB']):
+    #     if cond in mdtb_conditions:
+    #         print(mdtb_conditions.index(cond))
+    #     else:
+    #         print(cond, mdtb_conditions[c])
+
+    # ignore conditions that should not be included
+    ignore_conditions = ['p-startup', 'neutral']
+
+    # gotta take care of renaming mdtb conditions (new names:  VideoAct, VisualSearchSmall, VisualSearchLarge, SpatialMedDiff)
+    mdtb_new = ['VideoAct', 'VisualSearchSmall',
+                'VisualSearchLarge', 'SpatialMedDiff', 'rest']
+    mdtb_old = ['VideoActions', 'VisualSearchEasy',
+                'VisualSearchMed', 'SpatialMapDiff', 'Rest']
+    mdtb_new2old = dict(zip(mdtb_new, mdtb_old))
+    tags_mdtb_zeros = pd.Series(
+        [0] * (len(all_tags) - len(mdtb_columns[t_idx:])), index=all_tags[len(mdtb_columns[t_idx:]):])
+    for r, row in tags.iterrows():
+        # extract dataset, session and condition
+        dset, ses, cond = row[['dataset', 'session', 'condition']].values
+        tag = []
+        if dset == 'Pontine' and not cond == 'flexion-extension':
+            eq = pontine_mdtb_taskmap[pontine_mdtb_taskmap.condition ==
+                                      cond].mdtb_equivalent_task.item()
+
+            if eq not in mdtb_conditions and eq + 'Easy' in mdtb_conditions:
+                # pontine conditions were modelled across difficulty levels, while mdtb conditions were modelled separately
+                e = mdtb_conditions.index(eq + 'Easy')
+                m = mdtb_conditions.index(eq + 'Med')
+                d = mdtb_conditions.index(eq + 'Diff')
+                tag_row = tags_mdtb.iloc[[e, m, d], t_idx:]
+                tag_row = tag_row.mean(axis=0)
+
+            elif eq not in mdtb_conditions and eq + 'Simple' in mdtb_conditions:
+                e = mdtb_conditions.index(eq + 'Simple')
+                m = mdtb_conditions.index(eq + 'Seq')
+                tag_row = tags_mdtb.iloc[[e, m], t_idx:]
+                tag_row = tag_row.mean(axis=0)
+
+            elif eq not in mdtb_conditions and eq + 'ion' in mdtb_conditions:
+                e = mdtb_conditions.index(eq + 'ion')
+                m = mdtb_conditions.index(eq + 'Viol')
+                d = mdtb_conditions.index(eq + 'Scram')
+                tag_row = tags_mdtb.iloc[[e, m, d], t_idx:]
+                tag_row = tag_row.mean(axis=0)
+
+            elif eq not in mdtb_conditions and eq + '2Back' in mdtb_conditions:
+                e = mdtb_conditions.index(eq + '0Back')
+                m = mdtb_conditions.index(eq + '2Back')
+                tag_row = tags_mdtb.iloc[[e, m], t_idx:]
+                tag_row = tag_row.mean(axis=0)
+
+            else:
+                tag_row = tags_mdtb.query(
+                    'conditionName == @eq').iloc[:, t_idx:].squeeze()
+            tag_row = tag_row.append(tags_mdtb_zeros, ignore_index=True)
+        elif dset == 'MDTB':
+            if cond not in mdtb_conditions:
+                cond = mdtb_new2old[cond]
+            # print(tags_mdtb.query('conditionName == @cond'))
+            tag_row = tags_mdtb.query(
+                'conditionName == @cond').iloc[:, t_idx:].squeeze()
+            tag_row = tag_row.append(tags_mdtb_zeros, ignore_index=True)
+        elif cond in ignore_conditions:
+            tag_row = pd.Series([0] * len(all_tags), index=all_tags)
+        else:
+            tag_rrs = tags_other.query(
+                'Condition == @cond & Session == @ses').squeeze()
+            tag_after = pd.Series(tags_other.query(
+                'Condition == @cond & Session == @ses').iloc[:, -1].tolist()[0], index=all_tags)
+            if not isinstance(tag_rrs, pd.Series) and (tag_rrs.iloc[0, :].tags_other == tag_rrs.iloc[1, :].tags_other):
+                tag_rrs = tag_rrs.iloc[0, :]
+            # Replace tag with tag from tag_rrs
+            for i in ['response_selection', 'response_execution', 'saccadic_eye_movement']:
+                tag_after[i] = tag_rrs[i].item()
+            tag_row = tag_after
+        inf = pd.Series([dset, ses, cond], index=[
+                        'dataset', 'session', 'condition'])
+        full_row = pd.concat([inf, tag_row], axis=0)
+        tags.iloc[r, :] = full_row
+    tags.to_csv(
+        f'/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/tags.csv', index=False, sep="\t")
+    # tags.to_csv(f'{base_dir}/Atlases/tags.csv', index=False, sep="\t")
+    pass
+
+
 if __name__ == "__main__":
 
     # inspect_cognitive_tags()
@@ -267,4 +413,5 @@ if __name__ == "__main__":
     # # get_unique_conditions()
     # get_unique_tags()
 
-    compile_tags()
+    # compile_tags()
+    compile_features()
