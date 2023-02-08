@@ -276,12 +276,9 @@ if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     info, model = load_batch_best(mname)
     info = recover_info(info, model, mname)
+    fileparts = mname.split('/')
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
                                       fileparts[-1] + '.lut')
-
-    # get functional profiles
-    parcel_profiles, profile_data = get_profiles(model=model, info=info)
-
 
     # profile = pd.read_csv(
     #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
