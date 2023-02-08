@@ -801,6 +801,8 @@ def example_fusion_group(K_true=20, K=20, width=50, nsub_list=np.array([10,10]),
 def compare_model_1_3(D, title=None):
     D = D.replace(['D_fusion_joint'], ['Model_1'])
     D = D.replace(['D_fusion'], ['Model_3'])
+
+    D = D.loc[(D['sigma2'] == '[0.5, 0.8]')]
     plt.figure(figsize=(8, 5))
     crits = ['dcbc_group', 'dcbc_indiv']
     for i, c in enumerate(crits):
@@ -866,7 +868,7 @@ def compare_diffK(generate_ck=False, save=False):
         result = res_plot.pivot(index='K_true', columns='K_fit', values=c + '_dif')
         rdgn = sb.color_palette("vlag", as_cmap=True)
         # rdgn = sb.color_palette("Spectral", as_cmap=True)
-        sb.heatmap(result, annot=True, cmap=rdgn, center=0.00, fmt='.2g')
+        sb.heatmap(result, annot=False, cmap=rdgn, vmin=-0.03, vmax=0.03, center=0.00, fmt='.2g')
         plt.title(c)
 
     plt.suptitle(f'Simulation 4, different region signal strength, iter=100')
@@ -895,21 +897,22 @@ if __name__ == '__main__':
     #         D = pd.concat([D, res], ignore_index=True)
     #     D.to_csv(f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv', index=False, sep='\t')
 
-    fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
-    fname = f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
-    D = pd.read_csv(fname, delimiter='\t')
+    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
+    # D = pd.read_csv(fname, delimiter='\t')
     #_plot_diffK(D, style="common_kappa", save=False)
 
     ########## Comparing model 1 and 3 ##########
     # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
     # D = pd.read_csv(fname, delimiter='\t')
-    # D = D.loc[(D['K_fit']==20) & (D['relevant']==False)]
-    compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
+    # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)
+    #           & (D.common_kappa==True) & (D['sigma2'] == '[0.5, 0.8]')]
+    # compare_model_1_3(D, title='K_true=20, K_fit=20, relevant=True, model1 and model3')
 
     ########## Comparing model 3 and 4 ##########
-    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_5to40_all_models.tsv'
+    # fname = model_dir + f'/Results/2.simulation/eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
+    # # fname = f'eval_Ktrue_20_Kfit_20_Fusion_merged_joint.tsv'
     # D = pd.read_csv(fname, delimiter='\t')
-    # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)]
+    # # D = D.loc[(D['K_fit']==20) & (D['relevant']==True)]
     # compare_model_3_4(D, title='K_true=20, K_fit=20, relevant=False, model3 and model4')
 
     # example_fusion_group(K_true=20, K=20, width=50, nsub_list=np.array([10,10]),

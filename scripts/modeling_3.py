@@ -58,6 +58,22 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results' + '/3.IBC_two_sessions'
 
+def fit_IBC_twoSess():
+    # ########## IBC selected sessions fusion fit ##########
+    from itertools import combinations
+
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for (s1, s2) in reversed(list(combinations(sess, 2))):
+        this_s1 = s1.split('-')[1]
+        this_s2 = s2.split('-')[1]
+        for k in [17]:
+            for t in ['06']:
+                wdir = model_dir + f'/Models/Models_{t}/IBC_sessFusion'
+                fname = wdir + f'/asym_Ib_space-MNISymC3_K-{k}_ses-{this_s1}+{this_s2}.tsv'
+                if not os.path.isfile(fname):
+                    fit_two_IBC_sessions(K=k, sess1=this_s1, sess2=this_s2, model_type=t)
+                    print(f'-Done type {t}, K={k}, IBC session {this_s1} and {this_s2} fusion.')
+
 def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
     """Result3: Evaluate group and individual DCBC and coserr
        of IBC two single sessions and fusion on the IBC
@@ -76,16 +92,11 @@ def result_3_eval(K=10, model_type=['03','04'], ses1=None, ses2=None):
     rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False,
                                  voxel_wise=False)
     reliability = dict(zip(sess, rel[:, 0]))
-    sess_1 = DataSetIBC(base_dir + '/IBC').sessions
-    sess_2 = DataSetIBC(base_dir + '/IBC').sessions
     if (ses1 is not None) and (ses2 is not None):
-        sess_1 = [ses1, ses2]
-        sess_2 = [ses1, ses2]
+        sess = [ses1, ses2]
 
     results = pd.DataFrame()
-    for s1 in sess_1:
-        sess_2.remove(s1)
-        for s2 in sess_2:
+    for (s1, s2) in list(combinations(sess, 2)):
             this_s1 = s1.split('-')[1]
             this_s2 = s2.split('-')[1]
             print(f'- Start evaluating {this_s1} and {this_s2}.')
@@ -207,7 +218,7 @@ def result_3_plot(D, train_model='IBC', ck=None, style=None, style_order=None,
     D['relevant'] = ""
     # D.rename(columns={'test_sess': 'session'}, inplace=True)
 
-    D = D.loc[D['K']==17]
+    # D = D.loc[D['K']==17]
     if ck is not None:
         D = D.loc[D['common_kappa']==ck]
 
@@ -268,18 +279,18 @@ def result_3_plot(D, train_model='IBC', ck=None, style=None, style_order=None,
     crits = ['dcbc_group','dcbc_indiv']
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
-        sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='model_type',
-                   hue_order=['Models_01','Models_03','Models_04'], errorbar="se")
-        # if style is not None:
-        #     sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
-        #                 style=style, style_order=style_order, markers=True)
-        # else:
-        #     sb.lineplot(data=T, x="K", y=c, hue='session',
-        #                 hue_order=['sess_1','sess_2','Fusion'], markers=True)
-        if c == 'dcbc_indiv':
-            plt.ylim(0, 0.04)
-        elif c == 'dcbc_group':
-            plt.ylim(0, 0.04)
+        # sb.barplot(data=T, x='session', y=c, order=['sess_1','sess_2','Fusion'], hue='model_type',
+        #            hue_order=['Models_01','Models_03','Models_04'], errorbar="se")
+        if style is not None:
+            sb.lineplot(data=T, x="K", y=c, hue='session', hue_order=['sess_1','sess_2','Fusion'],
+                        style=style, style_order=style_order, markers=True)
+        else:
+            sb.lineplot(data=T, x="K", y=c, hue='session',
+                        hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        # if c == 'dcbc_indiv':
+        #     plt.ylim(0, 0.04)
+        # elif c == 'dcbc_group':
+        #     plt.ylim(0, 0.04)
         # elif c== 'coserr_floor':
         #     plt.ylim(0.475, 0.525)
 
@@ -431,12 +442,13 @@ def make_all_in_one_tsv(path, out_name):
 
         D.to_csv(out_name, sep='\t', index=False)
 
-def result_3_plot_otherData(D, train_model='IBC', ck=None, style=None, style_order=None,
+def result_3_plot_otherData_1(D, K=None, train_model='IBC', ck=None, style=None, style_order=None,
                   relevant=None, print_relevancy=False):
     D['relevant'] = ""
     # D.rename(columns={'test_sess': 'session'}, inplace=True)
+    if K is not None:
+        D = D.loc[D['K']==K]
 
-    D = D.loc[D['K']==17]
     if ck is not None:
         D = D.loc[D['common_kappa']==ck]
 
@@ -452,7 +464,9 @@ def result_3_plot_otherData(D, train_model='IBC', ck=None, style=None, style_ord
         ses2 = ses2.replace(s2.split('-')[1], 'sess2')
         T = pd.concat([T, ses1, ses2, df], ignore_index=True)
 
-    plt.figure(figsize=(8,5))
+    T.loc[((T.test_sess == 'sess1') | (T.test_sess == 'sess2')) & (T['model_type'] == 'Models_01'),
+          'model_type'] = 'Models_03'
+    plt.figure(figsize=(10,8))
     crits = ['dcbc_group','dcbc_indiv']
     for i, c in enumerate(crits):
         plt.subplot(1, 2, i + 1)
@@ -465,30 +479,81 @@ def result_3_plot_otherData(D, train_model='IBC', ck=None, style=None, style_ord
         #     sb.lineplot(data=T, x="K", y=c, hue='session',
         #                 hue_order=['sess_1','sess_2','Fusion'], markers=True)
         if c == 'dcbc_indiv':
-            plt.ylim(0, 0.18)
+            plt.ylim(0, 0.20)
         elif c == 'dcbc_group':
-            plt.ylim(0, 0.18)
+            plt.ylim(0, 0.20)
         plt.xticks(rotation=45)
         plt.legend(loc='upper left')
 
-    plt.suptitle(f'IBC two sessions fusion - overall trend, K=17')
+    plt.suptitle(f'IBC two sessions fusion - overall trend, K={K}')
     plt.tight_layout()
-    # plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
+    plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
+    plt.show()
+
+def result_3_plot_otherData_2(D, K=None, ck=None, style=None, style_order=None,
+                  relevant=None, print_relevancy=False):
+    D['relevant'] = ""
+    # D.rename(columns={'test_sess': 'session'}, inplace=True)
+    if K is not None:
+        D = D.loc[D['K']==K]
+
+    if ck is not None:
+        D = D.loc[D['common_kappa']==ck]
+
+    T = pd.DataFrame()
+    sess = DataSetIBC(base_dir + '/IBC').sessions
+    for s1,s2 in combinations(sess, 2):
+        df = D.loc[(D['test_sess'] == s1.split('-')[1] + '+' + s2.split('-')[1])]
+        df = df.replace(s1.split('-')[1] + '+' + s2.split('-')[1], 'Fusion')
+
+        ses1 = D.loc[(D['test_sess'] == s1.split('-')[1])]
+        ses1 = ses1.replace(s1.split('-')[1], 'sess1')
+        ses2 = D.loc[(D['test_sess'] == s2.split('-')[1])]
+        ses2 = ses2.replace(s2.split('-')[1], 'sess2')
+        T = pd.concat([T, ses1, ses2, df], ignore_index=True)
+
+    # averaged individual dataset training across model 1 and 3
+    T.loc[((T.test_sess == 'sess1') | (T.test_sess == 'sess2')) & (T['model_type'] == 'Models_01'),
+          'model_type'] = 'Models_03'
+    plt.figure(figsize=(10,8))
+    crits = ['dcbc_group','dcbc_indiv']
+    for i, c in enumerate(crits):
+        plt.subplot(1, 2, i + 1)
+        if style is not None:
+            sb.lineplot(data=T, x="K", y=c, hue='model_type',
+                        hue_order=['Models_01','Models_03','Models_04'],
+                        style=style, style_order=style_order, err_style='bars',
+                        errorbar='se', markers=False)
+        else:
+            sb.lineplot(data=T, x="K", y=c, hue='session',
+                        hue_order=['sess_1','sess_2','Fusion'], markers=True)
+        # if c == 'dcbc_indiv':
+        #     plt.ylim(0, 0.20)
+        # elif c == 'dcbc_group':
+        #     plt.ylim(0, 0.20)
+        plt.xticks(rotation=45)
+        plt.legend(loc='lower right')
+
+    plt.suptitle(f'IBC two sessions fusion - overall trend, K={K}')
+    plt.tight_layout()
+    plt.savefig('Ibc_twoSessFusion.pdf', format='pdf')
     plt.show()
 
 
 if __name__ == "__main__":
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
-    for k in [10,20,34,40,68,100]:
-        # result_3_eval(K=k, model_type=['01','03','04'])
-        result_3_eval_on_otherData(K=k, model_type=['01','03','04'])
+    # for k in [10,20,34,40,68,100]:
+    #     result_3_eval(K=k, model_type=['01','03','04'])
+    #     # result_3_eval_on_otherData(K=k, model_type=['01','03','04'])
 
     D = pd.read_csv(model_dir +
-                     f'/Models/Evaluation/eval_all_asym_Ib_K-17_twoSess_on_otherDataset.tsv',
+                     f'/Models/Evaluation/eval_all_asym_Ib_K-10to100_twoSess_on_otherDataset.tsv',
                      delimiter='\t')
-    result_3_plot_otherData(D, ck=None, style='model_type',
-                  style_order=['Models_01','Models_03'], relevant=None)
+    # result_3_plot_otherData_1(D, K=17, ck=None, style='model_type',
+    #               style_order=['Models_01','Models_03'], relevant=None)
+    result_3_plot_otherData_2(D, K=None, ck=None, style='test_sess',
+                  style_order=['Fusion','sess1','sess2'], relevant=None)
 
     # fname = '/Models/Evaluation_01/model1.tsv'
     # fname = f'/Models/Evaluation/eval_asym_train-Ib_twoSess_test-leftOutSess.tsv'
@@ -508,7 +573,7 @@ if __name__ == "__main__":
     D = pd.read_csv(model_dir + fname, delimiter='\t')
     D.rename(columns={'test_sess': 'session'}, inplace=True)
     result_3_plot(D, ck=None, style='model_type',
-                  style_order=['Models_01','Models_03'], relevant=None)
+                  style_order=['Models_01','Models_03', 'Models_04'], relevant=None)
     # # Option 2: overall trend (triaged by relevant/irrelevant sessions)
     # result_3_plot(fname, ck=True, style='relevant', style_order=[True, False])
 

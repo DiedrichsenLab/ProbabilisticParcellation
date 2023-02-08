@@ -256,9 +256,12 @@ def plot_IBC_rel():
     plt.suptitle(f'IBC individual sessions performance, tested on otherData vs. leftSess')
     plt.show()
 
-def plot_fig1(fname, save=False):
+def plot_fig1(fname, tdata=None, save=False):
     D = pd.read_csv(model_dir + fname, sep='\t')
     orderby = None
+
+    if tdata is not None:
+        D = D.loc[D['test_data'] == tdata]
 
     plt.figure(figsize=(12, 6))
     crits = ['dcbc_group', 'dcbc_indiv']
@@ -322,8 +325,8 @@ if __name__ == "__main__":
     # result_4_eval(K=[10,17,20,34,40,68,100], model_type=['01','03','04'],
     #               t_datasets=['MDTB', 'Pontine', 'Nishimoto',
     #                           'WMFS', 'Demand', 'Somatotopic'])
-    result_4_eval(K=[17], model_type=['01'],
-                  t_datasets=['MDTB'])
+    # result_4_eval(K=[17], model_type=['01'], t_datasets=['MDTB'])
+
     # fname = f'/Models/Evaluation/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
     # result_4_plot(fname, test_data='Pontine', orderby=False)
     fname = '/Models/Evaluation_01/eval_all_asym_Ib_K-10_to_100_indivSess_on_otherDatasets.tsv'
