@@ -104,7 +104,7 @@ def merge_clusters(ks, space='MNISymC3'):
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{k}'
 
         # merge model
-        _, mname_merged = cl.save_guided_clustering(
+        _, mname_merged = cl.cluster_parcel(
             mname_fine, mname_coarse)
         merged_models.append(mname_merged)
     return merged_models
@@ -274,126 +274,6 @@ def save_taskmaps(mname):
     plt.figure(figsize=(7, 10))
     plot_model_taskmaps(mname, n_highest=3, n_lowest=3)
     plt.savefig(f'tmaps_01.png', format='png')
-
-
-def mixed_clustering(mname_fine,
-                     df_assignment,
-                     fine_labels=None):
-    """ Maps parcels of a parcellation using a hand-coded merging of parcels
-    specified in mixed_assignment.csv.
-
-    Args:
-        mname_fine: Based parcellation map
-
-    Returns:
-        fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
-        fine_coarse_mapping_full: Winner-take-all assignment of fine parcels to coarse parcels for all parcels (same as fine_coarse_mapping for asym model)
-
-    """
-    # Import fine model
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    _, fine_model = load_batch_best(mname_fine)
-
-   # Get winner take all assignment for fine model
-    fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
-
-    # Get mapping
-    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-                                      f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
-
-    assignment = dict(zip(df_assignment.parcel_orig.tolist(),
-                          df_assignment.parcel_med_idx.tolist()))
-
-    fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
-    left_labels = int((len(labels) - 1) / 2)
-    labels_hem = labels[1:left_labels + 1]
-    labels_hem = [label.strip('L') for label in labels_hem]
-    for parcel_idx, parcel_label in enumerate(labels_hem):
-        fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
-        print(
-            f'{parcel_idx} parcel {parcel_label} belongs to {assignment[parcel_label]}')
-
-    # Spot checks
-    # mapping_check = dict(zip(labels_hem,
-    #                          fine_coarse_mapping.tolist()))
-    # for keys, value in mapping_check.items():
-    #    print(keys, value)
-
-    labels = []
-    for i in np.unique(fine_coarse_mapping):
-        ind = np.nonzero(
-            (df_assignment.parcel_med_idx == i).to_numpy())[0]
-        labels.append(df_assignment.parcel_medium[ind[0]])
-    labels = [0] + labels + labels
-    return fine_coarse_mapping, labels
-
-
-def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True, save_model=False):
-    """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
-
-    Args:
-        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
-
-    Returns:
-        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
-        mname_merged:   Name of merged model
-        mapping:        Mapping of fine parcels to coarse parcels.
-
-    """
-    # -- Import models --
-    # Import fine model
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    finfo, fine_model = load_batch_best(mname_fine)
-    if split_mn[0] == 'sym':
-        sym = True
-    else:
-        sym = False
-
-    # Get mapping between fine parcels and coarse parcels
-    df_assignment = pd.read_csv(
-        model_dir + '/Atlases/' + '/' + f_assignment)
-    mapping, labels = mixed_clustering(
-        mname_fine, df_assignment)
-
-    # -- Merge model --
-    merged_model = cl.merge_model(fine_model, mapping)
-
-    # Make new info
-    new_info = deepcopy(finfo)
-    new_info['model_type'] = mname_fine.split('/')[0]
-    new_info['K_original'] = int(new_info.K)
-    if sym:
-        new_info['K'] = int(len(np.unique(mapping)) * 2)
-    else:
-        new_info['K'] = int(len(np.unique(mapping)))
-
-    # Refit reduced model
-    if refit_model:
-        new_model, new_info = lf.refit_model(merged_model, new_info)
-    else:
-        new_model = merged_model
-        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
-    #
-    # -- Save model --
-    # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
-    if mname_new is None:
-        mname_new = f'{mname_fine}_meth-{method}'
-
-    if save_model:
-        # save new model
-        with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
-            pickle.dump([new_model], file)
-
-        # save new info
-        new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
-                        sep='\t', index=False)
-
-        print(
-            f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
-
-    return new_model, mname_new, labels
 
 
 def make_NettekovenSym68c32():
