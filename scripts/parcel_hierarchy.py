@@ -19,6 +19,7 @@ import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
+import ProbabilisticParcellation.functional_profiles as fp
 import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
 import logging
@@ -181,15 +182,14 @@ def compare_levels():
         pass
 
 
-def save_pmaps(Prob, labels, subset=[0, 1, 2, 3, 4, 5]):
+def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
     plt.figure(figsize=(7, 10))
-    plot_model_pmaps(Prob, atlas.name,
+    plot_model_pmaps(Prob, atlas,
                      labels=labels[1:],
                      subset=subset,
                      grid=(3, 2))
     plt.savefig(f'pmaps_01.png', format='png')
     pass
-
 
 
 def query_similarity(mname, label):
@@ -329,7 +329,7 @@ def mixed_clustering(mname_fine,
     return fine_coarse_mapping, labels
 
 
-def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True):
+def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True, save_model=False):
     """Merges the parcels of a fine parcellation model according a mixed functional and spatial clustering.
 
     Args:
@@ -381,43 +381,67 @@ def save_mixed_clustering(mname_fine, method='mixed', mname_new=None, f_assignme
     if mname_new is None:
         mname_new = f'{mname_fine}_meth-{method}'
 
-    # save new model
-    with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
-        pickle.dump([new_model], file)
+    if save_model:
+        # save new model
+        with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
+            pickle.dump([new_model], file)
 
-    # save new info
-    new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
-                    sep='\t', index=False)
+        # save new info
+        new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
+                        sep='\t', index=False)
 
-    print(
-        f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+        print(
+            f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
 
     return new_model, mname_new, labels
+
 
 def make_NettekovenSym68c32():
     space = 'MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new  = 'Models_03/NettekovenSym68c32'
+    mname_new = 'Models_03/NettekovenSym68c32'
     f_assignment = 'mixed_assignment_68_16.csv'
-    _,_,labels = save_mixed_clustering(mname_fine, method='mixed',
-              mname_new=mname_new,
-              f_assignment='mixed_assignment_68_16.csv',
-              refit_model=True)
+    _, _, labels = save_mixed_clustering(mname_fine, method='mixed',
+                                         mname_new=mname_new,
+                                         f_assignment='mixed_assignment_68_16.csv',
+                                         refit_model=True, save_model=True)
 
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname_new, sym=True, labels=labels)
     ea.export_map(Prob, atlas.name, cmap, labels,
-                   f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
+                  f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
     ea.resample_atlas('NettekovenSym68c32',
-            atlas='MNISymC2',
-            target_space='SUIT')
+                      atlas='MNISymC2',
+                      target_space='SUIT')
+
+
+def profile_NettekovenSym68c32():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new = 'Models_03/NettekovenSym68c32'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    _, _, labels = save_mixed_clustering(mname_fine, method='mixed',
+                                         mname_new=mname_new,
+                                         f_assignment='mixed_assignment_68_16.csv',
+                                         refit_model=False, save_model=False)
+
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    # save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    # save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    # save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+    info, model = load_batch_best(mname_new)
+    info = fp.recover_info(info, model, mname_new)
+    fp.export_profile(mname_new, info, model, labels)
+    features = fp.cognitive_features(mname_new)
 
 
 if __name__ == "__main__":
     # make_NettekovenSym68c32()
-    ea.resample_atlas('NettekovenSym68c32',
-            atlas='MNISymC2',
-            target_space='MNI152NLin6AsymC')
+    profile_NettekovenSym68c32()
+    # ea.resample_atlas('NettekovenSym68c32',
+    #                   atlas='MNISymC2',
+    #                   target_space='MNI152NLin6AsymC')
     # Save 3 highest and 2 lowest task maps
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # D = query_similarity(mname, 'E3L')
@@ -425,8 +449,9 @@ if __name__ == "__main__":
 
     # Merge functionally and spatially clustered scree parcels
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    # labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
+    # index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+    #                                   fileparts[-1] + '.lut')
+    # get data
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # f_assignment = 'mixed_assignment_68_16.csv'
