@@ -395,7 +395,7 @@ def compile_tags_all_datasets():
     # --- Save tags ---
     tags.to_csv(
         f'/Users/callithrix/Documents/Projects/Functional_Fusion/cognitive_ontology/tags.csv', index=False, sep="\t")
-    # tags.to_csv(f'{base_dir}/Atlases/tags.csv', index=False, sep="\t")
+    # tags.to_csv(f'{model_dir}/Atlases/tags.csv', index=False, sep="\t")
     pass
 
 

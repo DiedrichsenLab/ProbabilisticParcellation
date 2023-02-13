@@ -142,18 +142,23 @@ def get_profiles(model, info):
     return parcel_profiles, profile_data
 
 
-def export_profile(mname):
-    # Get model
-    info, model = load_batch_best(mname)
-    info = recover_info(info, model, mname)
+def export_profile(mname, info=None, model=None, labels=None):
+    if info is None or model is None:
+        # Get model
+        info, model = load_batch_best(mname)
+        info = recover_info(info, model, mname)
 
     # get functional profiles
     parcel_profiles, profile_data = get_profiles(model=model, info=info)
-    _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
+
+    if labels is None:
+        _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
 
     # make functional profile dataframe
+    if isinstance(labels, np.ndarray):
+        labels = labels.tolist()
     parcel_responses = pd.DataFrame(
-        parcel_profiles.numpy(), columns=labels[1:].tolist()
+        parcel_profiles.numpy(), columns=labels[1:]
     )
     Prof = pd.concat([profile_data, parcel_responses], axis=1)
 
@@ -178,7 +183,7 @@ def export_profile(mname):
     # --- Save profile ---
     # save functional profile as tsv
     Prof.to_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
     )
 
 
@@ -272,6 +277,37 @@ def dataset_colours(word, font_size, position, orientation, random_state=None, *
     return colour
 
 
+def cognitive_features(mname):
+    """Gets cognitive features for a model"""
+    profile = pd.read_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
+    )
+    first_parcel = profile.columns.tolist().index('condition') + 1
+    last_parcel = profile.columns.tolist().index('dataset_colour')
+    parcel_columns = profile.columns[first_parcel:last_parcel]
+    profile_matrix = profile[parcel_columns].to_numpy()
+
+    features = pd.read_csv(f'{model_dir}/Atlases/tags.tsv', sep="\t")
+    first_feature = features.columns.tolist().index('condition') + 1
+    feature_columns = features.columns[first_feature:]
+    feature_matrix = features[feature_columns].to_numpy()
+
+    # normalize the task profile
+
+    # multiply the profile by the feature matrix
+    feature_profile = np.dot(feature_matrix.T, (profile_matrix))
+
+    # make dataframe
+    feature_profile = pd.DataFrame(
+        feature_profile, columns=parcel_columns, index=feature_columns)
+
+    # save dataframe
+    feature_profile.to_csv(
+        f'{model_dir}/Atlases/{mname.split("/")[-1]}_cognitive_features.tsv', sep="\t")
+
+    return feature_profile
+
+
 if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     info, model = load_batch_best(mname)
@@ -280,6 +316,8 @@ if __name__ == "__main__":
     index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
                                       fileparts[-1] + '.lut')
 
+    export_profile(mname, info, model, labels)
+    features = cognitive_features(mname)
     # profile = pd.read_csv(
     #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     # )
