@@ -39,22 +39,10 @@ res_dir = ut.model_dir + f'/Results/nettekoven_68'
 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed.tsv'
 
 
-def evaluate_sym(K=[10, 14, 20, 28, 34, 40, 48, 56, 60, 68], train_type=['indiv', 'loo', 'all'], test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                                                                                                                'WMFS', 'Demand', 'Somatotopic']):
-    """Evaluate models that were fitted in MNISymC2 space on all datasets
-    """
-    pass
-
-
-def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                                      'WMFS', 'Demand', 'Somatotopic', 'HCP']):
-    """Evalute models that were clustered according to mixed method.
-    """
-
-    model_name = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+def evaluation(model_name, test_datasets):
+    # determine device:
 
     results = pd.DataFrame()
-    # Evaluate all single sessions on other datasets
     for dset in test_datasets:
         print(f'Testdata: {dset}\n')
 
@@ -78,12 +66,32 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                                    train_indx=train_indx,
                                    test_indx=test_indx,
                                    cond_vec=cond_vec,
-                                   part_vec=part_vec)
+                                   part_vec=part_vec,
+                                   device=ut.default_device)
             res_dcbc['indivtrain_ind'] = indivtrain_ind
             res_dcbc['indivtrain_val'] = indivtrain_values
             res_dcbc['test_data'] = dset
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
+    return results
+
+
+def evaluate_sym(K=[10, 14, 20, 28, 34, 40, 48, 56, 60, 68], train_type=['indiv', 'loo', 'all'], test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
+                                                                                                                'WMFS', 'Demand', 'Somatotopic']):
+    """Evaluate models that were fitted in MNISymC2 space on all datasets
+    """
+    pass
+
+
+def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
+                                      'WMFS', 'Demand', 'Somatotopic', 'HCP']):
+    """Evalute models that were clustered according to mixed method.
+    """
+
+    model_name = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+
+    # Evaluate
+    results = evaluation(model_name, test_datasets)
 
     # Save file
     fname = 'eval_' + model_name.split(' / ')[-1] + '.tsv'
