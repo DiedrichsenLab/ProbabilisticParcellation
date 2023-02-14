@@ -281,10 +281,10 @@ def make_NettekovenSym68c32():
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
     mname_new = 'Models_03/NettekovenSym68c32'
     f_assignment = 'mixed_assignment_68_16.csv'
-    _, _, labels = save_mixed_clustering(mname_fine, method='mixed',
-                                         mname_new=mname_new,
-                                         f_assignment='mixed_assignment_68_16.csv',
-                                         refit_model=True, save_model=True)
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment='mixed_assignment_68_16.csv',
+                                     refit_model=True, save_model=True)
 
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname_new, sym=True, labels=labels)
@@ -300,10 +300,10 @@ def profile_NettekovenSym68c32():
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
     mname_new = 'Models_03/NettekovenSym68c32'
     f_assignment = 'mixed_assignment_68_16.csv'
-    _, _, labels = save_mixed_clustering(mname_fine, method='mixed',
-                                         mname_new=mname_new,
-                                         f_assignment='mixed_assignment_68_16.csv',
-                                         refit_model=False, save_model=False)
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment='mixed_assignment_68_16.csv',
+                                     refit_model=False, save_model=False)
 
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname_new, sym=True, labels=labels)

@@ -573,17 +573,21 @@ def merge_model(model, mapping):
     return new_model
 
 
-def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=True, save_model=False):
-    """Merges the parcels of a fine parcellation model according to a coarser model.
+def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=False, save_model=False):
+    """Merges parcels of a fine probabilistic parcellation model into a reduced number of parcels using either guided or mixed clustering.
 
-    Args:
-        mname_fine:     Probabilstic parcellation to merge (fine parcellation)
-        mname_caorse:   Probabilstic parcellation that determines how to merge (coarse parcellation)
+    Parameters:
+    mname_fine(str): The file name of the fine probabilistic parcellation model.
+    mname_coarse(str, optional): The file name of the coarse probabilistic parcellation model to use for model - guided clustering.
+                                    If not provided, mixed clustering will be performed. Defaults to None.
+    method(str, optional): The method to use for clustering. Can be either 'mixed' or 'model_guided'. Defaults to 'mixed'.
+    mname_new(str, optional): The file name for the merged probabilistic parcellation model. If not provided, the name will be constructed based on `mname_fine` and `method`. Defaults to None.
+    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_17'.
+    refit_model(bool, optional): Whether to refit the reduced model. Defaults to False.
+    save_model(bool, optional): Whether to save the reduced model. Defaults to False.
 
     Returns:
-        merged_model:   Merged model. Coarse model containing voxel probabilities of fine model (Clustered fine model)
-        mname_merged:   Name of merged model
-        mapping:        Mapping of fine parcels to coarse parcels.
+    tuple: A tuple containing the reduced probabilistic parcellation model, the name of the reduced model, and the labels of the parcels in the reduced model.
 
     """
     # -- Import models --
@@ -596,11 +600,13 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
     else:
         sym = False
 
+    new_info = deepcopy(finfo)
     if method == 'model_guided' and mname_coarse is not None:
         # Import coarse model
         fileparts = mname_coarse.split('/')
         split_mn = fileparts[-1].split('_')
         cinfo, _ = ut.load_batch_best(mname_coarse)
+        new_info['K_coarse'] = int(cinfo.K)
 
         # -- Cluster fine model --
         print(
@@ -619,9 +625,7 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
     # -- Merge model --
     merged_model = merge_model(fine_model, mapping)
 
-    # Make new info
-    new_info = deepcopy(finfo)
-    new_info['K_coarse'] = int(cinfo.K)
+    # Add info
     new_info['model_type'] = mname_fine.split('/')[0]
     new_info['K_original'] = int(new_info.K)
     if sym:
