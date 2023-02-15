@@ -138,7 +138,9 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
 if __name__ == "__main__":
     # evaluate_clustered()
     evaluate_sym(K=[68], train_type=[
-                 'all'], rest_included=True, out_file='eval_sym_68_rest_all.tsv')
-    evaluate_sym(K=[68], train_type=['loo',
-                 'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
+                 'all', 'indiv'], rest_included=True, out_file='eval_sym_68_rest_all.tsv')
+    evaluate_sym(K=[68], train_type=[
+        'all', 'loo', 'indiv'], rest_included=False, out_file='eval_sym_68_task_all.tsv')
+    # evaluate_sym(K=[68], train_type=['loo',
+    #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
     pass
