@@ -135,8 +135,6 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
 
     dcbc_values = []
     for sub in range(testdata.shape[0]):
-        if verbose:
-            ut.report_cuda_memory()
         print(f'Subject {sub}', end=':')
         tic = time.perf_counter()
         if parcels.ndim == 1:
