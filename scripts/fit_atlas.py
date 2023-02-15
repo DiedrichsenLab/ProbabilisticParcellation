@@ -6,7 +6,7 @@ Created on 02/15/2023 at 2:16 PM
 Author: cnettekoven
 """
 import ProbabilisticParcellation.util as ut
-import ProbabilisticParcellation.learn_fusion_gpu as lfg
+import ProbabilisticParcellation.learn_fusion_gpu as lf
 from time import gmtime
 from pathlib import Path
 import pandas as pd
@@ -30,8 +30,7 @@ import time
 def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, verbose=True):
 
     ########## Settings ##########
-    spaces = ['MNISymC3', 'MNISymC2']  # Set atlas space
-    # space = 'MNISymC2' # Set atlas space
+    space = 'MNISymC3'  # Set atlas space
     msym = 'sym'  # Set model symmetry
     t = '03'  # Set model type
 
@@ -54,23 +53,22 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
         dataset_list.extend(individual_datasets)
 
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
-    for space in spaces:
-        for datasets in dataset_list:
-            for k in ks:
-                datanames = ''.join(T.two_letter_code[datasets])
-                wdir = ut.model_dir + f'/Models/Models_{t}'
-                fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+    for datasets in dataset_list:
+        for k in ks:
+            datanames = ''.join(T.two_letter_code[datasets])
+            wdir = ut.model_dir + f'/Models/Models_{t}'
+            fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
 
-                if not Path(wdir + fname).exists():
-                    print(
-                        f'fitting model {t} with K={k} in space {space} as {fname}...')
-                    if verbose:
-                        ut.report_cuda_memory()
-                    lfg.fit_all(datasets, k, model_type=t, repeats=100,
-                                sym_type=[msym], space=space)
-                else:
-                    print(
-                        f'model {t} with K={k} in space {space} already fitted as {fname}')
+            if not Path(wdir + fname).exists():
+                print(
+                    f'fitting model {t} with K={k} in space {space} as {fname}...')
+                if verbose:
+                    ut.report_cuda_memory()
+                lf.fit_all(datasets, k, model_type=t, repeats=100,
+                           sym_type=[msym], space=space)
+            else:
+                print(
+                    f'model {t} with K={k} in space {space} already fitted as {fname}')
 
 
 if __name__ == "__main__":

@@ -104,8 +104,8 @@ def merge_clusters(ks, space='MNISymC3'):
         mname_coarse = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{k}'
 
         # merge model
-        _, mname_merged = cl.cluster_parcel(
-            mname_fine, mname_coarse)
+        _, mname_merged, labels = cl.cluster_parcel(
+            mname_fine, mname_coarse, refit_model=True, save_model=True)
         merged_models.append(mname_merged)
     return merged_models
 
@@ -318,7 +318,7 @@ def profile_NettekovenSym68c32():
 
 if __name__ == "__main__":
     # make_NettekovenSym68c32()
-    profile_NettekovenSym68c32()
+    # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',
     #                   atlas='MNISymC2',
     #                   target_space='MNI152NLin6AsymC')
@@ -328,7 +328,6 @@ if __name__ == "__main__":
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-
     # index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
     #                                   fileparts[-1] + '.lut')
     # get data
@@ -344,5 +343,7 @@ if __name__ == "__main__":
     #     model_dir + '/Atlases/' + '/' + f_assignment)
 
     # mapping, labels = mixed_clustering(mname, df_assignment)
+
+    merge_clusters(ks=[32], space='MNISymC3')
 
     pass
