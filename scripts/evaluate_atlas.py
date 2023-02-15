@@ -31,25 +31,24 @@ from copy import copy, deepcopy
 from itertools import combinations
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.evaluate as ev
+from datetime import datetime
 
 
-res_dir = ut.model_dir + f'/Results/nettekoven_68'
-
-'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.tsv'
-'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed.tsv'
+res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
 
 def evaluation(model_name, test_datasets):
-    # determine device:
+    # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
 
     results = pd.DataFrame()
     for dset in test_datasets:
         print(f'Testdata: {dset}\n')
 
         # Preparing atlas, cond_vec, part_vec
-        atlas, _ = am.get_atlas('MNISymC2', atlas_dir=ut.base_dir + '/Atlases')
+        atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
         tdata, tinfo, tds = ds.get_dataset(
-            ut.base_dir, dset, atlas='MNISymC2', sess='all')
+            ut.base_dir, dset, atlas=space, sess='all')
         # default from dataset class
         cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )
         part_vec = tinfo['half'].values
@@ -76,10 +75,48 @@ def evaluation(model_name, test_datasets):
     return results
 
 
-def evaluate_sym(K=[10, 14, 20, 28, 34, 40, 48, 56, 60, 68], train_type=['indiv', 'loo', 'all'], test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                                                                                                                'WMFS', 'Demand', 'Somatotopic']):
+def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], rest_included=False, out_file=None):
     """Evaluate models that were fitted in MNISymC2 space on all datasets
     """
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    datasets_long = T['name'].tolist()
+    datasets_short = T['two_letter_code'].tolist()
+
+    if rest_included:
+        datasets = datasets_short
+        test_datasets = datasets_long
+    else:
+        datasets = datasets_short[:-1]
+        test_datasets = datasets_long[:-1]
+
+    # Get model names for models to evaluate
+    indiv = datasets
+    leave_one_out = ["".join(datasets_short[:i] + datasets[i + 1:])
+                     for i in range(len(datasets))]
+    all = ''.join(datasets)
+    train_types = {'indiv': datasets, 'loo': leave_one_out, 'all': [all]}
+    train_datasets = []
+    for tt in train_type:
+        train_datasets.extend(train_types[tt])
+
+    if rest_included:
+        train_datasets.extend(['Hc'])
+
+    model_name = [f'Models_03/sym_{train_dset}_space-MNISymC3_K-{this_k}'
+                  for this_k in K for train_dset in train_datasets]
+
+    # Evaluate
+    Results = pd.DataFrame()
+    for mname in model_name:
+        results = evaluation(mname, test_datasets)
+        Results = pd.concat([Results, results], ignore_index=True)
+
+    # Save file
+    if out_file is None:
+        timestamp = datetime.today().strftime('%Y-%m-%d')
+        out_file = 'eval_' + timestamp + '.tsv'
+    results.to_csv(res_dir + out_file, index=False, sep='\t')
+
     pass
 
 
@@ -99,6 +136,11 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
 
 
 if __name__ == "__main__":
-    evaluate_clustered()
-
+    # evaluate_clustered()
+    evaluate_sym(K=[68], train_type=[
+                 'all', 'indiv'], rest_included=True, out_file='eval_sym_68_rest_all.tsv')
+    evaluate_sym(K=[68], train_type=[
+        'all', 'loo', 'indiv'], rest_included=False, out_file='eval_sym_68_task_all.tsv')
+    # evaluate_sym(K=[68], train_type=['loo',
+    #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
     pass

@@ -70,7 +70,7 @@ def build_data_list(datasets,
     sub = 0
     # Run over datasets get data + design
     for i in range(n_sets):
-        dat, info, ds = get_dataset(ut.base_dir, datasets[i],
+        dat, info, ds = get_dataset(ut.ut.base_dir, datasets[i],
                                     atlas=atlas,
                                     sess=sess[i],
                                     type=type[i])
@@ -295,7 +295,7 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=['asym', 'sym'], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
-    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.ut.base_dir + '/dataset_description.tsv', sep='\t')
     datasets = T.name.to_numpy()
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
@@ -423,7 +423,7 @@ def fit_indv_sess(indx=3, model_type='01', K=10):
     datasets = np.array(['MDTB', 'Pontine', 'Nishimoto',
                          'IBC', 'WMFS', 'Demand', 'Somatotopic'],
                         dtype=object)
-    _, _, my_dataset = get_dataset(ut.base_dir, datasets[indx])
+    _, _, my_dataset = get_dataset(ut.ut.base_dir, datasets[indx])
     sess = my_dataset.sessions
     for indv_sess in sess:
         ibc_dir = ut.model_dir + f'/Models/Models_{model_type}'
@@ -466,7 +466,7 @@ def fit_all_datasets(space='MNISymC2',
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
 
-    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.ut.base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
@@ -552,76 +552,14 @@ def refit_model(model, new_info):
 
 
 if __name__ == "__main__":
-    datasets_list=[0]
+    datasets_list = [0]
     K = 17
     sym_type = ['asym']
     model_type = '03'
     space = 'MNISymC3'
 
-    for k in [10,20,34,40,68,100]:
+    for k in [10, 20, 34, 40, 68, 100]:
         fit_all(set_ind=datasets_list, K=k, repeats=100, model_type=model_type,
                 sym_type=['asym'], space='MNISymC3')
-
-    # # ########## Higher K ##########
-    # space = 'MNISymC3' # Set atlas space
-    # # space = 'MNISymC2' # Set atlas space
-    # msym = 'sym' # Set model symmetry
-    # # ks = [10, 20, 34]
-    # ks = [14, 28, 48, 56, 60]
-    # # ks = [34, 40, 68, 80]
-    # # ks=[80]
-    #
-    #
-    # # # -- Build dataset list --
-    # n_dsets = 7 # without HCP
-    # alldatasets = np.arange(n_dsets).tolist()
-    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    # individual_datasets = [ [d] for d in alldatasets ]
-    #
-    # dataset_list = []
-    # dataset_list.extend([alldatasets])
-    # dataset_list.extend(individual_datasets)
-    # # dataset_list.extend(loo_datasets)
-    #
-    #
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    # for t in ['03']:
-    #     for datasets in dataset_list:
-    #         for k in ks:
-    #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = ut.model_dir + f'/Models/Models_{t}'
-    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
-    #
-    #             if not Path(wdir+fname).exists():
-    #                 print(f'fitting model {t} with K={k} as {fname}...')
-    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym], space=space)
-    #             else:
-    #                 print(f'model {t} with K={k} already fitted as {fname}')
-
-    # # # -- Build dataset list with HCP--
-    # n_dsets = 8 # with HCP
-    # alldatasets = np.arange(n_dsets).tolist()
-    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    # individual_datasets = [ [d] for d in alldatasets ]
-
-    # dataset_list = []
-    # dataset_list.extend([alldatasets])
-    # dataset_list.extend(individual_datasets)
-    # # dataset_list.extend(loo_datasets)
-
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    # for datasets in dataset_list:
-    #     for t in ['03','04']:
-    #         for k in ks:
-
-    #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = ut.model_dir + f'/Models/Models_{t}'
-    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
-
-    #             if not Path(wdir+fname).exists():
-    #                 print(f'fitting model {t} with K={k} as {fname}...')
-    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
-    #             else:
-    #                 print(f'model {t} with K={k} already fitted as {fname}')
 
     pass
