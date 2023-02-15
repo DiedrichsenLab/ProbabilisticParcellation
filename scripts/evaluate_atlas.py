@@ -34,15 +34,6 @@ import ProbabilisticParcellation.evaluate as ev
 from datetime import datetime
 
 
-def report_cuda_memory():
-    if pt.cuda.is_available():
-        ma = pt.cuda.memory_allocated() / 1024 / 1024
-        mma = pt.cuda.max_memory_allocated() / 1024 / 1024
-        mr = pt.cuda.memory_reserved() / 1024 / 1024
-        print(
-            f'Allocated:{ma:.2f} MB, MaxAlloc:{mma:.2f} MB, Reserved {mr:.2f} MB')
-
-
 res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
 
