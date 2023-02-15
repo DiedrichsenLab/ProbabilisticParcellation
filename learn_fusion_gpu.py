@@ -70,7 +70,7 @@ def build_data_list(datasets,
     sub = 0
     # Run over datasets get data + design
     for i in range(n_sets):
-        dat, info, ds = get_dataset(ut.ut.base_dir, datasets[i],
+        dat, info, ds = get_dataset(ut.base_dir, datasets[i],
                                     atlas=atlas,
                                     sess=sess[i],
                                     type=type[i])
@@ -295,7 +295,7 @@ def batch_fit(datasets, sess,
 def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
             sym_type=['asym', 'sym'], subj_list=None, weighting=None, this_sess=None, space=None):
     # Get dataset info
-    T = pd.read_csv(ut.ut.base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     datasets = T.name.to_numpy()
     sess = np.array(['all'] * len(T), dtype=object)
     if this_sess is not None:
@@ -423,7 +423,7 @@ def fit_indv_sess(indx=3, model_type='01', K=10):
     datasets = np.array(['MDTB', 'Pontine', 'Nishimoto',
                          'IBC', 'WMFS', 'Demand', 'Somatotopic'],
                         dtype=object)
-    _, _, my_dataset = get_dataset(ut.ut.base_dir, datasets[indx])
+    _, _, my_dataset = get_dataset(ut.base_dir, datasets[indx])
     sess = my_dataset.sessions
     for indv_sess in sess:
         ibc_dir = ut.model_dir + f'/Models/Models_{model_type}'
@@ -466,7 +466,7 @@ def fit_all_datasets(space='MNISymC2',
     # -- Model fitting --
     # datasets_list = [[0], [1], [2], [3], [4], [5], [6], [0, 1, 2, 3, 4, 5, 6, 7]]
 
-    T = pd.read_csv(ut.ut.base_dir + '/dataset_description.tsv', sep='\t')
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     # for i in range(7):
     #     datasets = [0, 1, 2, 3, 4, 5, 6]
     #     datasets.remove(i)
