@@ -23,7 +23,6 @@ import seaborn as sb
 import sys
 import pickle
 
-from ProbabilisticParcellation.util import *
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 
@@ -233,13 +232,13 @@ def mixed_clustering(mname_fine,
     # Import fine model
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    _, fine_model = load_batch_best(mname_fine)
+    _, fine_model = ut.load_batch_best(mname_fine)
 
    # Get winner take all assignment for fine model
     fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
 
     # Get mapping
-    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
                                       f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
 
     assignment = dict(zip(df_assignment.parcel_orig.tolist(),
@@ -573,7 +572,7 @@ def merge_model(model, mapping):
     return new_model
 
 
-def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_17', refit_model=False, save_model=False):
+def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_16', refit_model=False, save_model=False):
     """Merges parcels of a fine probabilistic parcellation model into a reduced number of parcels using either guided or mixed clustering.
 
     Parameters:
@@ -582,7 +581,7 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
                                     If not provided, mixed clustering will be performed. Defaults to None.
     method(str, optional): The method to use for clustering. Can be either 'mixed' or 'model_guided'. Defaults to 'mixed'.
     mname_new(str, optional): The file name for the merged probabilistic parcellation model. If not provided, the name will be constructed based on `mname_fine` and `method`. Defaults to None.
-    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_17'.
+    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_16'.
     refit_model(bool, optional): Whether to refit the reduced model. Defaults to False.
     save_model(bool, optional): Whether to save the reduced model. Defaults to False.
 
@@ -618,8 +617,8 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
     elif method == 'mixed':
         # Get mapping between fine parcels and coarse parcels
         df_assignment = pd.read_csv(
-            model_dir + '/Atlases/' + '/' + f_assignment)
-        mapping, labels = cl.mixed_clustering(
+            ut.model_dir + '/Atlases/' + '/' + f_assignment + '.csv')
+        mapping, labels = mixed_clustering(
             mname_fine, df_assignment)
 
     # -- Merge model --
@@ -647,14 +646,14 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
 
     if save_model:
         # save new model
-        with open(f'{model_dir}/Models/{mname_new}.pickle', 'wb') as file:
+        with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
             pickle.dump([new_model], file)
 
         # save new info
-        new_info.to_csv(f'{model_dir}/Models/{mname_new}.tsv',
+        new_info.to_csv(f'{ut.model_dir}/Models/{mname_new}.tsv',
                         sep='\t', index=False)
 
         print(
-            f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{model_dir}/Models/ \n\n')
+            f'Done. Saved merged model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
 
     return new_model, mname_new, labels
