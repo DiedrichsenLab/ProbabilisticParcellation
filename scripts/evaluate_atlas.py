@@ -155,7 +155,7 @@ def evaluate_selected_on_task():
         results = evaluation(mname, test_datasets)
 
         # Save file
-        fname = 'eval_on-task_' + mname + '.tsv'
+        fname = 'eval_on-task_' + mname.split('/')[1] + '.tsv'
         results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
