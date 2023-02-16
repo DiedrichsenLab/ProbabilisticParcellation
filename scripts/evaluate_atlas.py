@@ -147,12 +147,13 @@ def evaluate_selected(on='task'):
         test_datasets = ['HCP']
 
     model_name = [
-        'Models_03/sym_Hc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
+
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-10',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-20',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80',
+    ]
 
     for m, mname in enumerate(model_name):
         fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
