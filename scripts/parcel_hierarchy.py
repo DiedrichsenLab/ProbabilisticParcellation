@@ -8,10 +8,10 @@ from Functional_Fusion.dataset import *
 from scipy.linalg import block_diag
 import torch as pt
 import matplotlib.pyplot as plt
-from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
 import PcmPy as pcm
 import torch as pt
-from matplotlib import pyplot as plt
+from matplotlib.colors import ListedColormap
 from scipy.cluster.hierarchy import dendrogram, linkage
 from scipy.spatial.distance import squareform
 from copy import deepcopy
@@ -32,8 +32,8 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     # Get model and atlas.
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
-    info, model = load_batch_best(mname)
-    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
+    info, model = ut.load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
 
     # Get winner-take all parcels
     Prob = np.array(model.arrange.marginal_prob())
@@ -55,7 +55,7 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     if clustering == 'model_guided':
         if cluster_by is None:
             raise ('Need to specify model that guides clustering')
-        cluster_info, cluster_model = load_batch_best(cluster_by)
+        cluster_info, cluster_model = ut.load_batch_best(cluster_by)
         clusters_half, clusters = cl.guided_clustering(
             mname, cluster_by)
         labels, cluster_counts = cl.cluster_labels(clusters)
@@ -84,10 +84,10 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Plot the parcellation
     if plot:
-        ax = plot_data_flat(Prob, atlas.name, cmap=cmap,
-                            dtype='prob',
-                            labels=labels,
-                            render='plotly')
+        ax = ut.plot_data_flat(Prob, atlas.name, cmap=cmap,
+                               dtype='prob',
+                               labels=labels,
+                               render='plotly')
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
@@ -110,27 +110,31 @@ def merge_clusters(ks, space='MNISymC3'):
     return merged_models
 
 
-def export_merged(merged_models=None):
+def export_merged(model_names=None):
 
     # --- Export merged models ---
-    if merged_models is None:
-        merged_models = [
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-10_Keff-10',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-14_Keff-14',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-20_Keff-20',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-28_Keff-22',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-34_Keff-24',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-40_Keff-24',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-48_Keff-36',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-56_Keff-36',
-            f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_Kclus-60_Keff-38']
+    if model_names is None:
+        model_names = [
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
+            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
 
-    for mname_merged in merged_models:
+    f_assignment = 'mixed_assignment_68_16'
+    df_assignment = pd.read_csv(
+        ut.model_dir + '/Atlases/' + '/' + f_assignment + '.csv')
+    _, labels = cl.mixed_clustering(
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', df_assignment)
+    _, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                  'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed.lut')
+
+    for model_name in model_names:
         # export the merged model
-        Prob, parcel, atlas, labels, cmap = analyze_parcel(
-            mname_merged, sym=True)
+
+        Prob, _, atlas, _, cmap_similarity = analyze_parcel(
+            model_name, sym=True, labels=labels)
+        if not isinstance(cmap, ListedColormap):
+            cmap = ListedColormap(cmap)
         ea.export_map(Prob, atlas.name, cmap, labels,
-                      f'{model_dir}/Atlases/{mname_merged.split("/")[1]}')
+                      f'{ut.model_dir}/Atlases/{model_name.split("/")[1]}')
 
 
 def compare_levels():
@@ -144,7 +148,7 @@ def compare_levels():
     fine_model = f'/Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68'
     fileparts = fine_model.split('/')
     split_mn = fileparts[-1].split('_')
-    info_68, model_68 = load_batch_best(fine_model)
+    info_68, model_68 = ut.load_batch_best(fine_model)
     Prop_68 = np.array(model_68.marginal_prob())
     parcel_68 = Prop_68.argmax(axis=0) + 1
 
@@ -162,7 +166,7 @@ def compare_levels():
     m_models = []
     m_infos = []
     for mname in merged_models:
-        info, model = load_batch_best(mname)
+        info, model = ut.load_batch_best(mname)
         m_models.append(model)
         m_infos.append(info)
 
@@ -184,10 +188,10 @@ def compare_levels():
 
 def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
     plt.figure(figsize=(7, 10))
-    plot_model_pmaps(Prob, atlas,
-                     labels=labels[1:],
-                     subset=subset,
-                     grid=(3, 2))
+    ut.plot_model_pmaps(Prob, atlas,
+                        labels=labels[1:],
+                        subset=subset,
+                        grid=(3, 2))
     plt.savefig(f'pmaps_01.png', format='png')
     pass
 
@@ -210,7 +214,7 @@ def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic',
 
     """
     profile = pd.read_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     )
     atlas = mname.split('space-')[1].split('_')[0]
     Prob, parcel, _, labels, cmap = analyze_parcel(mname, sym=True)
@@ -236,7 +240,7 @@ def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic',
 
         if save_task_maps:
             # Get task maps
-            data, info, _ = ds.get_dataset(base_dir, dataset, atlas=atlas)
+            data, info, _ = ds.get_dataset(ut.base_dir, dataset, atlas=atlas)
             grid = (int(np.ceil((n_highest + n_lowest) / 2)), 2)
             for region in tasks.keys():
                 task = tasks[region]
@@ -276,6 +280,16 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
+def export_orig_68():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_fine, sym=True)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}')
+
+
 def make_NettekovenSym68c32():
     space = 'MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
@@ -289,7 +303,7 @@ def make_NettekovenSym68c32():
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname_new, sym=True, labels=labels)
     ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{model_dir}/Atlases/{mname_new.split("/")[1]}')
+                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
     ea.resample_atlas('NettekovenSym68c32',
                       atlas='MNISymC2',
                       target_space='SUIT')
@@ -310,7 +324,7 @@ def profile_NettekovenSym68c32():
     # save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
     # save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
     # save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
-    info, model = load_batch_best(mname_new)
+    info, model = ut.load_batch_best(mname_new)
     info = fp.recover_info(info, model, mname_new)
     fp.export_profile(mname_new, info, model, labels)
     features = fp.cognitive_features(mname_new)
@@ -328,22 +342,23 @@ if __name__ == "__main__":
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
-    # index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
+    # index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
     #                                   fileparts[-1] + '.lut')
     # get data
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # f_assignment = 'mixed_assignment_68_16.csv'
     # df_assignment = pd.read_csv(
-    #     model_dir + '/Atlases/' + '/' + f_assignment)
+    #     ut.model_dir + '/Atlases/' + '/' + f_assignment)
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     # f_assignment = 'mixed_assignment_68_16.csv'
     # df_assignment = pd.read_csv(
-    #     model_dir + '/Atlases/' + '/' + f_assignment)
+    #     ut.model_dir + '/Atlases/' + '/' + f_assignment)
 
     # mapping, labels = mixed_clustering(mname, df_assignment)
 
-    merge_clusters(ks=[32], space='MNISymC3')
-
+    # merge_clusters(ks=[32], space='MNISymC3')
+    # export_merged()
+    export_orig_68()
     pass

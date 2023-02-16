@@ -143,7 +143,7 @@ def evaluate_selected(on='task'):
     if on == 'task':
         test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                          'WMFS', 'Demand', 'Somatotopic']
-    elif on == 'hcp':
+    elif on == 'rest':
         test_datasets = ['HCP']
 
     model_name = [
@@ -177,5 +177,6 @@ if __name__ == "__main__":
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
     evaluate_selected(on='task')
+    evaluate_selected(on='rest')
 
     pass
