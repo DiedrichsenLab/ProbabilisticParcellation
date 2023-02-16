@@ -136,6 +136,27 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
     results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
+def evaluate_selected(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
+                                     'WMFS', 'Demand', 'Somatotopic', 'HCP']):
+    """Evalute models that were clustered according to mixed method.
+    """
+
+    model_name = [
+        'sym_Hc_space-MNISymC3_K-32',
+        'sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
+        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
+        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
+        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
+        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
+
+    # Evaluate
+    results = evaluation(model_name, test_datasets)
+
+    # Save file
+    fname = 'eval_' + model_name.split(' / ')[-1] + '.tsv'
+    results.to_csv(res_dir + fname, index=False, sep='\t')
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     evaluate_sym(K=[68], train_type=[
