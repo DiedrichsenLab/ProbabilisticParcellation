@@ -642,7 +642,7 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
     # -- Save model --
     # Model is saved with K_coarse as cluster K, since using only the actual (effective) K might overwrite merged models stemming from different K_coarse
     if mname_new is None:
-        mname_new = f'{mname_fine}_meth-{method}'
+        mname_new = f'{mname_fine.split("_K-")[0]}_K-{new_info.K}_meth-{method}'
 
     if save_model:
         # save new model
