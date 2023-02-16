@@ -125,7 +125,8 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
     """Evalute models that were clustered according to mixed method.
     """
 
-    model_name = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    model_name = [
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
 
     # Evaluate
     results = evaluation(model_name, test_datasets)

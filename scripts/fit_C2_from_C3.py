@@ -77,8 +77,8 @@ def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2'):
     info = pd.DataFrame(info.to_dict(), index=[0])
     info['loglik'] = ll3[-1].item()
     info['atlas'] = new_space
-    wdir = model_dir + f'/Models/' + fileparts[-2]
-    if mname_new is not None:
+    wdir = model_dir + f'/Models/' + fileparts[-2] + '/'
+    if mname_new is None:
         mname_new = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
     info.to_csv(wdir + mname_new + '.tsv', sep='\t', index=False)
     with open(wdir + mname_new + '.pickle', 'wb') as file:
