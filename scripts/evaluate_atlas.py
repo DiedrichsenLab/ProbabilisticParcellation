@@ -143,12 +143,12 @@ def evaluate_selected_on_task():
     test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                      'WMFS', 'Demand', 'Somatotopic']
     model_name = [
-        'sym_Hc_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
+        'Models_03/sym_Hc_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
 
     for mname in model_name:
         # Evaluate
@@ -165,12 +165,12 @@ def evaluate_selected_on_rest():
 
     test_datasets = ['HCP']
     model_name = [
-        'sym_Hc_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-        'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
+        'Models_03/sym_Hc_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
 
     for mname in model_name:
         # Evaluate
