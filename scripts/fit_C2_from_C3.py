@@ -54,7 +54,7 @@ def make_highres_model(info, model, new_space='MNISymC2'):
     return M
 
 
-def refit_model_in_new_space(mname, new_space='MNISymC2'):
+def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2'):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info, model = load_batch_best(mname)
@@ -78,9 +78,10 @@ def refit_model_in_new_space(mname, new_space='MNISymC2'):
     info['loglik'] = ll3[-1].item()
     info['atlas'] = new_space
     wdir = model_dir + f'/Models/' + fileparts[-2]
-    fname = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
-    info.to_csv(wdir + fname + '.tsv', sep='\t', index=False)
-    with open(wdir + fname + '.pickle', 'wb') as file:
+    if mname_new is not None:
+        mname_new = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
+    info.to_csv(wdir + mname_new + '.tsv', sep='\t', index=False)
+    with open(wdir + mname_new + '.pickle', 'wb') as file:
         pickle.dump([M], file)
 
 
@@ -94,7 +95,8 @@ if __name__ == "__main__":
     # ks = [56]
     for k in ks:
         mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-{k}'
-        refit_model_in_new_space(mname, new_space=target_space)
+        refit_model_in_new_space(
+            mname, mname_new=f'sym_MdPoNiIbWmDeSo_space-{target_space}_K-{k}', new_space=target_space)
 
     # move models that are still on cuda to cpu
 #     for k in ks:
