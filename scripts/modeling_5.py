@@ -281,8 +281,35 @@ def gmm_vs_vmf(m_name, save=True):
 
     if save:
         wdir = model_dir + f'/Models/Evaluation'
-        fname = f'/eval_all_asym_K-17_VMFvsGMM.tsv'
+        fname = f'/eval_all_asym_K-10to100_VMFvsGMM.tsv'
         results.to_csv(wdir + fname, index=False, sep='\t')
+
+def plot_gmm_vs_vmf(fname, benchmark=None, save=False):
+    D = pd.read_csv(model_dir + fname, delimiter='\t')
+
+    if benchmark is not None:
+        D = D.loc[(D['test_data'] == benchmark)]
+
+    crits = ['dcbc_group','dcbc_indiv']
+    plt.figure(figsize=(10, 8))
+    for i, c in enumerate(crits):
+        plt.subplot(2, 1, i + 1)
+        sb.barplot(data=D, x='test_data', y=c, hue='emission', errorbar="se",
+                   palette=sb.color_palette()[1:2] + sb.color_palette()[9:10],
+                   width=0.7)
+        plt.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0, fontsize='small')
+        # plt.xticks(rotation=45)
+        # if c == 'dcbc_group':
+        #     plt.ylim(0.02, 0.12)
+        # elif c == 'dcbc_indiv':
+        #     plt.ylim(0.1, 0.18)
+
+    plt.suptitle(f'GMM vs. VMF, tdata={benchmark}')
+    plt.tight_layout()
+
+    if save:
+        plt.savefig(f'all_datasets_fusion.pdf', format='pdf')
+    plt.show()
 
 if __name__ == "__main__":
     ############# Evaluating indiv datasets vs fusion #############
@@ -305,9 +332,9 @@ if __name__ == "__main__":
     # D.to_csv(wdir + fname, index=False, sep='\t')
 
     ############# Plot results #############
-    fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
+    # fname = f'/Models/Evaluation/eval_dataset7_asym.tsv'
     # # result_5_plot(fname, model_type='Models_03')
-    result_5_benchmark(fname, benchmark='MDTB', save=False)
+    # result_5_benchmark(fname, benchmark='MDTB', save=False)
     # plot_diffK_benchmark(fname, save=True)
 
     ############# Plot fusion atlas #############
@@ -322,6 +349,22 @@ if __name__ == "__main__":
     # plot_model_parcel(model_names, [2, 4], cmap=colors, align=True, device='cuda')
     # plt.show()
 
-    m_name = ['Models_03/asym_Md_space-MNISymC3_K-17',
-              'Models_03/asym_Md_space-MNISymC3_K-17_GMM']
-    gmm_vs_vmf(m_name, save=True)
+    ############# GMM vs. vMF #############
+    # m_name = ['Models_03/asym_Md_space-MNISymC3_K-10',
+    #           'Models_03/asym_Md_space-MNISymC3_K-10_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-17',
+    #           'Models_03/asym_Md_space-MNISymC3_K-17_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-20',
+    #           'Models_03/asym_Md_space-MNISymC3_K-20_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-34',
+    #           'Models_03/asym_Md_space-MNISymC3_K-34_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-40',
+    #           'Models_03/asym_Md_space-MNISymC3_K-40_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-68',
+    #           'Models_03/asym_Md_space-MNISymC3_K-68_GMM',
+    #           'Models_03/asym_Md_space-MNISymC3_K-100',
+    #           'Models_03/asym_Md_space-MNISymC3_K-100_GMM']
+    # gmm_vs_vmf(m_name, save=True)
+
+    fname = f'/Models/Evaluation/eval_all_asym_K-10to100_VMFvsGMM.tsv'
+    plot_gmm_vs_vmf(fname, save=True)

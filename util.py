@@ -154,6 +154,29 @@ def get_colormap_from_lut(fname=base_dir + '/Atlases/tpl-SUIT/atl-MDTB10.lut'):
     color_map = color_info.iloc[:, 1:4].to_numpy()
     return color_map
 
+def get_cmap(mname, load_best=True, sym=False):
+    # Get model and atlas.
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    if load_best:
+        info, model = load_batch_best(mname)
+    else:
+        info, model = load_batch_fit(mname)
+    atlas, ainf = am.get_atlas(info.atlas, atlas_dir)
+
+    # Get winner-take all parcels
+    Prob = np.array(model.marginal_prob())
+    parcel = Prob.argmax(axis=0) + 1
+
+    # Get parcel similarity:
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
+    W = sc.calc_mds(w_cos_sim, center=True)
+
+    # Define color anchors
+    m, regions, colors = sc.get_target_points(atlas, parcel)
+    cmap = sc.colormap_mds(W, target=(m, regions, colors), clusters=None, gamma=0.3)
+
+    return cmap.colors
 
 def plot_data_flat(data, atlas,
                    cmap=None,
@@ -248,22 +271,24 @@ def plot_multi_flat(data, atlas, grid,
         cmap = [cmap] * n_subplots
 
     for i in np.arange(n_subplots):
-        plt.subplot(grid[0], grid[1], i + 1)
+        # plt.subplot(grid[0], grid[1], i + 1)
         plot_data_flat(data[i], atlas,
                        cmap=cmap[i],
                        dtype=dtype,
                        cscale=cscale,
                        render='matplotlib',
                        colorbar=(i == 0) & colorbar)
+
+        plt.tight_layout()
         if titles is not None:
-            plt.title(titles[i])
-            if save_fig:
-                fname = f'rel_{titles[i]}.png'
-                if save_under is not None:
-                    fname = save_under
-                plt.savefig(fname, format='png')
-                # plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
-                #             bbox_inches='tight', pad_inches=0)
+            # plt.title(titles[i])
+            # if save_fig:
+            #     fname = f'rel_{titles[i]}.png'
+            #     if save_under is not None:
+            #         fname = save_under
+            #     plt.savefig(fname, format='png')
+            plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
+                        bbox_inches='tight', pad_inches=0)
 
 
 def hard_max(Prob):

@@ -60,7 +60,7 @@ atlas_dir = base_dir + f'/Atlases'
 res_dir = model_dir + f'/Results'
 
 def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10',
-                  oname=None):
+                  infer_model='VMF', oname=None):
     info, model = load_batch_best(model_type + f'/{model_name}', device='cuda')
     # Individual training dataset:
     idata, iinfo, ids = get_dataset(base_dir, 'MDTB', atlas='MNISymC3',
@@ -105,9 +105,16 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
     part_vec = iinfo['run'].values.reshape(-1, )
     runs = np.unique(part_vec)
 
-    indivtrain_em = em.MixVMF(K=m1.emissions[0].K, P=m1.emissions[0].P,
-                              X=matrix.indicator(cond_vec), part_vec=part_vec,
-                              uniform_kappa=m1.emissions[0].uniform_kappa)
+    if infer_model == 'VMF':
+        indivtrain_em = em.MixVMF(K=m1.emissions[0].K, P=m1.emissions[0].P,
+                                  X=matrix.indicator(cond_vec), part_vec=part_vec,
+                                  uniform_kappa=m1.emissions[0].uniform_kappa)
+    elif infer_model == 'GMM':
+        indivtrain_em = em.MixGaussian(K=m1.emissions[0].K, P=m1.emissions[0].P,
+                                       X=matrix.indicator(cond_vec), std_V=False)
+    else:
+        raise NameError('Unknown infer model type!')
+
     indivtrain_em.initialize(idata)
     m1.emissions = [indivtrain_em]
     m1.initialize()
@@ -134,21 +141,20 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
     all_eval = [Uhat_group] + Uhat_em_all + Uhat_complete_all + ['floor']
 
     # Build model for sc2 (testing session):
-    #     indivtrain_em = em.MixVMF(K=m1.K,
-    m2 = deepcopy(model)
-    MM = [m1, m2]
-    Prop = ev.align_models(MM, in_place=True)
-
-    cond_vec = tinfo['cond_num_uni'].values.reshape(-1, )
-    part_vec = tinfo['half'].values.reshape(-1, )
-    test_em = em.MixVMF(K=m2.emissions[0].K, P=m2.emissions[0].P,
-                        X=matrix.indicator(cond_vec), part_vec=part_vec,
-                        uniform_kappa=m2.emissions[0].uniform_kappa)
-    test_em.initialize(tdata)
-    m2.emissions = [test_em]
-    m2.initialize()
-
-    coserr = calc_test_error(m2, tdata, all_eval)
+    # m2 = deepcopy(model)
+    # MM = [m1, m2]
+    # Prop = ev.align_models(MM, in_place=True)
+    #
+    # cond_vec = tinfo['cond_num_uni'].values.reshape(-1, )
+    # part_vec = tinfo['half'].values.reshape(-1, )
+    # test_em = em.MixVMF(K=m2.emissions[0].K, P=m2.emissions[0].P,
+    #                     X=matrix.indicator(cond_vec), part_vec=part_vec,
+    #                     uniform_kappa=m2.emissions[0].uniform_kappa)
+    # test_em.initialize(tdata)
+    # m2.emissions = [test_em]
+    # m2.initialize()
+    #
+    # coserr = calc_test_error(m2, tdata, all_eval)
 
     # Include DCBC evluation in group vs. indiv
     atlas, _ = am.get_atlas('MNISymC3', atlas_dir=base_dir + '/Atlases')
@@ -158,19 +164,19 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
     dcbc_complete = [calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete_all]
 
     T = pd.DataFrame()
-    for sub in range(coserr.shape[1]):
+    for sub in range(tdata.shape[0]):
         for r in range(16):
             D1 = {}
             D1['type'] = ['dataOnly']
             D1['runs'] = [r + 1]
-            D1['coserr'] = [coserr[r + 1, sub]]
+            # D1['coserr'] = [coserr[r + 1, sub]]
             D1['dcbc'] = [dcbc_em[r][sub].item()]
             D1['subject'] = [sub + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             D1 = {}
             D1['type'] = ['dataAndPrior']
             D1['runs'] = [r + 1]
-            D1['coserr'] = [coserr[r + 17, sub]]
+            # D1['coserr'] = [coserr[r + 17, sub]]
             D1['dcbc'] = [dcbc_complete[r][sub].item()]
             D1['subject'] = [sub + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
@@ -178,7 +184,7 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
         D1 = {}
         D1['type'] = ['group']
         D1['runs'] = [0]
-        D1['coserr'] = [coserr[0, sub]]
+        # D1['coserr'] = [coserr[0, sub]]
         D1['dcbc'] = [dcbc_group[sub].item()]
         D1['subject'] = [sub + 1]
         T = pd.concat([T, pd.DataFrame(D1)])
@@ -186,7 +192,7 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
         D1 = {}
         D1['type'] = ['floor']
         D1['runs'] = [0]
-        D1['coserr'] = [coserr[-1, sub]]
+        # D1['coserr'] = [coserr[-1, sub]]
         D1['dcbc'] = ""
         D1['subject'] = [sub + 1]
         T = pd.concat([T, pd.DataFrame(D1)])
@@ -196,12 +202,12 @@ def result_1_eval(model_type='Models_03',model_name='asym_Md_space-MNISymC3_K-10
 
     return T, [Uhat_group, Uhat_em_all, Uhat_complete_all]
 
-def result_1_plot_curve(fname, oname=None, save=False):
+def result_1_plot_curve(fname, crits=['coserr', 'dcbc'], oname=None, save=False):
     D = pd.read_csv(fname, delimiter='\t')
-    crits = ['coserr', 'dcbc']
-    plt.figure(figsize=(10, 5))
+    num_plot = len(crits)
+    plt.figure(figsize=(5*num_plot, 5))
     for i, c in enumerate(crits):
-        plt.subplot(1, 2, i + 1)
+        plt.subplot(1, num_plot, i + 1)
         gm = D[c][D.type == 'group'].mean()
         sb.lineplot(data=D.loc[(D.type != 'group')&(D.type != 'floor')],
                     y=c, x='runs', hue='type', markers=True, dashes=False)
@@ -242,19 +248,31 @@ def result_1_plot_flatmap(Us, sub=0, cmap='tab20', save_folder=None):
 
 
 if __name__ == "__main__":
-    for t in ['03']:
-        for k in [17]:
-            model_type = f'Models_{t}'
-            model_name = f'asym_Md_space-MNISymC3_K-{k}'
-            fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
-            # D, Us = result_1_eval(model_type=model_type, model_name=model_name, oname=fname)
-
-    result_1_plot_curve(fname, oname=model_type + f'_{model_name}.pdf', save=True)
+    # for t in ['03']:
+    #     for k in [17]:
+    #         model_type = f'Models_{t}'
+    #         model_name = f'asym_Md_space-MNISymC3_K-{k}_GMM'
+    #         fname = model_dir + f'/Results/1.indiv_vs_group/eval_{model_type}_{model_name}.tsv'
+    #         D, Us = result_1_eval(model_type=model_type, model_name=model_name, infer_model='GMM',
+    #                               oname=fname)
+    #
+    # result_1_plot_curve(fname,crits=['dcbc'], oname=model_type + f'_{model_name}.pdf', save=True)
 
     ########## Making color map ##########
-    D, Us = result_1_eval(model_type='Models_03', model_name='asym_Md_space-MNISymC3_K-17',
-                          oname=None)
+    D1, Us1 = result_1_eval(model_type='Models_03', model_name='asym_Md_space-MNISymC3_K-17',
+                           infer_model='VMF', oname=None)
+    D2, Us2 = result_1_eval(model_type='Models_03', model_name='asym_Md_space-MNISymC3_K-17_GMM',
+                          infer_model='GMM', oname=None)
+
+    map_vmf = Us1[1][-1][0]
+    map_gmm = Us2[1][-1][0]
+    indx = ev.matching_greedy(map_vmf, map_gmm)
+    map_gmm = map_gmm[indx,:]
     colors = get_cmap('Models_03/asym_Md_space-MNISymC3_K-17')
     colors[12] = np.array([249 / 255, 178 / 255, 247 / 255, 1.])
-    result_1_plot_flatmap(Us, sub=0, cmap=colors, save_folder='/Models_03/asym_17')
+
+    plot_multi_flat(pt.stack((map_vmf, map_gmm)).cpu().numpy(), 'MNISymC3', grid=(1, 2),
+                    cmap=colors, dtype='prob', titles=['VMF','GMM'])
+
+    result_1_plot_flatmap(Us, sub=0, cmap=colors, save_folder='/Models_03')
 

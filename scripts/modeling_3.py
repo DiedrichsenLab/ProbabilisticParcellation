@@ -541,6 +541,12 @@ def result_3_plot_otherData_2(D, K=None, ck=None, style=None, style_order=None,
 
 
 if __name__ == "__main__":
+    ##### Plot IBC session reliability map #####
+    # plt.figure(figsize=(30,18))
+    rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False, voxel_wise=True)
+    plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
+                    cscale=[-0.3, 0.7], colorbar=False, titles=sess)
+    plt.show()
     ##### 1. Evaluate all two sessions fusion tested on 12 leftout sessions
     ##### The number of combination = 91 (pick 2 from 14)
     # for k in [10,20,34,40,68,100]:
@@ -593,8 +599,3 @@ if __name__ == "__main__":
     #                    'Models_04/asym_Ib_space-MNISymC3_K-17_ses-tom'],
     #                    [1, 3], cmap=colors, align=True, device='cuda')
     # plt.show()
-
-    ##### Plot IBC session reliability map #####
-    # rel, sess = reliability_maps(base_dir, 'IBC', subtract_mean=False, voxel_wise=True)
-    # plot_multi_flat(rel, 'MNISymC3', grid=(3, 5), dtype='func',
-    #                 cscale=[-0.3, 0.7], colorbar=False, titles=sess)

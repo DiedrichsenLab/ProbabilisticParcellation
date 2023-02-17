@@ -376,6 +376,9 @@ def fit_all(set_ind=[0, 1, 2, 3], K=10, repeats=100, model_type='01',
         if subj_list is not None:
             wdir = ut.model_dir + f'/Models/Models_{model_type}/leaveNout'
             fname = f'/{name}_space-{atlas.name}_K-{K}'
+
+            toc = time.perf_counter()
+            print(f'Done Model fitting - {mname}. Used {toc - tic:0.4f} seconds!')
             return wdir, fname, info, models
 
         info.to_csv(wdir + fname + '.tsv', sep='\t')
@@ -552,11 +555,11 @@ def refit_model(model, new_info):
 
 
 if __name__ == "__main__":
-    datasets_list=[0]
-    K = 17
+    K = 34
     sym_type = ['asym']
     model_type = '03'
     space = 'MNISymC3'
+    datasets_list = [1, 7]
 
     for k in [10,20,34,40,68,100]:
         fit_all(set_ind=datasets_list, K=k, repeats=100, model_type=model_type,
