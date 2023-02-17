@@ -261,10 +261,13 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
             # ------------------------------------------
             # Collect the information from the evaluation
             # in a data frame
+            train_datasets = minfo.datasets
+            if isinstance(minfo.datasets, pd.Series):
+                train_datasets = minfo.datasets.tolist()
             ev_df = pd.DataFrame({'model_name': [minfo['name']] * num_subj,
                                   'atlas': [minfo.atlas] * num_subj,
                                   'K': [minfo.K] * num_subj,
-                                  'train_data': [minfo.datasets] * num_subj,
+                                  'train_data': [train_datasets] * num_subj,
                                   'train_loglik': [minfo.loglik] * num_subj,
                                   'test_data': [test_data] * num_subj,
                                   'indivtrain_ind': [indivtrain_ind] * num_subj,
@@ -435,10 +438,13 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
         # ------------------------------------------
         # Collect the information from the evaluation
         # in a data frame
+        train_datasets = minfo.datasets
+        if isinstance(minfo.datasets, pd.Series):
+            train_datasets = minfo.datasets.tolist()
         ev_df = pd.DataFrame({'model_name': [minfo['name']] * num_subj,
                               'atlas': [minfo.atlas] * num_subj,
                               'K': [minfo.K] * num_subj,
-                              'train_data': [minfo.datasets] * num_subj,
+                              'train_data': [train_datasets] * num_subj,
                               'train_loglik': [minfo.loglik] * num_subj,
                               'subj_num': np.arange(num_subj),
                               'common_kappa': [model.emissions[0].uniform_kappa] * num_subj})

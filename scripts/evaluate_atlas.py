@@ -132,53 +132,40 @@ def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
     results = evaluation(model_name, test_datasets)
 
     # Save file
-    fname = 'eval_' + model_name.split(' / ')[-1] + '.tsv'
+    fname = 'eval_' + model_name.split('/')[-1] + '.tsv'
     results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
-def evaluate_selected_on_task():
+def evaluate_selected(on='task'):
     """Evalute selected models on task data.
     """
 
-    test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                     'WMFS', 'Demand', 'Somatotopic']
+    if on == 'task':
+        test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
+                         'WMFS', 'Demand', 'Somatotopic']
+    elif on == 'rest':
+        test_datasets = ['HCP']
+
     model_name = [
-        'Models_03/sym_Hc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
 
-    for mname in model_name:
-        # Evaluate
-        results = evaluation(mname, test_datasets)
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-10',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-20',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80',
+    ]
 
-        # Save file
-        fname = 'eval_on-task_' + mname + '.tsv'
-        results.to_csv(res_dir + fname, index=False, sep='\t')
+    for m, mname in enumerate(model_name):
+        fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
 
+        if Path(res_dir + fname).exists():
+            print(f'File {fname} already exists. Skipping.')
+        else:
+            # Evaluate
+            results = evaluation(mname, test_datasets)
 
-def evaluate_selected_on_rest():
-    """Evalute selected models on task data.
-    """
-
-    test_datasets = ['HCP']
-    model_name = [
-        'Models_03/sym_Hc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed_fromC3']
-
-    for mname in model_name:
-        # Evaluate
-        results = evaluation(mname, test_datasets)
-
-        # Save file
-        fname = 'eval_on-rest_' + mname + '.tsv'
-        results.to_csv(res_dir + fname, index=False, sep='\t')
+            # Save file
+            results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
 if __name__ == "__main__":
@@ -190,5 +177,7 @@ if __name__ == "__main__":
     # evaluate_sym(K=[68], train_type=['loo',
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
-    evaluate_selected_on_task()
+    evaluate_selected(on='task')
+    evaluate_selected(on='rest')
+
     pass

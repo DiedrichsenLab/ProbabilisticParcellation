@@ -31,7 +31,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
 
     ########## Settings ##########
     space = 'MNISymC3'  # Set atlas space
-    msym = 'sym'  # Set model symmetry
+    msym = 'asym'  # Set model symmetry
     t = '03'  # Set model type
 
     # -- Build dataset list --
@@ -57,7 +57,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
         for k in ks:
             datanames = ''.join(T.two_letter_code[datasets])
             wdir = ut.model_dir + f'/Models/Models_{t}'
-            fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
+            fname = f'/{msym}_{datanames}_space-{space}_K-{k}.tsv'
 
             if not Path(wdir + fname).exists():
                 print(
