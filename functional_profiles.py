@@ -73,9 +73,8 @@ def get_profiles(model, info):
         model: Loaded model
         info: Model info
     Returns:
-        profile: list of task profiles. Each entry is the V for one emission model
-        conditions: list of conditions. Each entry is the condition for one emission model
-        conditions_detailed: list of conditions. Each entry is the condition for one emission model along with the dataset name and the session name
+        parcel_profiles: list of task profiles. Each entry is the V for one emission model
+        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
     """
     # --- Get profile ---
     # Get task profile for each emission model
