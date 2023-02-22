@@ -5,11 +5,12 @@ import pandas as pd
 import numpy as np
 import Functional_Fusion.atlas_map as am
 import Functional_Fusion.matrix as matrix
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 import generativeMRF.emissions as em
 import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
+import ProbabilisticParcellation.util as ut
 
 from scipy.linalg import block_diag
 import nibabel as nb
@@ -28,7 +29,6 @@ from ProbabilisticParcellation.util import *
 ######################################################
 # from DCBC.DCBC_vol import compute_DCBC, compute_dist
 
-# pytorch cuda global flag
 
 # Find model directory to save model fitting results
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
@@ -45,11 +45,12 @@ if not Path(base_dir).exists():
 if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
+    raise (NameError('Could not find base_dir'))
 
 atlas_dir = base_dir + f'/Atlases'
 
-def calc_test_error(M,tdata,U_hats):
+
+def calc_test_error(M, tdata, U_hats):
     """Evaluates the predictions from a trained full model on some testdata.
     The full model consists of a trained arrangement model and is
     combined with untrained emission model for the test data.
@@ -70,45 +71,47 @@ def calc_test_error(M,tdata,U_hats):
     num_subj = tdata.shape[0]
     subj = np.arange(num_subj)
     group_parc = M.marginal_prob()
-    pred_err = np.empty((len(U_hats),num_subj))
+    pred_err = np.empty((len(U_hats), num_subj))
     for s in range(num_subj):
-        print(f'Subject:{s}',end=':')
+        print(f'Subject:{s}', end=':')
         tic = time.perf_counter()
         # initialize the emssion model using all but one subject
-        M.emissions[0].initialize(tdata[subj != s,:,:])
+        M.emissions[0].initialize(tdata[subj != s, :, :])
         # For fitting an emission model witout the arrangement model,
         # We can not without multiple starting values
         M.initialize()
-        M,ll,theta,Uhat = M.fit_em(
-                iter=200, tol=0.1,
-                fit_emission=True,
-                fit_arrangement=False,
-                first_evidence=False)
+        M, ll, theta, Uhat = M.fit_em(
+            iter=200, tol=0.1,
+            fit_emission=True,
+            fit_arrangement=False,
+            first_evidence=False)
         X = M.emissions[0].X
-        dat = pt.linalg.pinv(X) @ tdata[subj==s,:,:]
-        for i,crit in enumerate(U_hats):
-            if crit=='group':
+        dat = pt.linalg.pinv(X) @ tdata[subj == s, :, :]
+        for i, crit in enumerate(U_hats):
+            if crit == 'group':
                 U = group_parc
-            elif crit=='floor':
+            elif crit == 'floor':
                 # U,ll = M.Estep(Y=pt.tensor(tdata[subj==s,:,:]).unsqueeze(0))
-                M.emissions[0].initialize(tdata[subj == s,:,:])
-                U = pt.softmax(M.emissions[0].Estep(tdata[subj == s, :, :]), dim=1)
+                M.emissions[0].initialize(tdata[subj == s, :, :])
+                U = pt.softmax(M.emissions[0].Estep(
+                    tdata[subj == s, :, :]), dim=1)
             elif crit.ndim == 2:
                 U = crit
-            elif crit.ndim == 3: 
-                U = crit[subj==s,:,:]
-            else: 
-                raise(NameError("U_hats needs to be 'group','floor',a 2-d or 3d-tensor"))
-            a=ev.coserr(dat, M.emissions[0].V, U,
-                        adjusted=True, soft_assign=True)
-            pred_err[i,s] = a
+            elif crit.ndim == 3:
+                U = crit[subj == s, :, :]
+            else:
+                raise (
+                    NameError("U_hats needs to be 'group','floor',a 2-d or 3d-tensor"))
+            a = ev.coserr(dat, M.emissions[0].V, U,
+                          adjusted=True, soft_assign=True)
+            pred_err[i, s] = a
         toc = time.perf_counter()
         print(f"{toc - tic:0.4f}s")
     return pred_err
 
 
 def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
-                   trim_nan=False):
+                   trim_nan=False, verbose=True):
     """DCBC: evaluate the resultant parcellation using DCBC
     Args:
         parcels (np.ndarray): the input parcellation:
@@ -132,9 +135,9 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
 
     dcbc_values = []
     for sub in range(testdata.shape[0]):
-        print(f'Subject {sub}',end=':')
+        print(f'Subject {sub}', end=':')
         tic = time.perf_counter()
-        if parcels.ndim==1:
+        if parcels.ndim == 1:
             D = compute_DCBC(maxDist=max_dist, binWidth=bin_width,
                              parcellation=parcels,
                              dist=dist, func=testdata[sub].T)
@@ -149,7 +152,7 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
 
 
 def run_prederror(model_names, test_data, test_sess, cond_ind,
-                  part_ind=None, eval_types=['group','floor'],
+                  part_ind=None, eval_types=['group', 'floor'],
                   indivtrain_ind=None, indivtrain_values=[0],
                   device=None, load_best=True):
     """ Calculates a prediction error using a test_data set
@@ -175,15 +178,15 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
     Returns:
         data-frame with model evalution
     """
-    tdata,tinfo,tds = get_dataset(base_dir,test_data,
-                              atlas='MNISymC3',sess=test_sess)
+    tdata, tinfo, tds = ds.get_dataset(base_dir, test_data,
+                                       atlas='MNISymC3', sess=test_sess)
     # convert tdata to tensor
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
     # For testing: tdata=tdata[0:5,:,:]
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
-    if not isinstance(model_names,list):
+    if not isinstance(model_names, list):
         model_names = [model_names]
 
     # Get condition and partition vector of test data
@@ -191,7 +194,7 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
         cond_ind = tds.cond_ind
     cond_vec = tinfo[cond_ind].values.reshape(-1,)
     if part_ind is None:
-        part_vec = np.zeros((tinfo.shape[0],),dtype=int)
+        part_vec = np.zeros((tinfo.shape[0],), dtype=int)
     else:
         part_vec = tinfo[part_ind].values
 
@@ -209,7 +212,7 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
         else:
             minfo, model = load_batch_fit(f"{model_name}")
             minfo = minfo.iloc[0]
-        
+
         model_kp = model.emissions[0].uniform_kappa
         this_res = pd.DataFrame()
         # Loop over the splits - if split then train a individual model
@@ -218,61 +221,65 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
             # Train an emission model on the individual training data
             # and get a Uhat (individual parcellation) from it.
             if indivtrain_ind is not None:
-                train_indx = tinfo[indivtrain_ind]==indivtrain_values[n]
-                test_indx = tinfo[indivtrain_ind]!=indivtrain_values[n]
+                train_indx = tinfo[indivtrain_ind] == indivtrain_values[n]
+                test_indx = tinfo[indivtrain_ind] != indivtrain_values[n]
                 indivtrain_em = em.MixVMF(K=minfo.K, N=40,
-                            P = model.emissions[0].P,
-                            X = matrix.indicator(cond_vec[train_indx]),
-                            part_vec=part_vec[train_indx],
-                            uniform_kappa=model_kp)
-                indivtrain_em.initialize(tdata[:,train_indx,:])
+                                          P=model.emissions[0].P,
+                                          X=matrix.indicator(
+                                              cond_vec[train_indx]),
+                                          part_vec=part_vec[train_indx],
+                                          uniform_kappa=model_kp)
+                indivtrain_em.initialize(tdata[:, train_indx, :])
                 model.emissions = [indivtrain_em]
                 model.initialize()
-                m,ll,theta,U_indiv = model.fit_em(iter=200, tol=0.1,
-                                                  fit_emission=True,
-                                                  fit_arrangement=False,
-                                                  first_evidence=False)
+                m, ll, theta, U_indiv = model.fit_em(iter=200, tol=0.1,
+                                                     fit_emission=True,
+                                                     fit_arrangement=False,
+                                                     first_evidence=False)
                 # Add individual U_hat data (emission) only
                 Uhat_em = pt.softmax(m.emissions[0].Estep(), dim=1)
                 # Uhat_compl, _ = m.arrange.Estep(m.emissions[0].Estep())
                 all_eval = eval_types + [Uhat_em] + \
-                           [model.remap_evidence(U_indiv)]
+                    [model.remap_evidence(U_indiv)]
             else:
-                test_indx =  np.ones((tinfo.shape[0],),dtype=bool)
+                test_indx = np.ones((tinfo.shape[0],), dtype=bool)
                 all_eval = eval_types
             # ------------------------------------------
             # Now build the model for the test data and crossvalidate
             # across subjects
             em_model = em.MixVMF(K=minfo.K, N=40,
-                            P=model.emissions[0].P,
-                            X=matrix.indicator(cond_vec[test_indx]),
-                            part_vec=part_vec[test_indx],
-                            uniform_kappa=model_kp)
+                                 P=model.emissions[0].P,
+                                 X=matrix.indicator(cond_vec[test_indx]),
+                                 part_vec=part_vec[test_indx],
+                                 uniform_kappa=model_kp)
             # Add this single emission model
             model.emissions = [em_model]
             # recalculate total number parameters
             model.nparams = model.arrange.nparams + em_model.nparams
             # Calculate cosine error
-            res = calc_test_error(model,tdata[:,test_indx,:],all_eval)
+            res = calc_test_error(model, tdata[:, test_indx, :], all_eval)
             # ------------------------------------------
             # Collect the information from the evaluation
             # in a data frame
-            ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
-                            'atlas':[minfo.atlas]*num_subj,
-                            'K':[minfo.K]*num_subj,
-                            'train_data':[minfo.datasets]*num_subj,
-                            'train_loglik':[minfo.loglik]*num_subj,
-                            'test_data':[test_data]*num_subj,
-                            'indivtrain_ind':[indivtrain_ind]*num_subj,
-                            'indivtrain_val':[indivtrain_values[n]]*num_subj,
-                            'subj_num':np.arange(num_subj),
-                            'common_kappa':[model_kp]*num_subj})
+            train_datasets = minfo.datasets
+            if isinstance(minfo.datasets, pd.Series):
+                train_datasets = minfo.datasets.tolist()
+            ev_df = pd.DataFrame({'model_name': [minfo['name']] * num_subj,
+                                  'atlas': [minfo.atlas] * num_subj,
+                                  'K': [minfo.K] * num_subj,
+                                  'train_data': [train_datasets] * num_subj,
+                                  'train_loglik': [minfo.loglik] * num_subj,
+                                  'test_data': [test_data] * num_subj,
+                                  'indivtrain_ind': [indivtrain_ind] * num_subj,
+                                  'indivtrain_val': [indivtrain_values[n]] * num_subj,
+                                  'subj_num': np.arange(num_subj),
+                                  'common_kappa': [model_kp] * num_subj})
             # Add all the evaluations to the data frame
-            for e,ev in enumerate(all_eval):
-                if isinstance(ev,str):
-                    ev_df['coserr_' + ev]=res[e,:]
+            for e, ev in enumerate(all_eval):
+                if isinstance(ev, str):
+                    ev_df['coserr_' + ev] = res[e, :]
                 else:
-                    ev_df[f'coserr_ind{e}']=res[e,:]
+                    ev_df[f'coserr_ind{e}'] = res[e, :]
             this_res = pd.concat([this_res, ev_df], ignore_index=True)
 
         # Concate model type
@@ -287,7 +294,7 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
     return results
 
 
-def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
+def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
                    device=None):
     """ Run DCBC group evaluation
 
@@ -303,14 +310,14 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
     Returns:
         DataFrame: Results
     """
-    tdata,tinfo,tds = get_dataset(base_dir,test_data,
-                              atlas=space,sess=test_sess)
-    atlas, _ = am.get_atlas(space,atlas_dir=base_dir + '/Atlases')
-    dist = compute_dist(atlas.world.T,resolution=1)
+    tdata, tinfo, tds = ds.get_dataset(base_dir, test_data,
+                                       atlas=space, sess=test_sess)
+    atlas, _ = am.get_atlas(space, atlas_dir=base_dir + '/Atlases')
+    dist = compute_dist(atlas.world.T, resolution=1)
 
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
-    if not isinstance(par_names,list):
+    if not isinstance(par_names, list):
         par_names = [par_names]
 
     # convert tdata to tensor
@@ -322,13 +329,13 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
         pname = fileparts[-1]
         pname_parts = pname.split('.')
         print(f'evaluating {pname}')
-        if pname_parts[-1]=='pickle':
+        if pname_parts[-1] == 'pickle':
             minfo, model = load_batch_best(f"{fileparts[-2]}/{pname_parts[-2]}",
                                            device=device)
             Prop = model.marginal_prob()
-            par = pt.argmax(Prop,dim=0)+1
-        elif pname_parts[-1]=='nii':
-            par = atlas.sample_nifti(pn,0)
+            par = pt.argmax(Prop, dim=0) + 1
+        elif pname_parts[-1] == 'nii':
+            par = atlas.sample_nifti(pn, 0)
         # Initialize result array
         if i == 0:
             dcbc = pt.zeros((len(par_names), tdata.shape[0]))
@@ -337,11 +344,11 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
         num_subj = tdata.shape[0]
 
         ev_df = pd.DataFrame({'fit_type': [fileparts[0]] * num_subj,
-                            'model_name': [pname_parts[-2]] * num_subj,
-                            'test_data': [test_data] * num_subj,
-                            'subj_num': np.arange(num_subj),
-                            'dcbc': dcbc[i,:].cpu().numpy()
-                            })
+                              'model_name': [pname_parts[-2]] * num_subj,
+                              'test_data': [test_data] * num_subj,
+                              'subj_num': np.arange(num_subj),
+                              'dcbc': dcbc[i, :].cpu().numpy()
+                              })
         results = pd.concat([results, ev_df], ignore_index=True)
 
     if saveFile is not None:
@@ -352,7 +359,7 @@ def run_dcbc_group(par_names,space,test_data,test_sess='all',saveFile=None,
 
 
 def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
-             part_vec, device=None, load_best=True):
+             part_vec, device=None, load_best=True, verbose=True):
     """ Calculates DCBC using a test_data set. The test data splitted into
         individual training and test set given by `train_indx` and `test_indx`.
         First we use individual training data to derive an individual
@@ -380,12 +387,12 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
         requested by Jorn.
     """
     # Calculate distance metric given by input atlas
-    dist = compute_dist(atlas.world.T,resolution=1)
+    dist = compute_dist(atlas.world.T, resolution=1)
     # convert tdata to tensor
     if type(tdata) is np.ndarray:
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
-    if not isinstance(model_names,list):
+    if not isinstance(model_names, list):
         model_names = [model_names]
 
     num_subj = tdata.shape[0]
@@ -393,12 +400,14 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
     # Now loop over possible models we want to evaluate
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
+        if verbose:
+            ut.report_cuda_memory()
         if load_best:
             minfo, model = load_batch_best(f"{model_name}", device=device)
         else:
             minfo, model = load_batch_fit(f"{model_name}")
             minfo = minfo.iloc[0]
-        
+
         Prop = model.marginal_prob()
         this_res = pd.DataFrame()
         # ------------------------------------------
@@ -409,36 +418,39 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
                                   X=matrix.indicator(cond_vec[train_indx]),
                                   part_vec=part_vec[train_indx],
                                   uniform_kappa=model.emissions[0].uniform_kappa)
-        indivtrain_em.initialize(tdata[:,train_indx,:])
+        indivtrain_em.initialize(tdata[:, train_indx, :])
         model.emissions = [indivtrain_em]
         model.initialize()
         # Gets us the individual parcellation
-        model,_,_,U_indiv = model.fit_em(iter=200, tol=0.1,
-                                         fit_emission=True,
-                                         fit_arrangement=False,
-                                         first_evidence=False)
+        model, _, _, U_indiv = model.fit_em(iter=200, tol=0.1,
+                                            fit_emission=True,
+                                            fit_arrangement=False,
+                                            first_evidence=False)
         U_indiv = model.remap_evidence(U_indiv)
 
         # ------------------------------------------
         # Now run the DCBC evaluation fo the group and individuals
         Pgroup = pt.argmax(Prop, dim=0) + 1
         Pindiv = pt.argmax(U_indiv, dim=1) + 1
-        dcbc_group = calc_test_dcbc(Pgroup,tdata[:,test_indx,:], dist)
+        dcbc_group = calc_test_dcbc(Pgroup, tdata[:, test_indx, :], dist)
         dcbc_indiv = calc_test_dcbc(Pindiv, tdata[:, test_indx, :], dist)
 
         # ------------------------------------------
         # Collect the information from the evaluation
         # in a data frame
-        ev_df = pd.DataFrame({'model_name':[minfo['name']]*num_subj,
-                        'atlas':[minfo.atlas]*num_subj,
-                        'K':[minfo.K]*num_subj,
-                        'train_data':[minfo.datasets]*num_subj,
-                        'train_loglik':[minfo.loglik]*num_subj,
-                        'subj_num':np.arange(num_subj),
-                        'common_kappa':[model.emissions[0].uniform_kappa]*num_subj})
+        train_datasets = minfo.datasets
+        if isinstance(minfo.datasets, pd.Series):
+            train_datasets = minfo.datasets.tolist()
+        ev_df = pd.DataFrame({'model_name': [minfo['name']] * num_subj,
+                              'atlas': [minfo.atlas] * num_subj,
+                              'K': [minfo.K] * num_subj,
+                              'train_data': [train_datasets] * num_subj,
+                              'train_loglik': [minfo.loglik] * num_subj,
+                              'subj_num': np.arange(num_subj),
+                              'common_kappa': [model.emissions[0].uniform_kappa] * num_subj})
         # Add all the evaluations to the data frame
-        ev_df['dcbc_group']=dcbc_group.cpu()
-        ev_df['dcbc_indiv']=dcbc_indiv.cpu()
+        ev_df['dcbc_group'] = dcbc_group.cpu()
+        ev_df['dcbc_indiv'] = dcbc_indiv.cpu()
         this_res = pd.concat([this_res, ev_df], ignore_index=True)
 
         # Concate model type
@@ -451,6 +463,7 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
         results = pd.concat([results, this_res], ignore_index=True)
 
     return results
+
 
 def run_dcbc_IBC(model_names, test_data, test_sess,
                  cond_ind=None, part_ind=None,
@@ -478,8 +491,8 @@ def run_dcbc_IBC(model_names, test_data, test_sess,
     Returns:
         data-frame with model evalution
     """
-    tdata, tinfo, tds = get_dataset(base_dir, test_data,
-                                    atlas='MNISymC3', sess=test_sess)
+    tdata, tinfo, tds = ds.get_dataset(base_dir, test_data,
+                                       atlas='MNISymC3', sess=test_sess)
     atlas, _ = am.get_atlas('MNISymC3', atlas_dir=base_dir + '/Atlases')
     dist = compute_dist(atlas.world.T, resolution=1)
 
@@ -532,7 +545,8 @@ def run_dcbc_IBC(model_names, test_data, test_sess,
                 test_indx = tinfo[indivtrain_ind] != indivtrain_values[n]
                 indivtrain_em = em.MixVMF(K=minfo.K, N=40,
                                           P=model.emissions[0].P,
-                                          X=matrix.indicator(cond_vec[train_indx]),
+                                          X=matrix.indicator(
+                                              cond_vec[train_indx]),
                                           part_vec=part_vec[train_indx],
                                           uniform_kappa=model.emissions[0].uniform_kappa)
                 indivtrain_em.initialize(tdata[:, train_indx, :])
@@ -548,14 +562,17 @@ def run_dcbc_IBC(model_names, test_data, test_sess,
             else:
                 # If no testset split, then use the U_indiv from training
                 test_indx = np.ones((tinfo.shape[0],), dtype=bool)
-                trainsess = [idx for idx in eval(minfo.sess) if isinstance(idx, list)][0]
-                traind, info, _ = get_dataset(base_dir, test_data,
-                                              atlas='MNISymC3', sess=trainsess)
+                trainsess = [idx for idx in eval(
+                    minfo.sess) if isinstance(idx, list)][0]
+                traind, info, _ = ds.get_dataset(base_dir, test_data,
+                                                 atlas='MNISymC3', sess=trainsess)
                 # Check if the model was trained joint or separate sessions
                 if len(model.emissions) == 1:
-                    model.initialize([np.hstack([traind[:, info.sess == s, :] for s in trainsess])])
+                    model.initialize(
+                        [np.hstack([traind[:, info.sess == s, :] for s in trainsess])])
                 else:
-                    model.initialize([traind[:, info.sess == s, :] for s in trainsess])
+                    model.initialize([traind[:, info.sess == s, :]
+                                     for s in trainsess])
 
                 # Get the individual parcellation on all training data
                 model, _, _, U_indiv = model.fit_em(iter=200, tol=0.1,
@@ -600,29 +617,34 @@ def run_dcbc_IBC(model_names, test_data, test_sess,
 
     return results
 
-def eval_all_prederror(model_type,prefix,K):
-    models = ['Md','Po','Ni','Ib','MdPoNiIb']
-    datasets = ['Ibc','Mdtb','Pontine','Nishimoto']
+
+def eval_all_prederror(model_type, prefix, K, verbose=True):
+    models = ['Md', 'Po', 'Ni', 'Ib', 'MdPoNiIb']
+    datasets = ['Ibc', 'Mdtb', 'Pontine', 'Nishimoto']
 
     model_name = []
     results = pd.DataFrame()
     for m in models:
         model_name.append(prefix + '_' +
                           m + '_' +
-                          'space-MNISymC3'+ '_' +
+                          'space-MNISymC3' + '_' +
                           f'K-{K}')
     for ds in datasets:
+        if verbose:
+            ut.report_cuda_memory()
         print(f'Testdata: {ds}\n')
-        R = run_prederror(model_type,model_name,ds,'all',
-                    cond_ind=None,
-                    part_ind='half',
-                    eval_types=['group','floor'],
-                    indivtrain_ind='half',indivtrain_values=[1,2])
-        results = pd.concat([results,R],ignore_index=True)
-    fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv'
-    results.to_csv(fname,sep='\t',index=False)
+        R = run_prederror(model_type, model_name, ds, 'all',
+                          cond_ind=None,
+                          part_ind='half',
+                          eval_types=['group', 'floor'],
+                          indivtrain_ind='half', indivtrain_values=[1, 2])
+        results = pd.concat([results, R], ignore_index=True)
+    fname = base_dir + \
+        f'/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv'
+    results.to_csv(fname, sep='\t', index=False)
 
-def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suffix = None):
+
+def eval_all_dcbc(model_type, prefix, K, space='MNISymC3', models=None, fname_suffix=None, verbose=True):
     """ Calculates DCBC over all models. 
 
         Args:
@@ -637,34 +659,37 @@ def eval_all_dcbc(model_type,prefix,K,space = 'MNISymC3', models=None, fname_suf
 
     """
     if models is None:
-        models = ['Md','Po','Ni','Ib','Hc','MdPoNiIb','MdPoNiIbHc']
-    datasets = ['MDTB','Pontine','Nishimoto']
-
+        models = ['Md', 'Po', 'Ni', 'Ib', 'Hc', 'MdPoNiIb', 'MdPoNiIbHc']
+    datasets = ['MDTB', 'Pontine', 'Nishimoto']
 
     model_name = []
     results = pd.DataFrame()
     for m in models:
         model_name.append(prefix + '_' + m + '_' +
-                          f'space-{space}'+ '_' + f'K-{K}')
+                          f'space-{space}' + '_' + f'K-{K}')
     for ds in datasets:
         print(f'Testdata: {ds}\n')
-        R = run_dcbc_individual(model_name,ds,'all',cond_ind=None,
-                                part_ind='half',indivtrain_ind='half',
-                                indivtrain_values=[1,2])
-        results = pd.concat([results,R],ignore_index=True)
+        if verbose:
+            ut.report_cuda_memory()
+        R = run_dcbc_individual(model_name, ds, 'all', cond_ind=None,
+                                part_ind='half', indivtrain_ind='half',
+                                indivtrain_values=[1, 2])
+        results = pd.concat([results, R], ignore_index=True)
 
     prefix = '_'.join(models)
-    fname = model_dir + f'/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv'
+    fname = model_dir + \
+        f'/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv'
     if fname_suffix is not None:
         # Append fname suffix to avoid overwriting old results
         fname = fname.strip('.tsv') + f'_{fname_suffix}.tsv'
-    results.to_csv(fname,sep='\t',index=False)
+    results.to_csv(fname, sep='\t', index=False)
     print(f'Evaluation finished. Saved evaluation results in {fname}')
+
 
 def eval_old_dcbc(models=None, datasets=None, fname_suffix=None):
     """ Evaluates old and new parcellations using new DCBC
     """
-    parcels = ['Anatom','MDTB10','Buckner7','Buckner17','Ji10']
+    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
     if models is None:
         models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
     if datasets is None:
@@ -673,45 +698,49 @@ def eval_old_dcbc(models=None, datasets=None, fname_suffix=None):
     par_name = []
     for p in parcels:
         par_name.append(base_dir + '/Atlases/tpl-MNI152NLin2009cSymC/' +
-                f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
+                        f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
     par_name = models + par_name
     results = pd.DataFrame()
     for ds in datasets:
         print(f'Testdata: {ds}\n')
         R = run_dcbc_group(par_name,
-                         space='MNISymC3',
-                         test_data = ds,
-                         test_sess = 'all')
-        results = pd.concat([results,R],ignore_index=True)
+                           space='MNISymC3',
+                           test_data=ds,
+                           test_sess='all')
+        results = pd.concat([results, R], ignore_index=True)
     fname = base_dir + f'/Models/eval_dcbc_group.tsv'
     if fname_suffix is not None:
         # Append fname suffix to avoid overwriting old results
         fname = fname.strip('.tsv') + f'_{fname_suffix}.tsv'
-    results.to_csv(fname,sep='\t',index=False)
+    results.to_csv(fname, sep='\t', index=False)
 
-def concat_all_prederror(model_type,prefix,K,outfile):
+
+def concat_all_prederror(model_type, prefix, K, outfile):
     D = pd.DataFrame()
-    for p in prefix: 
+    for p in prefix:
         for k in K:
-            fname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{p}_K-{k}.tsv'
-            T = pd.read_csv(fname,delimiter='\t')
-            T['prefix'] = [p]*T.shape[0]
-            D = pd.concat([D,T],ignore_index=True)
-    oname = base_dir + f'/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv'
-    D.to_csv(oname,index=False,sep='\t')
+            fname = base_dir + \
+                f'/Models/Evaluation_{model_type}/eval_prederr_{p}_K-{k}.tsv'
+            T = pd.read_csv(fname, delimiter='\t')
+            T['prefix'] = [p] * T.shape[0]
+            D = pd.concat([D, T], ignore_index=True)
+    oname = base_dir + \
+        f'/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv'
+    D.to_csv(oname, index=False, sep='\t')
 
     pass
 
+
 if __name__ == "__main__":
 
-        # model_type='04'
-        # sym='asym'
-        # fname_suffix='HCPw_asym'
-        
-        # # Evaluate DCBC
-        # eval_all_dcbc(model_type=model_type,prefix=sym,K=K,space = 'MNISymC3', models=hcp_models, fname_suffix=fname_suffix)
+    # model_type='04'
+    # sym='asym'
+    # fname_suffix='HCPw_asym'
+
+    # # Evaluate DCBC
+    # eval_all_dcbc(model_type=model_type,prefix=sym,K=K,space = 'MNISymC3', models=hcp_models, fname_suffix=fname_suffix)
 
     # Concat DCBC
     # concat_all_prederror(model_type=model_type,prefix=sym,K=Ks,outfile=fname_suffix)
-            
+
     pass

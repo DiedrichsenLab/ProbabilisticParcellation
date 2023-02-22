@@ -49,6 +49,14 @@ else:
     default_device = pt.device('cpu')
     pt.set_default_tensor_type(pt.FloatTensor)
 
+# Keep track of cuda memory
+def report_cuda_memory():
+    if pt.cuda.is_available():
+        ma = pt.cuda.memory_allocated() / 1024 / 1024
+        mma = pt.cuda.max_memory_allocated() / 1024 / 1024
+        mr = pt.cuda.memory_reserved() / 1024 / 1024
+        print(
+            f'Allocated:{ma:.2f} MB, MaxAlloc:{mma:.2f} MB, Reserved {mr:.2f} MB')
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target
@@ -300,7 +308,7 @@ def hard_max(Prob):
 
 
 def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None):
-    if isinstance(labels,list):
+    if isinstance(labels, list):
         labels = np.array(labels)
     K, P = Prob.shape
     if not sym:

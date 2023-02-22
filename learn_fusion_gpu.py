@@ -561,70 +561,8 @@ if __name__ == "__main__":
     space = 'MNISymC3'
     datasets_list = [1, 7]
 
-    for k in [10,20,34,40,68,100]:
+    for k in [10, 20, 34, 40, 68, 100]:
         fit_all(set_ind=datasets_list, K=k, repeats=100, model_type=model_type,
                 sym_type=['asym'], space='MNISymC3')
-
-    # # ########## Higher K ##########
-    # space = 'MNISymC3' # Set atlas space
-    # # space = 'MNISymC2' # Set atlas space
-    # msym = 'sym' # Set model symmetry
-    # # ks = [10, 20, 34]
-    # ks = [14, 28, 48, 56, 60]
-    # # ks = [34, 40, 68, 80]
-    # # ks=[80]
-    #
-    #
-    # # # -- Build dataset list --
-    # n_dsets = 7 # without HCP
-    # alldatasets = np.arange(n_dsets).tolist()
-    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    # individual_datasets = [ [d] for d in alldatasets ]
-    #
-    # dataset_list = []
-    # dataset_list.extend([alldatasets])
-    # dataset_list.extend(individual_datasets)
-    # # dataset_list.extend(loo_datasets)
-    #
-    #
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    # for t in ['03']:
-    #     for datasets in dataset_list:
-    #         for k in ks:
-    #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = ut.model_dir + f'/Models/Models_{t}'
-    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
-    #
-    #             if not Path(wdir+fname).exists():
-    #                 print(f'fitting model {t} with K={k} as {fname}...')
-    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[msym], space=space)
-    #             else:
-    #                 print(f'model {t} with K={k} already fitted as {fname}')
-
-    # # # -- Build dataset list with HCP--
-    # n_dsets = 8 # with HCP
-    # alldatasets = np.arange(n_dsets).tolist()
-    # loo_datasets = [ np.delete(np.arange(n_dsets), d).tolist() for d in alldatasets ]
-    # individual_datasets = [ [d] for d in alldatasets ]
-
-    # dataset_list = []
-    # dataset_list.extend([alldatasets])
-    # dataset_list.extend(individual_datasets)
-    # # dataset_list.extend(loo_datasets)
-
-    # T = pd.read_csv(base_dir + '/dataset_description.tsv', sep='\t')
-    # for datasets in dataset_list:
-    #     for t in ['03','04']:
-    #         for k in ks:
-
-    #             datanames = ''.join(T.two_letter_code[datasets])
-    #             wdir = ut.model_dir + f'/Models/Models_{t}'
-    #             fname = f'/sym_{datanames}_space-{space}_K-{k}.tsv'
-
-    #             if not Path(wdir+fname).exists():
-    #                 print(f'fitting model {t} with K={k} as {fname}...')
-    #                 fit_all(datasets, k, model_type=t, repeats=100, sym_type=[s])
-    #             else:
-    #                 print(f'model {t} with K={k} already fitted as {fname}')
 
     pass
