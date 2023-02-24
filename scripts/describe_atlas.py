@@ -38,9 +38,10 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
     parcel_profiles, profile_data = fp.get_profiles(model, info)
     data = []
     for dset in info.datasets:
-        data.append(ds.get_dataset(ut.base_dir, dset, atlas=space, sess='all'))
+        d, i = ds.get_dataset(ut.base_dir, dset, atlas=space, sess='all')
+        data.append(d)
 
-    cortex = correlate_profile(data, profile)
+    cortex = correlate_profile(data, parcel_profiles)
     return cortex
 
 

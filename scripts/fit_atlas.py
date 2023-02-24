@@ -31,7 +31,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
 
     ########## Settings ##########
     space = 'MNISymC3'  # Set atlas space
-    msym = 'asym'  # Set model symmetry
+    msym = 'sym'  # Set model symmetry
     t = '03'  # Set model type
 
     # -- Build dataset list --
@@ -72,5 +72,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
 
 
 if __name__ == "__main__":
-    fit_models(ks=[32], fit_datasets=['all'], rest_included=False)
-    fit_models(ks=[32], fit_datasets=['all'], rest_included=True)
+    ks = [32, 34, 68, 10, 20, 40, 68, 80]
+    # fit_models(ks=[32], fit_datasets=['all'], rest_included=False)
+    fit_models(ks=ks, fit_datasets=['indiv', 'all'], rest_included=True)
+    fit_models(ks=ks, fit_datasets=['loo'], rest_included=True)
