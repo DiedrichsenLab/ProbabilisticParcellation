@@ -147,12 +147,13 @@ def evaluate_selected(on='task'):
         test_datasets = ['HCP']
 
     model_name = [
-
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-32',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-34',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68',
         'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-10',
         'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-20',
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-34',
         'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-40',
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68'
     ]
 
     for m, mname in enumerate(model_name):
@@ -177,7 +178,7 @@ if __name__ == "__main__":
     # evaluate_sym(K=[68], train_type=['loo',
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
-    evaluate_selected(on='task')
+    # evaluate_selected(on='task')
     evaluate_selected(on='rest')
 
     pass
