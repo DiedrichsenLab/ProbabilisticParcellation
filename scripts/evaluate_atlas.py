@@ -178,7 +178,7 @@ if __name__ == "__main__":
     # evaluate_sym(K=[68], train_type=['loo',
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
-    # evaluate_selected(on='task')
+    evaluate_selected(on='task')
     evaluate_selected(on='rest')
 
     pass
