@@ -148,11 +148,11 @@ def evaluate_selected(on='task'):
 
     model_name = [
 
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-10',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-20',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-34',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-40',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-10',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-20',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-34',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-40',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68',
     ]
 
     for m, mname in enumerate(model_name):
