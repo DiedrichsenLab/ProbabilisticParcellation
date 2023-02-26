@@ -159,7 +159,7 @@ def evaluate_models(ks, evaluate_datasets=['all', 'loo', 'indiv'], rest_included
         for k in ks:
             datanames = ''.join(T.two_letter_code[datasets])
             wdir = ut.model_dir + f'/Models/Models_{t}'
-            mname = f'/{msym}_{datanames}_space-{space}_K-{k}.tsv'
+            mname = f'Models_03/{msym}_{datanames}_space-{space}_K-{k}'
             fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
 
             if Path(res_dir + fname).exists():
