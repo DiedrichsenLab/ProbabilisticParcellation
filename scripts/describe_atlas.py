@@ -35,10 +35,18 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
     space = mname.split('space-')[1].split('_')[0]
     info, model = ut.load_batch_best(mname)
     info = fp.recover_info(info, model, mname)
-    parcel_profiles, profile_data = fp.get_profiles(model, info)
+    profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv'
+    if Path(profile_file).exists():
+        profile = pd.read_csv(
+            profile_file, sep="\t"
+        )
+    else:
+
+        parcel_profiles, profile_data = fp.get_profile(model, info)
     data = []
     for dset in info.datasets:
-        d, i = ds.get_dataset(ut.base_dir, dset, atlas=space, sess='all')
+        d, i, dataset = ds.get_dataset(
+            ut.base_dir, dset, atlas=space, sess='all')
         data.append(d)
 
     cortex = correlate_profile(data, parcel_profiles)
