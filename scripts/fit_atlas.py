@@ -75,7 +75,8 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
 
 
 if __name__ == "__main__":
-    ks = [28, 30, 36, 38, 74]
+    # ks = [28, 30, 36, 38, 74]
+    ks = [68, 80]
     # fit_models(ks=[32], fit_datasets=['all'], rest_included=False)
     fit_models(ks=ks, fit_datasets=['indiv', 'all'],
                rest_included=True, indiv_on_rest_only=True)
