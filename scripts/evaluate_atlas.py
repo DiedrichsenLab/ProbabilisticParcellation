@@ -75,8 +75,8 @@ def evaluation(model_name, test_datasets):
     return results
 
 
-def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], rest_included=False, out_file=None):
-    """Evaluate models that were fitted in MNISymC2 space on all datasets
+def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], space='MNISymC3', rest_included=False, out_file=None):
+    """Evaluate models
     """
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     datasets_long = T['name'].tolist()
@@ -102,7 +102,7 @@ def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], rest_included=False
     if rest_included:
         train_datasets.extend(['Hc'])
 
-    model_name = [f'Models_03/sym_{train_dset}_space-MNISymC3_K-{this_k}'
+    model_name = [f'Models_03/sym_{train_dset}_space-{space}_K-{this_k}'
                   for this_k in K for train_dset in train_datasets]
 
     # Evaluate
@@ -118,6 +118,58 @@ def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], rest_included=False
     results.to_csv(res_dir + out_file, index=False, sep='\t')
 
     pass
+
+
+def evaluate_models(ks, evaluate_datasets=['all', 'loo', 'indiv'], rest_included=False, verbose=True, indiv_on_rest_only=False, on='task'):
+
+    ########## Settings ##########
+    space = 'MNISymC3'  # Set atlas space
+    msym = 'sym'  # Set model symmetry
+    t = '03'  # Set model type
+
+    if on == 'task':
+        test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
+                         'WMFS', 'Demand', 'Somatotopic']
+    elif on == 'rest':
+        test_datasets = ['HCP']
+
+    # -- Build dataset list --
+    if rest_included:
+        n_dsets = 8  # with HCP
+    else:
+        n_dsets = 7  # without HCP
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [np.delete(np.arange(n_dsets), d).tolist()
+                    for d in alldatasets]
+    individual_datasets = [[d] for d in alldatasets]
+
+    dataset_list = []
+    if 'all' in evaluate_datasets:
+        dataset_list.extend([alldatasets])
+    if 'loo' in evaluate_datasets:
+        dataset_list.extend(loo_datasets)
+    if 'indiv' in evaluate_datasets:
+        if indiv_on_rest_only:
+            dataset_list.append([7])
+        else:
+            dataset_list.extend(individual_datasets)
+
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    for datasets in dataset_list:
+        for k in ks:
+            datanames = ''.join(T.two_letter_code[datasets])
+            wdir = ut.model_dir + f'/Models/Models_{t}'
+            mname = f'/{msym}_{datanames}_space-{space}_K-{k}.tsv'
+            fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
+
+            if Path(res_dir + fname).exists():
+                print(f'File {fname} already exists. Skipping.')
+            else:
+                # Evaluate
+                results = evaluation(mname, test_datasets)
+
+                # Save file
+                results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
 def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
@@ -175,7 +227,12 @@ if __name__ == "__main__":
     # evaluate_sym(K=[68], train_type=['loo',
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
-    evaluate_selected(on='task')
-    evaluate_selected(on='rest')
+    # evaluate_selected(on='task')
+    # evaluate_selected(on='rest')
 
+    ks = [10, 20, 34, 40, 68]
+    evaluate_models(on='task', ks=ks, evaluate_datasets=[
+        'loo'], rest_included=False)
+    evaluate_models(on='task', ks=ks, evaluate_datasets=[
+        'loo'], rest_included=True)
     pass
