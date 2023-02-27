@@ -165,6 +165,11 @@ def evaluate_models(ks, evaluate_datasets=['all', 'loo', 'indiv'], rest_included
             if Path(res_dir + fname).exists():
                 print(f'File {fname} already exists. Skipping.')
             else:
+                # Make sure you test on left out dataset only for leave-one-out models
+                if (rest_included and len(datasets) == 6) or (rest_included and len(datasets) == 7):
+                    left_out_dataset = list(set(alldatasets) - set(datasets))
+                    test_datasets = [T.name[left_out_dataset].item()]
+
                 # Evaluate
                 results = evaluation(mname, test_datasets)
 
