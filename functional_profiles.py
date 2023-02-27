@@ -43,7 +43,7 @@ def recover_info(info, model=None, mname=None, info_type='model_info'):
         info: Model info with list fields.
 
     """
-    if info_type is 'model_info':
+    if info_type == 'model_info':
         variables = ['datasets', 'sess', 'type']
         # Recover model info from tsv file format
         for var in variables:

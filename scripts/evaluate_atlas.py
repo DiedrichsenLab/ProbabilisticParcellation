@@ -120,56 +120,29 @@ def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], space='MNISymC3', r
     pass
 
 
-def evaluate_models(ks, evaluate_datasets=['all', 'loo', 'indiv'], rest_included=False, verbose=True, indiv_on_rest_only=False, on='task'):
+def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], test_on='task'):
 
+    model_datasets = get_model_datasets(model_on, model_types)
     ########## Settings ##########
     space = 'MNISymC3'  # Set atlas space
     msym = 'sym'  # Set model symmetry
     t = '03'  # Set model type
 
-    if on == 'task':
-        test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                         'WMFS', 'Demand', 'Somatotopic']
-    elif on == 'rest':
-        test_datasets = ['HCP']
-
-    # -- Build dataset list --
-    if rest_included:
-        n_dsets = 8  # with HCP
-    else:
-        n_dsets = 7  # without HCP
-    alldatasets = np.arange(n_dsets).tolist()
-    loo_datasets = [np.delete(np.arange(n_dsets), d).tolist()
-                    for d in alldatasets]
-    individual_datasets = [[d] for d in alldatasets]
-
-    dataset_list = []
-    if 'all' in evaluate_datasets:
-        dataset_list.extend([alldatasets])
-    if 'loo' in evaluate_datasets:
-        dataset_list.extend(loo_datasets)
-    if 'indiv' in evaluate_datasets:
-        if indiv_on_rest_only:
-            dataset_list.append([7])
-        else:
-            dataset_list.extend(individual_datasets)
-
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
-    for datasets in dataset_list:
+    for datasets in model_datasets:
         for k in ks:
             datanames = ''.join(T.two_letter_code[datasets])
             wdir = ut.model_dir + f'/Models/Models_{t}'
             mname = f'Models_03/{msym}_{datanames}_space-{space}_K-{k}'
-            fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
+            fname = f'eval_on-{test_on}_' + mname.split('/')[-1] + '.tsv'
 
             if Path(res_dir + fname).exists():
                 print(f'File {fname} already exists. Skipping.')
             else:
-                # Make sure you test on left out dataset only for leave-one-out models
-                if (rest_included and len(datasets) == 6) or (rest_included and len(datasets) == 7):
-                    left_out_dataset = list(set(alldatasets) - set(datasets))
-                    test_datasets = [T.name[left_out_dataset].item()]
-
+                print(
+                    f'\nEvaluating {mname}...\nTrained on {T.name.iloc[datasets].tolist()}.')
+                test_datasets = get_test_datasets(model_on, test_on, datasets)
+                test_datasets = T.name.iloc[test_datasets].tolist()
                 # Evaluate
                 results = evaluation(mname, test_datasets)
 
@@ -177,20 +150,52 @@ def evaluate_models(ks, evaluate_datasets=['all', 'loo', 'indiv'], rest_included
                 results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
-def evaluate_clustered(test_datasets=['MDTB', 'Pontine', 'Nishimoto', 'IBC',
-                                      'WMFS', 'Demand', 'Somatotopic', 'HCP']):
+model_name = [
+    'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
+
+
+def get_model_datasets(model_on, model_types, indiv_on_rest_only=False):
     """Evalute models that were clustered according to mixed method.
     """
+    # -- Build dataset list --
 
-    model_name = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    n_dsets = len([r for r, row in T.iterrows()
+                  if row.behaviour_state in model_on])
 
-    # Evaluate
-    results = evaluation(model_name, test_datasets)
+    alldatasets = np.arange(n_dsets).tolist()
+    loo_datasets = [np.delete(np.arange(n_dsets), d).tolist()
+                    for d in alldatasets]
+    individual_datasets = [[d] for d in alldatasets]
 
-    # Save file
-    fname = 'eval_' + model_name.split('/')[-1] + '.tsv'
-    results.to_csv(res_dir + fname, index=False, sep='\t')
+    dataset_list = []
+    if 'all' in model_types:
+        dataset_list.extend([alldatasets])
+    if 'loo' in model_types:
+        dataset_list.extend(loo_datasets)
+    if 'indiv' in model_types:
+        if indiv_on_rest_only:
+            dataset_list.append([7])
+        else:
+            dataset_list.extend(individual_datasets)
+
+    return dataset_list
+
+
+def get_test_datasets(model_on, test_on, model_datasets):
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    eligible_datasets = T[T.behaviour_state.isin(model_on)].index.tolist()
+    test_datasets = T[T.behaviour_state == test_on].index.tolist()
+
+    # Make sure you test on left out dataset only for leave-one-out models
+    left_out_dataset = list(set(eligible_datasets) - set(model_datasets))
+    if len(left_out_dataset) == 1:
+        # If difference between modelled datasets and all eligible datasets is 1, then model must be leave-one-out
+        print(
+            f'Detected Leave-One-Out Model. Testing on left out dataset: {T.name.iloc[left_out_dataset[0]]}')
+        test_datasets = left_out_dataset
+
+    return test_datasets
 
 
 def evaluate_selected(on='task'):
@@ -202,13 +207,6 @@ def evaluate_selected(on='task'):
                          'WMFS', 'Demand', 'Somatotopic']
     elif on == 'rest':
         test_datasets = ['HCP']
-
-    model_name = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-80'
-        'Models_03/sym_Hc_space-MNISymC3_K-80'
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-80',
-
-    ]
 
     for m, mname in enumerate(model_name):
         fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
@@ -236,8 +234,8 @@ if __name__ == "__main__":
     # evaluate_selected(on='rest')
 
     ks = [10, 20, 34, 40, 68]
-    evaluate_models(on='task', ks=ks, evaluate_datasets=[
-        'loo'], rest_included=False)
-    evaluate_models(on='task', ks=ks, evaluate_datasets=[
-        'loo'], rest_included=True)
+    # evaluate_models(ks, model_types=['loo'], model_on=[
+    #                 'task'], test_on='task')
+    evaluate_models(ks, model_types=['loo'], model_on=[
+                    'task', 'rest'], test_on='task')
     pass
