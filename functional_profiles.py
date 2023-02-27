@@ -32,9 +32,10 @@ from matplotlib.colors import TABLEAU_COLORS
 from matplotlib.patches import Rectangle
 from copy import deepcopy
 from wordcloud import WordCloud
+import re
 
 
-def recover_info(info, model, mname):
+def recover_info(info, model=None, mname=None, info_type='model_info'):
     """Recovers info fields that were lists from tsv-saved strings and adds model type information.
     Args:
         info: Model info loaded form tsv
@@ -42,28 +43,38 @@ def recover_info(info, model, mname):
         info: Model info with list fields.
 
     """
-    # Recover model info from tsv file format
-    for var in ["datasets", "sess", "type"]:
+    if info_type is 'model_info':
+        variables = ['datasets', 'sess', 'type']
+        # Recover model info from tsv file format
+        for var in variables:
+            if not isinstance(info[var], list):
+                v = eval(info[var])
+                if len(model.emissions) > 2 and len(v) == 1:
+                    v = eval(info[var].replace(" ", ","))
+                info[var] = v
+
+        model_settings = {
+            "01": [True, True, False],
+            "02": [False, True, False],
+            "03": [True, False, False],
+            "04": [False, False, False],
+            "05": [False, True, True],
+        }
+
+        info["model_type"] = mname.split("Models_")[1].split("/")[0]
+        uniform_kappa = model_settings[info.model_type][0]
+        joint_sessions = model_settings[info.model_type][1]
+
+        info["uniform_kappa"] = uniform_kappa
+        info["joint_sessions"] = joint_sessions
+    elif info_type is 'evaluation_info':
+        var = 'train_data'
         if not isinstance(info[var], list):
             v = eval(info[var])
-            if len(model.emissions) > 2 and len(v) == 1:
-                v = eval(info[var].replace(" ", ","))
+            if len(v) == 1 and len(re.findall('[A-Z][^A-Z]*', v[0])) > 5:
+                v = info[var].strip("[]'").split("' '")
             info[var] = v
 
-    model_settings = {
-        "01": [True, True, False],
-        "02": [False, True, False],
-        "03": [True, False, False],
-        "04": [False, False, False],
-        "05": [False, True, True],
-    }
-
-    info["model_type"] = mname.split("Models_")[1].split("/")[0]
-    uniform_kappa = model_settings[info.model_type][0]
-    joint_sessions = model_settings[info.model_type][1]
-
-    info["uniform_kappa"] = uniform_kappa
-    info["joint_sessions"] = joint_sessions
     return info
 
 
@@ -73,9 +84,8 @@ def get_profiles(model, info):
         model: Loaded model
         info: Model info
     Returns:
-        profile: list of task profiles. Each entry is the V for one emission model
-        conditions: list of conditions. Each entry is the condition for one emission model
-        conditions_detailed: list of conditions. Each entry is the condition for one emission model along with the dataset name and the session name
+        parcel_profiles: list of task profiles. Each entry is the V for one emission model
+        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
     """
     # --- Get profile ---
     # Get task profile for each emission model
