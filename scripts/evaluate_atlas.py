@@ -150,10 +150,6 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
                 results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
-model_name = [
-    'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
-
-
 def get_model_datasets(model_on, model_types, indiv_on_rest_only=False):
     """Evalute models that were clustered according to mixed method.
     """
@@ -202,6 +198,11 @@ def evaluate_selected(on='task'):
     """Evalute selected models on task data.
     """
 
+    model_name = [
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC2_K-80',
+        'Models_03/sym_Hc_space-MNISymC2_K-80'
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC2_K-80']
+
     if on == 'task':
         test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                          'WMFS', 'Demand', 'Somatotopic']
@@ -231,11 +232,11 @@ if __name__ == "__main__":
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
     # evaluate_selected(on='task')
-    # evaluate_selected(on='rest')
+    evaluate_selected(on='rest')
 
-    ks = [10, 20, 34, 40, 68]
+    # ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    evaluate_models(ks, model_types=['loo'], model_on=[
-                    'task', 'rest'], test_on='task')
+    # evaluate_models(ks, model_types=['loo'], model_on=[
+    #                 'task', 'rest'], test_on='task')
     pass
