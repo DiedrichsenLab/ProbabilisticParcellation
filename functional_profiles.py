@@ -67,7 +67,7 @@ def recover_info(info, model=None, mname=None, info_type='model_info'):
 
         info["uniform_kappa"] = uniform_kappa
         info["joint_sessions"] = joint_sessions
-    elif info_type is 'evaluation_info':
+    elif info_type == 'evaluation_info':
         var = 'train_data'
         if not isinstance(info[var], list):
             v = eval(info[var])

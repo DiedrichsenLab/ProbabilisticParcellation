@@ -28,26 +28,33 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 def correlate_profile(data, profile):
+
     pass
 
 
 def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'):
-    space = mname.split('space-')[1].split('_')[0]
     info, model = ut.load_batch_best(mname)
     info = fp.recover_info(info, model, mname)
     profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv'
     if Path(profile_file).exists():
-        profile = pd.read_csv(
+        parcel_profiles = pd.read_csv(
             profile_file, sep="\t"
         )
     else:
 
         parcel_profiles, profile_data = fp.get_profile(model, info)
-    data = []
-    for dset in info.datasets:
-        d, i, dataset = ds.get_dataset(
-            ut.base_dir, dset, atlas=space, sess='all')
-        data.append(d)
+    dat = []
+    for d, dataset in enumerate(info.datasets):
+
+        D, d_info, dataset = ds.get_dataset(
+            ut.base_dir, dataset, atlas='fs32k', sess=info.sess[d], type=info.type[d])
+        Davg = np.nanmean(D, axis=0)
+        if re.findall('[A-Z][^A-Z]*', info.type[d])[1] == 'Half':
+            # Average across the two halves
+            Davg = np.nanmean(
+                np.stack([Davg[d_info.half == 1, :], Davg[d_info.half == 2, :]]), axis=0)
+        dat.append(Davg)
+    data = np.concatenate(dat, axis=0)
 
     cortex = correlate_profile(data, parcel_profiles)
     return cortex
