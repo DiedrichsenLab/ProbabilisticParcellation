@@ -27,13 +27,18 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 def correlate_profile(data, profile):
+    print(profile.dtype)
     cortex = []
+    data_averaged = []
     for d in data:
         # Average over the first axis (subject) for each condition
-        d_mean = np.mean(d, axis=0)
-        # data_concat = np.concatenate(d_mean, axis=1)
-        corr = np.corrcoef(d_mean.T, profile.T)
-        cortex.append(np.argmax(corr, axis=1) + 1)
+        d_mean = np.nanmean(d, axis=0)
+        data_averaged.append(d_mean)
+    data_concat = np.concatenate(data_averaged, axis=0)
+    print(data_concat.shape)
+    corr = np.corrcoef(data_concat.T, profile[:,3:36].T)
+    print(corr.shape)
+   
     return cortex
 
 
@@ -57,8 +62,9 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
         if 'half' not in i.columns:
             raise ValueError('Missing "half" column in info file.')
         half_col = np.where(i.columns == 'half')[0][0]
-        half1_idx = i[half_col] == 1
-        half2_idx = i[half_col] == 2
+        print(half_col)
+        half1_idx = i.iloc[:, half_col] == 1
+        half2_idx = i.iloc[:, half_col] == 2
         half1_data = d[:, half1_idx]
         half2_data = d[:, half2_idx]
         averaged_data = np.mean([half1_data, half2_data], axis=0)
