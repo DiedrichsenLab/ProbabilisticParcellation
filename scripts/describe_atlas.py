@@ -27,30 +27,65 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def correlate_profile(data, profile):
-    pass
+def correlate(X, Y):
+    """ Correlate X and Y numpy arrays after standardizing them"""
+    X = util.zstandarize_ts(X)
+    Y = util.zstandarize_ts(Y)
+    return Y.T @ X / X.shape[0]
 
 
 def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'):
-    space = mname.split('space-')[1].split('_')[0]
+
+    # Get the model and parcel profile
     info, model = ut.load_batch_best(mname)
     info = fp.recover_info(info, model, mname)
-    profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv'
+    lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
+    if Path(lut_file).exists():
+        index, cmap, labels = nt.read_lut(lut_file)
+    profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv'
     if Path(profile_file).exists():
-        profile = pd.read_csv(
+        parcel_profiles = pd.read_csv(
             profile_file, sep="\t"
         )
     else:
+        parcel_profiles, profile_data = fp.get_profiles(model, info)
 
-        parcel_profiles, profile_data = fp.get_profile(model, info)
-    data = []
-    for dset in info.datasets:
-        d, i, dataset = ds.get_dataset(
-            ut.base_dir, dset, atlas=space, sess='all')
-        data.append(d)
+    # Make profile into numpy array
+    if isinstance(parcel_profiles, pd.DataFrame):
+        idx_start = parcel_profiles.columns.tolist().index('condition') + 1
+        parcel_names = parcel_profiles.columns[idx_start:idx_start + info.K]
+        profile = parcel_profiles.iloc[:, idx_start:idx_start + info.K]
+        profile = profile.values
 
-    cortex = correlate_profile(data, parcel_profiles)
-    return cortex
+    # Get cortical data
+    dat = []
+    for d, dataset in enumerate(info.datasets):
+
+        D, d_info, dataset = ds.get_dataset(
+            ut.base_dir, dataset, atlas='fs32k', sess=info.sess[d], type=info.type[d])
+        Davg = np.nanmean(D, axis=0)
+        if re.findall('[A-Z][^A-Z]*', info.type[d])[1] == 'Half':
+            # Average across the two halves
+            Davg = np.nanmean(
+                np.stack([Davg[d_info.half == 1, :], Davg[d_info.half == 2, :]]), axis=0)
+        dat.append(Davg)
+    data = np.concatenate(dat, axis=0)
+
+    # Correlat parcel profiles with cortical data
+    cortex = correlate(data, profile)
+
+    # Get the fs32k atlas
+    atlas, _ = am.get_atlas('fs32k', dataset.atlas_dir)
+
+    # Save the data
+    if labels is None:
+        labels = parcel_names
+    else:
+        labels = labels[1:]
+
+    C = atlas.data_to_cifti(cortex, labels)
+    nb.save(
+        C, f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_cortex-{method}.dscalar.nii')
 
 
 if __name__ == "__main__":
