@@ -26,9 +26,15 @@ import logging
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-
 def correlate_profile(data, profile):
-    pass
+    cortex = []
+    for d in data:
+        # Average over the first axis (subject) for each condition
+        d_mean = np.mean(d, axis=0)
+        # data_concat = np.concatenate(d_mean, axis=1)
+        corr = np.corrcoef(d_mean.T, profile.T)
+        cortex.append(np.argmax(corr, axis=1) + 1)
+    return cortex
 
 
 def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'):
@@ -40,6 +46,7 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
         profile = pd.read_csv(
             profile_file, sep="\t"
         )
+        parcel_profiles = profile.values[:, 1:]
     else:
 
         parcel_profiles, profile_data = fp.get_profile(model, info)
@@ -47,14 +54,18 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
     for dset in info.datasets:
         d, i, dataset = ds.get_dataset(
             ut.base_dir, dset, atlas=space, sess='all')
-        data.append(d)
-
+        data.append(d)     
+    
     cortex = correlate_profile(data, parcel_profiles)
+    
     return cortex
+
+
 
 
 if __name__ == "__main__":
 
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     cortex = get_cortex(mname=mname, method='corr')
+    print(cortex)
     pass
