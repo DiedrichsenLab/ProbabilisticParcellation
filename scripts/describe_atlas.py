@@ -53,8 +53,16 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
     data = []
     for dset in info.datasets:
         d, i, dataset = ds.get_dataset(
-            ut.base_dir, dset, atlas=space, sess='all')
-        data.append(d)     
+        ut.base_dir, dset, atlas=space, sess='all')
+        if 'half' not in i.columns:
+            raise ValueError('Missing "half" column in info file.')
+        half_col = np.where(i.columns == 'half')[0][0]
+        half1_idx = i[half_col] == 1
+        half2_idx = i[half_col] == 2
+        half1_data = d[:, half1_idx]
+        half2_data = d[:, half2_idx]
+        averaged_data = np.mean([half1_data, half2_data], axis=0)
+        data.append(averaged_data)     
     
     cortex = correlate_profile(data, parcel_profiles)
     
