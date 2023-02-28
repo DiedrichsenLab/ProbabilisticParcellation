@@ -199,7 +199,7 @@ def evaluate_selected(on='task'):
     """
 
     model_name = [
-        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-80',
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68',
         'Models_03/sym_Hc_space-MNISymC3_K-80'
         'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-80']
 
