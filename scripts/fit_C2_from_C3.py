@@ -18,7 +18,7 @@ import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 
 
-def make_highres_model(info, model, new_space='MNISymC2'):
+def make_highres_model(info, model, new_space='MNISymC2', symmetry=None):
     atlas, ainf = am.get_atlas(new_space, atlas_dir)
     split_mn = info['name'].split('_')
 
@@ -41,9 +41,11 @@ def make_highres_model(info, model, new_space='MNISymC2'):
     # Load all necessary data and designs
     n_sets = len(data)
 
+    if symmetry is None:
+        symmetry = split_mn[0]
     print(
         f'Building fullMultiModel {info.arrange} + {info.emission} for fitting...')
-    M = lf.build_model(model.K, info.arrange, split_mn[0], info.emission, atlas,
+    M = lf.build_model(model.K, info.arrange, symmetry, info.emission, atlas,
                        cond_vec, part_vec,
                        model.emissions[0].uniform_kappa)
     # Copy over parameters
@@ -54,11 +56,13 @@ def make_highres_model(info, model, new_space='MNISymC2'):
     return M
 
 
-def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2'):
+def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2', symmetry=None):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
+    if symmetry is None:
+        symmetry = split_mn[0]
     info, model = load_batch_best(mname)
-    M = make_highres_model(info, model, new_space)
+    M = make_highres_model(info, model, new_space, symmetry)
     M.move_to(device=default_device)
     M, ll1, theta, Uhat = M.fit_em(iter=100, tol=0.01,
                                    fit_emission=False,
@@ -78,8 +82,9 @@ def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2'):
     info['loglik'] = ll3[-1].item()
     info['atlas'] = new_space
     wdir = model_dir + f'/Models/' + fileparts[-2] + '/'
+
     if mname_new is None:
-        mname_new = f'/{split_mn[0]}_{split_mn[1]}_space-{new_space}_K-{M.K}'
+        mname_new = f'/{symmetry}_{split_mn[1]}_space-{new_space}_K-{M.K}'
     info.to_csv(wdir + mname_new + '.tsv', sep='\t', index=False)
     with open(wdir + mname_new + '.pickle', 'wb') as file:
         pickle.dump([M], file)
