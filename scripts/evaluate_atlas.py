@@ -150,10 +150,6 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
                 results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
-model_name = [
-    'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
-
-
 def get_model_datasets(model_on, model_types, indiv_on_rest_only=False):
     """Evalute models that were clustered according to mixed method.
     """
@@ -202,6 +198,11 @@ def evaluate_selected(on='task'):
     """Evalute selected models on task data.
     """
 
+    model_name = [
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-68',
+        'Models_03/sym_Hc_space-MNISymC3_K-80'
+        'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-80']
+
     if on == 'task':
         test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                          'WMFS', 'Demand', 'Somatotopic']
@@ -221,6 +222,21 @@ def evaluate_selected(on='task'):
             results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
+def evaluate_existing(test_on='task'):
+    """Evalute existing parcellations (MDTB, Buckner) on task data.
+    """
+    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+
+    test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
+
+    par_name = []
+    for p in parcels:
+        par_name.append(ut.base_dir + '/Atlases/tpl-MNI152NLin2009cSymC/' +
+                        f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
+
+    pass
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -233,9 +249,11 @@ if __name__ == "__main__":
     # evaluate_selected(on='task')
     # evaluate_selected(on='rest')
 
-    ks = [10, 20, 34, 40, 68]
+    # ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    evaluate_models(ks, model_types=['loo'], model_on=[
-                    'task', 'rest'], test_on='task')
+    # evaluate_models(ks, model_types=['loo'], model_on=[
+    #                 'task', 'rest'], test_on='task')
+
+    evaluate_existing(on='task')
     pass
