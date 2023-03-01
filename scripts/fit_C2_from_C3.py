@@ -84,6 +84,8 @@ def refit_model_in_new_space(mname, mname_new=None, new_space='MNISymC2'):
     with open(wdir + mname_new + '.pickle', 'wb') as file:
         pickle.dump([M], file)
 
+    return M, info
+
 
 if __name__ == "__main__":
 
