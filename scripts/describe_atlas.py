@@ -85,14 +85,15 @@ def get_modelled_cortex(mname, mname_new=None):
     return cortex, info
 
 
-def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'):
+def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed', symmetry=None):
     mname_new = f'{mname.split("/")[-1]}_cortex-{method}.dscalar.nii'
 
     # Get corresponding cortical parcels
     if method == 'corr':
         cortex = get_correlated_cortex(mname)
     elif method == 'model':
-        cortex, info = get_modelled_cortex(mname, mname_new=mname_new)
+        cortex, info = get_modelled_cortex(
+            mname, mname_new=mname_new, symmetry=symmetry)
 
     lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
     if Path(lut_file).exists():
@@ -111,6 +112,6 @@ if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     # cortex = get_cortex(mname=mname, method='corr')
 
-    cortex = get_cortex(mname=mname, method='model')
+    cortex = get_cortex(mname=mname, method='model', symmetry='sym')
 
     pass
