@@ -222,6 +222,21 @@ def evaluate_selected(on='task'):
             results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
+def evaluate_existing(test_on='task'):
+    """Evalute existing parcellations (MDTB, Buckner) on task data.
+    """
+    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+
+    test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
+
+    par_name = []
+    for p in parcels:
+        par_name.append(ut.base_dir + '/Atlases/tpl-MNI152NLin2009cSymC/' +
+                        f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
+
+    pass
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -232,11 +247,13 @@ if __name__ == "__main__":
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
     # evaluate_selected(on='task')
-    evaluate_selected(on='rest')
+    # evaluate_selected(on='rest')
 
     # ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task', 'rest'], test_on='task')
+
+    evaluate_existing(on='task')
     pass
