@@ -78,9 +78,9 @@ def get_correlated_cortex(mname):
     return cortex
 
 
-def get_modelled_cortex(mname, mname_new=None):
+def get_modelled_cortex(mname, mname_new=None, symmetry=None):
     model, info = ft.refit_model_in_new_space(
-        mname, mname_new=mname_new, new_space='fs32k')
+        mname, mname_new=mname_new, new_space='fs32k', symmetry=symmetry)
     cortex = model.arrange
     return cortex, info
 
