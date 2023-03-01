@@ -34,7 +34,7 @@ def export_map(data, atlas, cmap, labels, base_name):
 
     Args:
         data (probabilities): Marginal probabilities of the arrangement model 
-        atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3)
+        atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3, fs32k)
         cmap (ListedColormap): Colormap
         labels (list): List of labels for fields
         base_name (_type_): File directory + basename for atlas
