@@ -16,7 +16,7 @@ import Functional_Fusion.dataset as ds
 import generativeMRF.emissions as em
 import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
-import generativeMRF.evaluation as ev
+import generativeMRF.evaluation as gev
 
 from scipy.linalg import block_diag
 import nibabel as nb
@@ -31,6 +31,7 @@ from copy import copy, deepcopy
 from itertools import combinations
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.evaluate as ev
+import ProbabilisticParcellation.functional_profiles as fp
 from datetime import datetime
 
 
@@ -60,7 +61,8 @@ def evaluation(model_name, test_datasets):
             # get train/test index for cross validation
             train_indx = tinfo[indivtrain_ind] == indivtrain_values
             test_indx = tinfo[indivtrain_ind] != indivtrain_values
-            # 1. Run DCBC individual
+
+            # 1. Run DCBC
             res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
                                    train_indx=train_indx,
                                    test_indx=test_indx,
@@ -73,51 +75,6 @@ def evaluation(model_name, test_datasets):
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
     return results
-
-
-def evaluate_sym(K=[68], train_type=['indiv', 'loo', 'all'], space='MNISymC3', rest_included=False, out_file=None):
-    """Evaluate models
-    """
-    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
-    datasets_long = T['name'].tolist()
-    datasets_short = T['two_letter_code'].tolist()
-
-    if rest_included:
-        datasets = datasets_short
-        test_datasets = datasets_long
-    else:
-        datasets = datasets_short[:-1]
-        test_datasets = datasets_long[:-1]
-
-    # Get model names for models to evaluate
-    indiv = datasets
-    leave_one_out = ["".join(datasets_short[:i] + datasets[i + 1:])
-                     for i in range(len(datasets))]
-    all = ''.join(datasets)
-    train_types = {'indiv': datasets, 'loo': leave_one_out, 'all': [all]}
-    train_datasets = []
-    for tt in train_type:
-        train_datasets.extend(train_types[tt])
-
-    if rest_included:
-        train_datasets.extend(['Hc'])
-
-    model_name = [f'Models_03/sym_{train_dset}_space-{space}_K-{this_k}'
-                  for this_k in K for train_dset in train_datasets]
-
-    # Evaluate
-    Results = pd.DataFrame()
-    for mname in model_name:
-        results = evaluation(mname, test_datasets)
-        Results = pd.concat([Results, results], ignore_index=True)
-
-    # Save file
-    if out_file is None:
-        timestamp = datetime.today().strftime('%Y-%m-%d')
-        out_file = 'eval_' + timestamp + '.tsv'
-    results.to_csv(res_dir + out_file, index=False, sep='\t')
-
-    pass
 
 
 def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], test_on='task'):
@@ -237,6 +194,109 @@ def evaluate_existing(test_on='task'):
     pass
 
 
+def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest']):
+    """
+    Compare models based on their Adjusted Rand Index (ARI)
+
+    Args:
+    - ks: list of integers (parcel numbers for models)
+    - model_types: list of strings representing the model types to be used for comparison. Default: ['all', 'loo', 'indiv']
+    - model_on: list of strings representing the data type (task, rest or both) on which the models were fitted. Default: ['task', 'rest']
+
+
+    """
+
+    model_datasets = get_model_datasets(model_on, model_types)
+
+    ########## Settings ##########
+    space = 'MNISymC3'  # Set atlas space
+    msym = 'sym'  # Set model symmetry
+    t = '03'  # Set model type
+
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+
+    results = pd.DataFrame()
+
+    for k in ks:
+        model_names = [
+            f'Models_03/{msym}_{" ".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
+        loaded_models, loaded_info = get_models(
+            model_names)
+        combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
+                        for j in range(i + 1, len(model_names))]
+
+        r = compare_ari(loaded_models, loaded_info, combinations)
+        results = pd.concat([results, r], ignore_index=True)
+
+    model_type = '-'.join(model_types)
+    ks = [str(k) for k in ks]
+    ks = '-'.join(ks)
+    results.to_csv(
+        res_dir + f'ARI_{msym}_{model_type}_space-{space}_K-{ks}_.tsv', index=False, sep='\t')
+
+
+def get_models(model_names):
+    """
+    Load models for comparison
+
+    Args:
+    - model_names: list of strings representing the names of the models to be loaded
+
+    Returns:
+    - loaded_models: dictionary with keys as the model names and values as the loaded models
+    - loaded_info: dictionary with keys as the model names and values as the model information
+    """
+
+    info_all = []
+    models_all = []
+    for i in model_names:
+        info, model = ut.load_batch_best(i)
+        info_all.append(info)
+        models_all.append(model)
+
+    loaded_models = dict(zip(model_names, models_all))
+    loaded_info = dict(zip(model_names, info_all))
+
+    return loaded_models, loaded_info
+
+
+def compare_ari(combinations, loaded_models, loaded_info):
+    """
+    Compute Adjusted Rand Index (ARI) between pairs of loaded models
+
+    Args:
+    - combinations: list of tuples representing the combinations of models to be compared
+    - loaded_models: dictionary with keys as the model names and values as the loaded models
+    - loaded_info: dictionary with keys as the model names and values as the model information
+
+    Returns:
+    - results: DataFrame with columns 'model_name', 'atlas', 'K', 'train_data', 'train_loglik', and 'ari'
+    """
+
+    results = pd.DataFrame()
+    for (a, b) in combinations:
+        # load models
+        info_a = loaded_info[a]
+        model_a = loaded_models[a]
+        info_b = loaded_info[b]
+        model_b = loaded_models[b]
+
+        ari_group = gev.ARI(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
+            model_b.arrange.marginal_prob(), dim=0))
+
+        # 1. Run ARI
+        res_ari = pd.DataFrame({'model_name': [info_a['name'], info_b['name']],
+                                'atlas': info_a.atlas,
+                                'K': info_a.K,
+                                'train_data': [info_a.datasets, info_b.datasets],
+                                'train_loglik': [info_a.loglik, info_b.loglik],
+                                'ari': ari_group,
+                                })
+        results = pd.concat([results, res_ari], ignore_index=True)
+
+    return results
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -249,11 +309,13 @@ if __name__ == "__main__":
     # evaluate_selected(on='task')
     # evaluate_selected(on='rest')
 
-    # ks = [10, 20, 34, 40, 68]
+    ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task', 'rest'], test_on='task')
 
-    evaluate_existing(on='task')
+    # evaluate_existing(on='task')
+
+    compare_models(ks=ks, model_types=['indiv'], model_on=['task', 'rest'])
     pass
