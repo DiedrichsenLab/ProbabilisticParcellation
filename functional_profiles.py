@@ -21,7 +21,6 @@ import seaborn as sb
 import sys
 import pickle
 from ProbabilisticParcellation.util import *
-from ProbabilisticParcellation.scripts.parcel_hierarchy import analyze_parcel
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -95,6 +94,11 @@ def get_profiles(model, info):
     for prof in profile[1:]:
         parcel_profiles = pt.cat((parcel_profiles, prof), 0)
 
+    # Normalize the parcel profiles to unit length
+    Psq = parcel_profiles**2
+    normp = parcel_profiles / \
+        np.sqrt(np.sum(Psq.numpy(), axis=1).reshape(-1, 1))
+
     # --- Get conditions ---
     conditions = []
     sessions = []
@@ -149,7 +153,7 @@ def get_profiles(model, info):
         {"dataset": datasets, "session": sessions, "condition": conditions}
     )
 
-    return parcel_profiles, profile_data
+    return normp, profile_data
 
 
 def export_profile(mname, info=None, model=None, labels=None):
@@ -160,9 +164,6 @@ def export_profile(mname, info=None, model=None, labels=None):
 
     # get functional profiles
     parcel_profiles, profile_data = get_profiles(model=model, info=info)
-
-    if labels is None:
-        _, _, _, labels, _ = analyze_parcel(mname, sym=True, plot=True)
 
     # make functional profile dataframe
     if isinstance(labels, np.ndarray):
@@ -319,12 +320,12 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
     info, model = load_batch_best(mname)
     info = recover_info(info, model, mname)
     fileparts = mname.split('/')
-    index, cmap, labels = nt.read_lut(model_dir + '/Atlases/' +
-                                      fileparts[-1] + '.lut')
+    index, cmap, labels = nt.read_lut(
+        model_dir + '/Atlases/' + fileparts[-1] + '.lut')
 
     export_profile(mname, info, model, labels)
     features = cognitive_features(mname)

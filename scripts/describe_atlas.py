@@ -44,12 +44,12 @@ def get_correlated_cortex(mname):
 
     # Get parcel profile
     profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv'
-    if Path(profile_file).exists():
-        parcel_profiles = pd.read_csv(
-            profile_file, sep="\t"
-        )
-    else:
-        parcel_profiles, profile_data = fp.get_profiles(model, info)
+    # if Path(profile_file).exists():
+    #     parcel_profiles = pd.read_csv(
+    #         profile_file, sep="\t"
+    #     )
+    # else:
+    parcel_profiles, profile_data = fp.get_profiles(model, info)
 
     # Make profile into numpy array
     if isinstance(parcel_profiles, pd.DataFrame):
@@ -171,8 +171,6 @@ def export_cortex(mname):
     for i, h in enumerate(['L', 'R']):
         nb.save(roi_gifti[i], save_dir + '/tpl-fs32k' +
                 f'/vertical-{condition_1}_vs_{condition_2}.32k.{h}.label.gii')
-
-# TODO Fix model naming
 
 
 if __name__ == "__main__":

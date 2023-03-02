@@ -115,7 +115,6 @@ def export_merged(model_names=None):
     # --- Export merged models ---
     if model_names is None:
         model_names = [
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
             'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
 
     f_assignment = 'mixed_assignment_68_16'
@@ -123,13 +122,11 @@ def export_merged(model_names=None):
         ut.model_dir + '/Atlases/' + '/' + f_assignment + '.csv')
     _, labels = cl.mixed_clustering(
         'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', df_assignment)
-    _, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                  'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed.lut')
 
     for model_name in model_names:
         # export the merged model
 
-        Prob, _, atlas, _, cmap_similarity = analyze_parcel(
+        Prob, _, atlas, _, cmap = analyze_parcel(
             model_name, sym=True, labels=labels)
         if not isinstance(cmap, ListedColormap):
             cmap = ListedColormap(cmap)
@@ -360,5 +357,6 @@ if __name__ == "__main__":
 
     # merge_clusters(ks=[32], space='MNISymC3')
     # export_merged()
-    export_orig_68()
+    # export_orig_68()
+    export_merged()
     pass
