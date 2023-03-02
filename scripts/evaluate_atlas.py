@@ -194,9 +194,9 @@ def evaluate_existing(test_on='task'):
     pass
 
 
-def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest']):
+def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
     """
-    Compare models based on their Adjusted Rand Index (ARI)
+    Compare models trained on different datasets on their Adjusted Rand Index (ARI)
 
     Args:
     - ks: list of integers (parcel numbers for models)
@@ -215,24 +215,32 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
 
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
 
-    results = pd.DataFrame()
+    # get info for file name
+    model_type = '-'.join(model_types)
+    allK = [str(k) for k in ks]
+    allK = '-'.join(allK)
 
-    for k in ks:
+    if compare == 'train_data':
+
         model_names = [
-            f'Models_03/{msym}_{" ".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
-        loaded_models, loaded_info = get_models(
-            model_names)
+            f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets for k in ks]
+        fname = res_dir + \
+            f'ARI_{msym}_{model_type}_space-{space}_K-{allK}_.tsv'
         combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
                         for j in range(i + 1, len(model_names))]
 
-        r = compare_ari(loaded_models, loaded_info, combinations)
-        results = pd.concat([results, r], ignore_index=True)
+    elif compare == 'symmetry':
+        combinations = [
+            (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets for k in ks]
+        model_names = [m for c in combinations for m in c]
+        fname = res_dir + \
+            f'ARI_sym-asym_{model_type}_space-{space}_K-{allK}_.tsv'
 
-    model_type = '-'.join(model_types)
-    ks = [str(k) for k in ks]
-    ks = '-'.join(ks)
-    results.to_csv(
-        res_dir + f'ARI_{msym}_{model_type}_space-{space}_K-{ks}_.tsv', index=False, sep='\t')
+    loaded_models, loaded_info = get_models(
+        model_names)
+
+    results = compare_ari(combinations, loaded_models, loaded_info)
+    results.to_csv(fname, index=False, sep='\t')
 
 
 def get_models(model_names):
@@ -284,13 +292,15 @@ def compare_ari(combinations, loaded_models, loaded_info):
         ari_group = gev.ARI(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
             model_b.arrange.marginal_prob(), dim=0))
 
+        print(f'ARI {a} vs {b}: {ari_group.item():.3f}')
+
         # 1. Run ARI
         res_ari = pd.DataFrame({'model_name': [info_a['name'], info_b['name']],
                                 'atlas': info_a.atlas,
-                                'K': info_a.K,
+                               'K': info_a.K,
                                 'train_data': [info_a.datasets, info_b.datasets],
                                 'train_loglik': [info_a.loglik, info_b.loglik],
-                                'ari': ari_group,
+                                'ari': ari_group.item(),
                                 })
         results = pd.concat([results, res_ari], ignore_index=True)
 
@@ -317,5 +327,6 @@ if __name__ == "__main__":
 
     # evaluate_existing(on='task')
 
-    compare_models(ks=ks, model_types=['indiv'], model_on=['task', 'rest'])
+    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+                   'task', 'rest'], compare='symmetry')
     pass
