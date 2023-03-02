@@ -178,9 +178,9 @@ def export_cortex(mname):
 if __name__ == "__main__":
 
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    method = 'model'
+    method = 'corr'
     symmetry = 'sym'
-    # cortex = get_cortex(mname=mname, method=method)
+    cortex = get_cortex(mname=mname, method=method)
     # cortex = get_cortex(mname=mname, method=method, symmetry=symmetry)
 
     mname_new = '_'.join(mname.split("/")[-1].split("_")[1:])

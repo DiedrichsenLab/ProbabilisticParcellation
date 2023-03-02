@@ -328,5 +328,8 @@ if __name__ == "__main__":
     # evaluate_existing(on='task')
 
     compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+                   'task', 'rest'], compare='train_data')
+
+    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
                    'task', 'rest'], compare='symmetry')
     pass
