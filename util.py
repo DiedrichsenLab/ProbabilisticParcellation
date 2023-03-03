@@ -50,6 +50,8 @@ else:
     pt.set_default_tensor_type(pt.FloatTensor)
 
 # Keep track of cuda memory
+
+
 def report_cuda_memory():
     if pt.cuda.is_available():
         ma = pt.cuda.memory_allocated() / 1024 / 1024
@@ -57,6 +59,7 @@ def report_cuda_memory():
         mr = pt.cuda.memory_reserved() / 1024 / 1024
         print(
             f'Allocated:{ma:.2f} MB, MaxAlloc:{mma:.2f} MB, Reserved {mr:.2f} MB')
+
 
 def cal_corr(Y_target, Y_source):
     """ Matches the rows of two Y_source matrix to Y_target

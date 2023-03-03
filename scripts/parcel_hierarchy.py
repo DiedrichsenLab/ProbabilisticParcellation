@@ -270,8 +270,7 @@ def export_model_merged(mname_new):
     save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
     info, model = ut.load_batch_best(mname_new)
     info = fp.recover_info(info, model, mname_new)
-    fp.export_profile(mname_new, info, model, labels)
-    features = fp.cognitive_features(mname_new)
+
     ea.export_map(Prob, atlas.name, cmap, labels,
                   f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
 
@@ -311,8 +310,10 @@ if __name__ == "__main__":
     # --- Export merged models ---
 
     model_names = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed']
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
 
     for model_name in model_names:
+        # --- Export merged model ---
         export_model_merged(model_name)
-    pass
+
+pass
