@@ -36,20 +36,20 @@ def correlate(X, Y):
     return Y.T @ X / X.shape[0]
 
 
-def get_correlated_cortex(mname):
+def get_correlated_cortex(mname, weighting=False):
     """ Get the cortex correlated with the parcel profiles"""
     # Load model
     info, model = ut.load_batch_best(mname)
     info = fp.recover_info(info, model, mname)
 
     # Get parcel profile
-    profile_file = f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv'
-    # if Path(profile_file).exists():
-    #     parcel_profiles = pd.read_csv(
-    #         profile_file, sep="\t"
-    #     )
-    # else:
-    parcel_profiles, profile_data = fp.get_profiles(model, info)
+    profile_file = f'{ut.model_dir}/Atlases/Profiles/{mname.split("/")[-1]}_profile.tsv'
+    if Path(profile_file).exists():
+        parcel_profiles = pd.read_csv(
+            profile_file, sep="\t"
+        )
+    else:
+        parcel_profiles, profile_data = fp.get_profiles(model, info)
 
     # Make profile into numpy array
     if isinstance(parcel_profiles, pd.DataFrame):
@@ -64,13 +64,19 @@ def get_correlated_cortex(mname):
 
         D, d_info, dataset = ds.get_dataset(
             ut.base_dir, dataset, atlas='fs32k', sess=info.sess[d], type=info.type[d])
-        Davg = np.nanmean(D, axis=0)
+        D = np.nanmean(D, axis=0)
         if re.findall('[A-Z][^A-Z]*', info.type[d])[1] == 'Half':
-            # TODO: Implement weighting of data according to kappa and sqrt(n_subjects)
             # Average across the two halves
-            Davg = np.nanmean(
-                np.stack([Davg[d_info.half == 1, :], Davg[d_info.half == 2, :]]), axis=0)
-        dat.append(Davg)
+            D = np.nanmean(
+                np.stack([D[d_info.half == 1, :], D[d_info.half == 2, :]]), axis=0)
+
+        # Weigh the V vectors by kappa (certainty) and the square root of the number of subjects
+        # This is to make the profiles comparable across datasets with different number of subjects
+        if weighting == True:
+            em = model.emissions[d]
+            D = D * em.kappa.item() * np.sqrt(em.num_subj)
+
+        dat.append(D)
     data = np.concatenate(dat, axis=0)
 
     # Correlate parcel profiles with cortical data
@@ -100,13 +106,15 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
     lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
     if Path(lut_file).exists():
         index, cmap, labels = nt.read_lut(lut_file)
+    if labels[0] == '0':
+        labels = labels[1:]
 
     # Get the fs32k atlas
     atlas, _ = am.get_atlas('fs32k', ut.atlas_dir)
 
     C = atlas.data_to_cifti(cortex, labels)
     nb.save(
-        C, f'{ut.model_dir}/Atlases/{mname_new}')
+        C, f'{ut.model_dir}/Atlases/{mname_new}.dscalar.nii')
 
 
 def export_cortex(mname):

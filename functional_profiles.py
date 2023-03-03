@@ -298,12 +298,12 @@ def cognitive_features(mname):
     parcel_columns = profile.columns[first_parcel:last_parcel]
     profile_matrix = profile[parcel_columns].to_numpy()
 
-    features = pd.read_csv(f'{model_dir}/Atlases/tags.tsv', sep="\t")
+    feature_dir = f'{model_dir}/Atlases/Profiles/Cognitive_Features'
+    features = pd.read_csv(
+        f'{feature_dir}/tags/tags.tsv', sep="\t")
     first_feature = features.columns.tolist().index('condition') + 1
     feature_columns = features.columns[first_feature:]
     feature_matrix = features[feature_columns].to_numpy()
-
-    # normalize the task profile
 
     # multiply the profile by the feature matrix
     feature_profile = np.dot(feature_matrix.T, (profile_matrix))
@@ -314,7 +314,7 @@ def cognitive_features(mname):
 
     # save dataframe
     feature_profile.to_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_cognitive_features.tsv', sep="\t")
+        f'{feature_dir}/{mname.split("/")[-1]}_cognitive_features.tsv', sep="\t")
 
     return feature_profile
 
