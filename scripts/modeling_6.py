@@ -178,15 +178,21 @@ def fit_rest_vs_task(datasets_list = [1,7], K=[34], sym_type=['asym'],
     sub_list += [hcp_train]
     for t in model_type:
         for k in K:
-            wdir, fname, info, models = fit_all(set_ind=datasets_list, K=k,
-                                                repeats=100, model_type=t,
-                                                sym_type=sym_type,
-                                                subj_list=sub_list,
-                                                space=space)
-            fname = fname + f'_hcpOdd'
-            info.to_csv(wdir + fname + '.tsv', sep='\t')
-            with open(wdir + fname + '.pickle', 'wb') as file:
-                pickle.dump(models, file)
+            writein_dir = ut.model_dir + f'/Models/Models_{t}/leaveNout'
+            dataname = ''.join(T.two_letter_code[datasets_list])
+            nam = f'/asym_{dataname}_space-MNISymC3_K-{k}_hcpOdd'
+            if not Path(writein_dir + nam + '.tsv').exists():
+                wdir, fname, info, models = fit_all(set_ind=datasets_list, K=k,
+                                                    repeats=100, model_type=t,
+                                                    sym_type=sym_type,
+                                                    subj_list=sub_list,
+                                                    space=space)
+                fname = fname + f'_hcpOdd'
+                info.to_csv(wdir + fname + '.tsv', sep='\t')
+                with open(wdir + fname + '.pickle', 'wb') as file:
+                    pickle.dump(models, file)
+            else:
+                print(f"Already fitted {dataname}, K={k}, Type={t}...")
 
 def plot_result_6(D, t_data='MDTB'):
     D = D.replace(["['Pontine' 'Nishimoto' 'IBC' 'WMFS' 'Demand' 'Somatotopic' 'HCP']",
@@ -214,12 +220,12 @@ def plot_result_6(D, t_data='MDTB'):
 
 if __name__ == "__main__":
     ############# Fitting models #############
-    for i in range(4,7):
+    for i in range(1,7):
         datasets_list = [0, 1, 2, 3, 4, 5, 6, 7]
         datasets_list.remove(i)
         print(datasets_list)
-        fit_rest_vs_task(datasets_list=datasets_list, K=[10,17,20,34,40,68,100],
-                         sym_type=['asym'], model_type=['03','04'], space='MNISymC3')
+        fit_rest_vs_task(datasets_list=datasets_list, K=[34,40],
+                         sym_type=['asym'], model_type=['04'], space='MNISymC3')
 
     ############# Evaluating models #############
     # model_type = ['03', '04']
