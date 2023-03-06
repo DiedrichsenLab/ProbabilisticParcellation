@@ -38,7 +38,7 @@ from datetime import datetime
 res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
 
-def evaluation(model_name, test_datasets):
+def evaluation(model_name, test_datasets, tseries=False):
     # determine space:
     space = model_name.split('space-')[-1].split('_')[0]
 
@@ -50,8 +50,12 @@ def evaluation(model_name, test_datasets):
         atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
         tdata, tinfo, tds = ds.get_dataset(
             ut.base_dir, dset, atlas=space, sess='all')
+
         # default from dataset class
         cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )
+        if tseries and dset == 'HCP':
+            cond_vec = tinfo['time_id'].values.reshape(-1, )
+
         part_vec = tinfo['half'].values
         # part_vec = np.ones((tinfo.shape[0],), dtype=int)
         CV_setting = [('half', 1), ('half', 2)]
@@ -61,6 +65,17 @@ def evaluation(model_name, test_datasets):
             # get train/test index for cross validation
             train_indx = tinfo[indivtrain_ind] == indivtrain_values
             test_indx = tinfo[indivtrain_ind] != indivtrain_values
+
+            # 1. Run DCBC
+            res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                                   train_indx=train_indx,
+                                   test_indx=test_indx,
+                                   cond_vec=cond_vec,
+                                   part_vec=part_vec,
+                                   device=ut.default_device)
+            res_dcbc['indivtrain_ind'] = indivtrain_ind
+            res_dcbc['indivtrain_val'] = indivtrain_values
+            res_dcbc['test_data'] = dset
 
             # 1. Run DCBC
             res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
@@ -98,10 +113,17 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
             else:
                 print(
                     f'\nEvaluating {mname}...\nTrained on {T.name.iloc[datasets].tolist()}.')
-                test_datasets = get_test_datasets(model_on, test_on, datasets)
+                if test_on == 'tseries':
+                    tseries = True
+                    test_datasets = get_test_datasets(
+                        model_on, test_on='rest', model_datasets=datasets)
+                else:
+                    test_datasets = get_test_datasets(
+                        model_on, test_on=test_on, model_datasets=datasets)
                 test_datasets = T.name.iloc[test_datasets].tolist()
+
                 # Evaluate
-                results = evaluation(mname, test_datasets)
+                results = evaluation(mname, test_datasets, tseries=tseries)
 
                 # Save file
                 results.to_csv(res_dir + fname, index=False, sep='\t')
@@ -193,6 +215,10 @@ def evaluate_existing(test_on='task', models=None):
         test_datasets = T.name.iloc[test_datasets].tolist()
     elif test_on == 'rest':
         test_datasets = [7]
+        test_datasets = T.name.iloc[test_datasets].tolist()
+    elif test_on == ['task', 'rest']:
+        test_on = 'task+rest'
+        test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
         test_datasets = T.name.iloc[test_datasets].tolist()
 
     par_name = []
@@ -349,8 +375,8 @@ if __name__ == "__main__":
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    # evaluate_models(ks, model_types=['loo'], model_on=[
-    #                 'task', 'rest'], test_on='task')
+    # evaluate_models(ks, model_types=['all'], model_on=[
+    #                 'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
