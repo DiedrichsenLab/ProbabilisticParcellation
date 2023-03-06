@@ -275,30 +275,29 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
 
     # get info for file name
     model_type = '-'.join(model_types)
-    allK = [str(k) for k in ks]
-    allK = '-'.join(allK)
 
-    if compare == 'train_data':
+    for k in ks
+       if compare == 'train_data':
 
-        model_names = [
-            f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets for k in ks]
-        fname = res_dir + \
-            f'ARI_{msym}_{model_type}_space-{space}_K-{allK}_.tsv'
-        combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
-                        for j in range(i + 1, len(model_names))]
+            model_names = [
+                f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
+            fname = res_dir + \
+                f'ARI_{msym}_{model_type}_space-{space}_K-{k}_.tsv'
+            combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
+                            for j in range(i + 1, len(model_names))]
 
-    elif compare == 'symmetry':
-        combinations = [
-            (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets for k in ks]
-        model_names = [m for c in combinations for m in c]
-        fname = res_dir + \
-            f'ARI_sym-asym_{model_type}_space-{space}_K-{allK}_.tsv'
+        elif compare == 'symmetry':
+            combinations = [
+                (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets]
+            model_names = [m for c in combinations for m in c]
+            fname = res_dir + \
+                f'ARI_sym-asym_{model_type}_space-{space}_K-{k}_.tsv'
 
-    loaded_models, loaded_info = get_models(
-        model_names)
+        loaded_models, loaded_info = get_models(
+            model_names)
 
-    results = compare_ari(combinations, loaded_models, loaded_info)
-    results.to_csv(fname, index=False, sep='\t')
+        results = compare_ari(combinations, loaded_models, loaded_info)
+        results.to_csv(fname, index=False, sep='\t')
 
 
 def get_models(model_names):
@@ -384,16 +383,16 @@ if __name__ == "__main__":
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    evaluate_models(ks, model_types=['all'], model_on=[
-                    'task'], test_on='tseries')
+    # evaluate_models(ks, model_types=['all'], model_on=[
+    #                 'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
-    # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
-    #                'task', 'rest'], compare='train_data')
+    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+                   'task', 'rest'], compare='train_data')
 
     # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
     #                'task', 'rest'], compare='symmetry')
 
-    evaluate_existing(test_on=['task', 'rest'])
+    # evaluate_existing(test_on=['task', 'rest'])
     pass
