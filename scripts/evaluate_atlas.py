@@ -395,5 +395,5 @@ if __name__ == "__main__":
     # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
     #                'task', 'rest'], compare='symmetry')
 
-    # evaluate_existing(test_on='task')
+    evaluate_existing(test_on=['task', 'rest'])
     pass
