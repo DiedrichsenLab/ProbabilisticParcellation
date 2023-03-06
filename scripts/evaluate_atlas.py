@@ -276,7 +276,7 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
     # get info for file name
     model_type = '-'.join(model_types)
 
-    for k in ks
+    for k in ks:
        if compare == 'train_data':
 
             model_names = [
