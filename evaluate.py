@@ -335,7 +335,7 @@ def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
             Prop = model.marginal_prob()
             par = pt.argmax(Prop, dim=0) + 1
         elif pname_parts[-1] == 'nii':
-            par = atlas.sample_nifti(pn, 0)
+            par = atlas.read_data(pn, 0)
         # Initialize result array
         if i == 0:
             dcbc = pt.zeros((len(par_names), tdata.shape[0]))
