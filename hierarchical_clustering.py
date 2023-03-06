@@ -239,9 +239,9 @@ def mixed_clustering(mname_fine,
 
     # Get mapping
     index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                      f'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
+                                      f'{fileparts[-1]}.lut')
 
-    assignment = dict(zip(df_assignment.parcel_orig.tolist(),
+    assignment = dict(zip(df_assignment.parcel_orig_idx.tolist(),
                           df_assignment.parcel_med_idx.tolist()))
 
     fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
@@ -249,15 +249,9 @@ def mixed_clustering(mname_fine,
     labels_hem = labels[1:left_labels + 1]
     labels_hem = [label.strip('L') for label in labels_hem]
     for parcel_idx, parcel_label in enumerate(labels_hem):
-        fine_coarse_mapping[parcel_idx] = assignment[parcel_label]
+        fine_coarse_mapping[parcel_idx] = assignment[parcel_idx]
         print(
-            f'{parcel_idx} parcel {parcel_label} belongs to {assignment[parcel_label]}')
-
-    # Spot checks
-    # mapping_check = dict(zip(labels_hem,
-    #                          fine_coarse_mapping.tolist()))
-    # for keys, value in mapping_check.items():
-    #    print(keys, value)
+            f'{parcel_idx} parcel {parcel_label} belongs to {assignment[parcel_idx]}')
 
     labels = []
     for i in np.unique(fine_coarse_mapping):

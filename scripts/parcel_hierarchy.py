@@ -110,82 +110,6 @@ def merge_clusters(ks, space='MNISymC3'):
     return merged_models
 
 
-def export_merged(model_names=None):
-
-    # --- Export merged models ---
-    if model_names is None:
-        model_names = [
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed',
-            'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
-
-    f_assignment = 'mixed_assignment_68_16'
-    df_assignment = pd.read_csv(
-        ut.model_dir + '/Atlases/' + '/' + f_assignment + '.csv')
-    _, labels = cl.mixed_clustering(
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', df_assignment)
-    _, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                  'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed.lut')
-
-    for model_name in model_names:
-        # export the merged model
-
-        Prob, _, atlas, _, cmap_similarity = analyze_parcel(
-            model_name, sym=True, labels=labels)
-        if not isinstance(cmap, ListedColormap):
-            cmap = ListedColormap(cmap)
-        ea.export_map(Prob, atlas.name, cmap, labels,
-                      f'{ut.model_dir}/Atlases/{model_name.split("/")[1]}')
-
-
-def compare_levels():
-    """Compares different clustering levels.
-        For a selection of merged models, calculate adjusted Rand index between original fine parcellation and merged parcellation (merged according to coarse parcellation).
-
-    """
-    # Compare original parcellation with clustered parcellation
-    atlas = 'MNISymC2'
-
-    fine_model = f'/Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68'
-    fileparts = fine_model.split('/')
-    split_mn = fileparts[-1].split('_')
-    info_68, model_68 = ut.load_batch_best(fine_model)
-    Prop_68 = np.array(model_68.marginal_prob())
-    parcel_68 = Prop_68.argmax(axis=0) + 1
-
-    merged_models = [
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-10_Keff-10',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-14_Keff-14',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-20_Keff-20',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-28_Keff-22',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-34_Keff-24',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-40_Keff-24',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-48_Keff-36',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-56_Keff-36',
-        f'Models_03/sym_MdPoNiIbWmDeSo_space-{atlas}_K-68_Kclus-60_Keff-38']
-
-    m_models = []
-    m_infos = []
-    for mname in merged_models:
-        info, model = ut.load_batch_best(mname)
-        m_models.append(model)
-        m_infos.append(info)
-
-        n_models = len(m_models)
-        n_voxels = parcel_68.shape[0]
-        m_parcels = np.zeros((n_models, n_voxels))
-
-        for i, model in enumerate(m_models):
-            Prop = np.array(model.marginal_prob())
-            parcel = Prop.argmax(axis=0) + 1
-            m_parcels[i, :] = parcel
-
-        # get U_hat
-
-        ev.ARI(parcel_68, m_parcels[0, :])
-        parcel
-        pass
-
-
 def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
     plt.figure(figsize=(7, 10))
     ut.plot_model_pmaps(Prob, atlas,
@@ -197,7 +121,7 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
 
 
 def query_similarity(mname, label):
-    labels, w_cos_sim, spatial_sim, ind = similarity_matrices(mname)
+    labels, w_cos_sim, spatial_sim, ind = cl.similarity_matrices(mname)
     ind = np.nonzero(labels == label)[0]
     D = pd.DataFrame(
         {'labels': labels, 'w_cos_sim': w_cos_sim[ind[0], :], 'spatial_sim': spatial_sim[ind[0], :]})
@@ -313,21 +237,42 @@ def profile_NettekovenSym68c32():
     space = 'MNISymC2'
     mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
     mname_new = 'Models_03/NettekovenSym68c32'
-    f_assignment = 'mixed_assignment_68_16.csv'
+    f_assignment = 'mixed_assignment_68_16'
     _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
                                      mname_new=mname_new,
-                                     f_assignment='mixed_assignment_68_16.csv',
+                                     f_assignment=f_assignment,
                                      refit_model=False, save_model=False)
 
     Prob, parcel, atlas, labels, cmap = analyze_parcel(
         mname_new, sym=True, labels=labels)
-    # save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
-    # save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
-    # save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
     info, model = ut.load_batch_best(mname_new)
     info = fp.recover_info(info, model, mname_new)
     fp.export_profile(mname_new, info, model, labels)
     features = fp.cognitive_features(mname_new)
+
+
+def export_model_merged(mname_new):
+    space = mname_new.split('space-')[1].split('_')[0]
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    f_assignment = 'mixed_assignment_68_16'
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment=f_assignment,
+                                     refit_model=False, save_model=False)
+
+    Prob, parcel, atlas, labels, cmap = analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+    info, model = ut.load_batch_best(mname_new)
+    info = fp.recover_info(info, model, mname_new)
+
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
 
 
 if __name__ == "__main__":
@@ -360,5 +305,15 @@ if __name__ == "__main__":
 
     # merge_clusters(ks=[32], space='MNISymC3')
     # export_merged()
-    export_orig_68()
-    pass
+    # export_orig_68()
+
+    # --- Export merged models ---
+
+    model_names = [
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
+
+    for model_name in model_names:
+        # --- Export merged model ---
+        export_model_merged(model_name)
+
+pass
