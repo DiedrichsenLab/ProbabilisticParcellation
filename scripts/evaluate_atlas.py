@@ -151,7 +151,7 @@ def get_test_datasets(model_on, test_on, model_datasets):
     return test_datasets
 
 
-def evaluate_selected(on='task'):
+def evaluate_selected(test_on='task'):
     """Evalute selected models on task data.
     """
 
@@ -160,14 +160,14 @@ def evaluate_selected(on='task'):
         'Models_03/sym_Hc_space-MNISymC3_K-80'
         'Models_03/sym_MdPoNiIbWmDeSoHc_space-MNISymC3_K-80']
 
-    if on == 'task':
+    if test_on == 'task':
         test_datasets = ['MDTB', 'Pontine', 'Nishimoto', 'IBC',
                          'WMFS', 'Demand', 'Somatotopic']
-    elif on == 'rest':
+    elif test_on == 'rest':
         test_datasets = ['HCP']
 
     for m, mname in enumerate(model_name):
-        fname = f'eval_on-{on}_' + mname.split('/')[-1] + '.tsv'
+        fname = f'eval_on-{test_on}_' + mname.split('/')[-1] + '.tsv'
 
         if Path(res_dir + fname).exists():
             print(f'File {fname} already exists. Skipping.')
@@ -179,17 +179,44 @@ def evaluate_selected(on='task'):
             results.to_csv(res_dir + fname, index=False, sep='\t')
 
 
-def evaluate_existing(test_on='task'):
-    """Evalute existing parcellations (MDTB, Buckner) on task data.
+def evaluate_existing(test_on='task', models=None):
+    """Evalute existing parcellations (MDTB, Buckner).
     """
-    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
 
-    test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
+    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+    if models is None:
+        models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
+
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    if test_on == 'task':
+        test_datasets = [0, 1, 2, 3, 4, 5, 6]
+        test_datasets = T.name.iloc[test_datasets].tolist()
+    elif test_on == 'rest':
+        test_datasets = [7]
+        test_datasets = T.name.iloc[test_datasets].tolist()
 
     par_name = []
     for p in parcels:
         par_name.append(ut.base_dir + '/Atlases/tpl-MNI152NLin2009cSymC/' +
                         f'atl-{p}_space-MNI152NLin2009cSymC_dseg.nii')
+    par_name = models + par_name
+
+    fname = f'eval_on-{test_on}_existing.tsv'
+
+    if Path(res_dir + fname).exists():
+        print(f'File {fname} already exists. Skipping.')
+    else:
+        print(
+            f'\nEvaluating existing parcellations...\nTest on {test_on}.')
+        results = pd.DataFrame()
+        for ds in test_datasets:
+            print(f'Testdata: {ds}\n')
+            R = ev.run_dcbc_group(par_name,
+                                  space='MNISymC3',
+                                  test_data=ds,
+                                  test_sess='all')
+            results = pd.concat([results, R], ignore_index=True)
+        results.to_csv(res_dir + fname, index=False, sep='\t')
 
     pass
 
@@ -316,8 +343,8 @@ if __name__ == "__main__":
     # evaluate_sym(K=[68], train_type=['loo',
     #              'all'], rest_included=True, out_file='eval_sym_68_rest_loo_all.tsv')
 
-    # evaluate_selected(on='task')
-    # evaluate_selected(on='rest')
+    # evaluate_selected(test_on='task')
+    # evaluate_selected(test_on='rest')
 
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
@@ -325,11 +352,13 @@ if __name__ == "__main__":
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task', 'rest'], test_on='task')
 
-    # evaluate_existing(on='task')
+    # evaluate_existing(test_on='task')
 
-    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
-                   'task', 'rest'], compare='train_data')
+    # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+    #                'task', 'rest'], compare='train_data')
 
-    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
-                   'task', 'rest'], compare='symmetry')
+    # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+    #                'task', 'rest'], compare='symmetry')
+
+    evaluate_existing(test_on='task')
     pass
