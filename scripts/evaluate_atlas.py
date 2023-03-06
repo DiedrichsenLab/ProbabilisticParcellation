@@ -212,7 +212,7 @@ def evaluate_existing(test_on='task', models=None):
 
     parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
     if models is None:
-        models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
+        models = ['Models_03/asym_Md_space-MNISymC3_K-10.pickle']
 
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     if test_on == 'task':
@@ -361,8 +361,9 @@ def compare_ari(combinations, loaded_models, loaded_info):
                                 'train_data_b': info_b.datasets,
                                 'train_loglik_a': info_a.loglik,
                                 'train_loglik_b': info_b.loglik,
-                                'ari': ari_group.item(),
-                                })
+                                'ari': ari_group.item()},
+                               index=[0]
+                               )
         results = pd.concat([results, res_ari], ignore_index=True)
 
     return results
