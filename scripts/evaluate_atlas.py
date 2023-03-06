@@ -48,13 +48,18 @@ def evaluation(model_name, test_datasets, tseries=False):
 
         # Preparing atlas, cond_vec, part_vec
         atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
-        tdata, tinfo, tds = ds.get_dataset(
-            ut.base_dir, dset, atlas=space, sess='all')
+        if tseries and dset == 'HCP':
+            cond_ind = 'time_id'
+            tdata, tinfo, tds = ds.get_dataset(
+                ut.base_dir, dset, atlas=space, sess='all', type='Tseries')
+        else:
+            cond_ind = tds.cond_ind
+            tdata, tinfo, tds = ds.get_dataset(
+                ut.base_dir, dset, atlas=space, sess='all')
 
         # default from dataset class
-        cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )
-        if tseries and dset == 'HCP':
-            cond_vec = tinfo['time_id'].values.reshape(-1, )
+
+        cond_vec = tinfo[cond_ond].values.reshape(-1, )
 
         part_vec = tinfo['half'].values
         # part_vec = np.ones((tinfo.shape[0],), dtype=int)
@@ -348,11 +353,14 @@ def compare_ari(combinations, loaded_models, loaded_info):
         print(f'ARI {a} vs {b}: {ari_group.item():.3f}')
 
         # 1. Run ARI
-        res_ari = pd.DataFrame({'model_name': [info_a['name'], info_b['name']],
+        res_ari = pd.DataFrame({'model_name_a': info_a['name'],
+                                'model_name_b': info_b['name'],
                                 'atlas': info_a.atlas,
-                               'K': info_a.K,
-                                'train_data': [info_a.datasets, info_b.datasets],
-                                'train_loglik': [info_a.loglik, info_b.loglik],
+                                'K': info_a.K,
+                                'train_data_a': info_a.datasets,
+                                'train_data_b': info_b.datasets,
+                                'train_loglik_a': info_a.loglik,
+                                'train_loglik_b': info_b.loglik,
                                 'ari': ari_group.item(),
                                 })
         results = pd.concat([results, res_ari], ignore_index=True)
@@ -375,8 +383,8 @@ if __name__ == "__main__":
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    # evaluate_models(ks, model_types=['all'], model_on=[
-    #                 'task'], test_on='tseries')
+    evaluate_models(ks, model_types=['all'], model_on=[
+                    'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
@@ -386,5 +394,5 @@ if __name__ == "__main__":
     # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
     #                'task', 'rest'], compare='symmetry')
 
-    evaluate_existing(test_on='task')
+    # evaluate_existing(test_on='task')
     pass
