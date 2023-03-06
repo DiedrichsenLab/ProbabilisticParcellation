@@ -300,7 +300,7 @@ def cognitive_features(mname):
 
     feature_dir = f'{model_dir}/Atlases/Profiles/Cognitive_Features'
     features = pd.read_csv(
-        f'{feature_dir}/tags/tags.tsv', sep="\t")
+        f'{model_dir}/Atlases/Profiles/tags/tags.tsv', sep="\t")
     first_feature = features.columns.tolist().index('condition') + 1
     feature_columns = features.columns[first_feature:]
     feature_matrix = features[feature_columns].to_numpy()

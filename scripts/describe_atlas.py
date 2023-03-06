@@ -185,27 +185,21 @@ if __name__ == "__main__":
 
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
 
-    model_names = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed',
-    ]
+    # # --- Export merged model profile ---
+    # fileparts = mname.split('/')
+    # split_mn = fileparts[-1].split('_')
+    # info, model = ut.load_batch_best(mname)
+    # index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+    #                                   fileparts[-1] + '.lut')
+    # info = fp.recover_info(info, model, mname)
+    # fp.export_profile(mname, info, model, labels)
 
-    for mname in model_names:
-
-        # --- Export merged model profile ---
-        fileparts = mname.split('/')
-        split_mn = fileparts[-1].split('_')
-        info, model = ut.load_batch_best(mname)
-        index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                          fileparts[-1] + '.lut')
-        info = fp.recover_info(info, model, mname)
-        fp.export_profile(mname, info, model, labels)
-
-        features = fp.cognitive_features(mname)
+    # features = fp.cognitive_features(mname)
 
     # -- Get correlated cortex --
-    # method = 'corr'
-    # symmetry = 'sym'
-    # cortex = get_cortex(mname=mname, method=method)
+    method = 'corr'
+    symmetry = 'sym'
+    cortex = get_cortex(mname=mname, method=method)
     # # cortex = get_cortex(mname=mname, method=method, symmetry=symmetry)
 
     # mname_new = '_'.join(mname.split("/")[-1].split("_")[1:])
