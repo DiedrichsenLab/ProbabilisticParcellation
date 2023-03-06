@@ -277,8 +277,7 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
     model_type = '-'.join(model_types)
 
     for k in ks:
-       if compare == 'train_data':
-
+        if compare == 'train_data':
             model_names = [
                 f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
             fname = res_dir + \
