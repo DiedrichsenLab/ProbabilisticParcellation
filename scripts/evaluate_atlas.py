@@ -42,6 +42,9 @@ def evaluation(model_name, test_datasets, tseries=False):
     # determine space:
     space = model_name.split('space-')[-1].split('_')[0]
 
+    # Cross Valudation setting
+    CV_setting = [('half', 1), ('half', 2)]
+
     results = pd.DataFrame()
     for dset in test_datasets:
         print(f'Testdata: {dset}\n')
@@ -64,11 +67,7 @@ def evaluation(model_name, test_datasets, tseries=False):
             # part_vec = np.ones((tinfo.shape[0],), dtype=int)
 
         ################ CV starts here ################
-        CV_setting = [('half', 1), ('half', 2)]
         for (indivtrain_ind, indivtrain_values) in CV_setting:
-            # get train/test index for cross validation
-            train_indx = tinfo[indivtrain_ind] == indivtrain_values
-            test_indx = tinfo[indivtrain_ind] != indivtrain_values
 
             # If type is tseries, then evaluate each subject separately - otherwise data is too large
             if tseries and dset == 'HCP':
@@ -93,6 +92,9 @@ def evaluation(model_name, test_datasets, tseries=False):
                         res_sub_sess['test_data'] = dset + '-Tseries'
                         res_dcbc = pd.concat(res_dcbc, res_sub_sess, index=[0])
             else:
+                # get train/test index for cross validation
+                train_indx = tinfo[indivtrain_ind] == indivtrain_values
+                test_indx = tinfo[indivtrain_ind] != indivtrain_values
                 # 1. Run DCBC
                 res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
                                        train_indx=train_indx,
