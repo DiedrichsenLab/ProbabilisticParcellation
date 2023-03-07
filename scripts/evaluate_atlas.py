@@ -50,48 +50,59 @@ def evaluation(model_name, test_datasets, tseries=False):
         atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
         if tseries and dset == 'HCP':
             cond_ind = 'time_id'
-            tdata, tinfo, tds = ds.get_dataset(
-                ut.base_dir, dset, atlas=space, sess='all', type='Tseries')
+            _, _, tds = ds.get_dataset(
+                ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
         else:
             cond_ind = tds.cond_ind
             tdata, tinfo, tds = ds.get_dataset(
                 ut.base_dir, dset, atlas=space, sess='all')
 
-        # default from dataset class
+            # default from dataset class
+            cond_vec = tinfo[cond_ind].values.reshape(-1, )
 
-        cond_vec = tinfo[cond_ond].values.reshape(-1, )
-
-        part_vec = tinfo['half'].values
-        # part_vec = np.ones((tinfo.shape[0],), dtype=int)
-        CV_setting = [('half', 1), ('half', 2)]
+            part_vec = tinfo['half'].values
+            # part_vec = np.ones((tinfo.shape[0],), dtype=int)
 
         ################ CV starts here ################
+        CV_setting = [('half', 1), ('half', 2)]
         for (indivtrain_ind, indivtrain_values) in CV_setting:
             # get train/test index for cross validation
             train_indx = tinfo[indivtrain_ind] == indivtrain_values
             test_indx = tinfo[indivtrain_ind] != indivtrain_values
 
-            # 1. Run DCBC
-            res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
-                                   train_indx=train_indx,
-                                   test_indx=test_indx,
-                                   cond_vec=cond_vec,
-                                   part_vec=part_vec,
-                                   device=ut.default_device)
-            res_dcbc['indivtrain_ind'] = indivtrain_ind
-            res_dcbc['indivtrain_val'] = indivtrain_values
-            res_dcbc['test_data'] = dset
-
-            # 1. Run DCBC
-            res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
-                                   train_indx=train_indx,
-                                   test_indx=test_indx,
-                                   cond_vec=cond_vec,
-                                   part_vec=part_vec,
-                                   device=ut.default_device)
-            res_dcbc['indivtrain_ind'] = indivtrain_ind
-            res_dcbc['indivtrain_val'] = indivtrain_values
-            res_dcbc['test_data'] = dset
+            # If type is tseries, then evaluate each subject separately - otherwise data is too large
+            if tseries and dset == 'HCP':
+                res_dcbc = pd.DataFrame()
+                for s, sub in tds.get_participants().participant_id:
+                    for sess in tds.sessions:
+                        print(f'\tSubject {s}, session {sess}')
+                        tdata, tinfo = tds.get_data(space=space,
+                                                    ses_id=sess, type='Tseries', subj=[s])
+                        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+                        test_indx = tinfo[indivtrain_ind] != indivtrain_values
+                        cond_vec = tinfo[cond_ind].values.reshape(-1, )
+                        part_vec = tinfo['half'].values
+                        res_sub_sess = ev.run_dcbc(model_name, tdata, atlas,
+                                                   train_indx=train_indx,
+                                                   test_indx=test_indx,
+                                                   cond_vec=cond_vec,
+                                                   part_vec=part_vec,
+                                                   device=ut.default_device)
+                        res_sub_sess['indivtrain_ind'] = indivtrain_ind
+                        res_sub_sess['indivtrain_val'] = indivtrain_values
+                        res_sub_sess['test_data'] = dset + '-Tseries'
+                        res_dcbc = pd.concat(res_dcbc, res_sub_sess, index=[0])
+            else:
+                # 1. Run DCBC
+                res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                                       train_indx=train_indx,
+                                       test_indx=test_indx,
+                                       cond_vec=cond_vec,
+                                       part_vec=part_vec,
+                                       device=ut.default_device)
+                res_dcbc['indivtrain_ind'] = indivtrain_ind
+                res_dcbc['indivtrain_val'] = indivtrain_values
+                res_dcbc['test_data'] = dset
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
     return results
@@ -382,13 +393,13 @@ if __name__ == "__main__":
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    # evaluate_models(ks, model_types=['all'], model_on=[
-    #                 'task'], test_on='tseries')
+    evaluate_models(ks, model_types=['all'], model_on=[
+                    'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
-    compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
-                   'task', 'rest'], compare='train_data')
+    # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
+    #                'task', 'rest'], compare='train_data')
 
     # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
     #                'task', 'rest'], compare='symmetry')
