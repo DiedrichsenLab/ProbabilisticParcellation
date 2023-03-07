@@ -39,74 +39,123 @@ res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
 
 def evaluation(model_name, test_datasets, tseries=False):
-    # determine space:
-    space = model_name.split('space-')[-1].split('_')[0]
+    """
+    Evaluate a given model on a number of specified test datasets.
+
+    Args:
+        model_name (str): Name of the model to be evaluated.
+        test_datasets (list of str): List of test datasets to be evaluated on.
+        tseries (bool, optional): Whether the test data is in timeseries format. Defaults to False.
+
+    Returns:
+        pd.DataFrame: Results of the evaluation.
+    """
 
     # Cross Valudation setting
     CV_setting = [('half', 1), ('half', 2)]
 
-    results = pd.DataFrame()
+    # # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
+
+    # Get atlas
+    atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
+
+    # Get results
+    Results = pd.DataFrame()
     for dset in test_datasets:
         print(f'Testdata: {dset}\n')
-
-        # Preparing atlas, cond_vec, part_vec
-        atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
         if tseries and dset == 'HCP':
-            cond_ind = 'time_id'
-            _, _, tds = ds.get_dataset(
-                ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+            results = evaluate_timeseries(
+                model_name, dset, atlas, CV_setting)
         else:
-            cond_ind = tds.cond_ind
-            tdata, tinfo, tds = ds.get_dataset(
-                ut.base_dir, dset, atlas=space, sess='all')
+            results = evaluate_standard(model_name, dset, atlas, CV_setting)
+        Results = pd.concat([Results, results])
+    return Results
 
-            # default from dataset class
-            cond_vec = tinfo[cond_ind].values.reshape(-1, )
 
-            part_vec = tinfo['half'].values
-            # part_vec = np.ones((tinfo.shape[0],), dtype=int)
+def evaluate_standard(model_name, dset, atlas, CV_setting):
+    """
+    Evaluate a given model on a standard dataset.
 
-        ################ CV starts here ################
-        for (indivtrain_ind, indivtrain_values) in CV_setting:
+    Args:
+        model_name (str): Name of the model to be evaluated.
+        dset (str): Name of the dataset to be evaluated on.
+        atlas (ndarray): Atlas used for the evaluation.
+        CV_setting (list of tuples): Cross-validation settings.
 
-            # If type is tseries, then evaluate each subject separately - otherwise data is too large
-            if tseries and dset == 'HCP':
-                res_dcbc = pd.DataFrame()
-                for s, sub in tds.get_participants().participant_id:
-                    for sess in tds.sessions:
-                        print(f'\tSubject {s}, session {sess}')
-                        tdata, tinfo = tds.get_data(space=space,
-                                                    ses_id=sess, type='Tseries', subj=[s])
-                        train_indx = tinfo[indivtrain_ind] == indivtrain_values
-                        test_indx = tinfo[indivtrain_ind] != indivtrain_values
-                        cond_vec = tinfo[cond_ind].values.reshape(-1, )
-                        part_vec = tinfo['half'].values
-                        res_sub_sess = ev.run_dcbc(model_name, tdata, atlas,
-                                                   train_indx=train_indx,
-                                                   test_indx=test_indx,
-                                                   cond_vec=cond_vec,
-                                                   part_vec=part_vec,
-                                                   device=ut.default_device)
-                        res_sub_sess['indivtrain_ind'] = indivtrain_ind
-                        res_sub_sess['indivtrain_val'] = indivtrain_values
-                        res_sub_sess['test_data'] = dset + '-Tseries'
-                        res_dcbc = pd.concat(res_dcbc, res_sub_sess, index=[0])
-            else:
-                # get train/test index for cross validation
+    Returns:
+        pd.DataFrame: Results of the evaluation.
+    """
+    # # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
+
+    tdata, tinfo, tds = ds.get_dataset(
+        ut.base_dir, dset, atlas=space, sess='all')
+
+    # default from dataset class
+    cond_ind = tds.cond_ind
+    cond_vec = tinfo[cond_ind].values.reshape(-1, )
+
+    part_vec = tinfo['half'].values
+    # part_vec = np.ones((tinfo.shape[0],), dtype=int)
+
+    ################ CV starts here ################
+    results = pd.DataFrame()
+    for (indivtrain_ind, indivtrain_values) in CV_setting:
+        # If type is tseries, then evaluate each subject separately - otherwise data is too large
+
+        # get train/test index for cross validation
+        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+        test_indx = tinfo[indivtrain_ind] != indivtrain_values
+        # 1. Run DCBC
+        res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device=ut.default_device)
+        res_dcbc['indivtrain_ind'] = indivtrain_ind
+        res_dcbc['indivtrain_val'] = indivtrain_values
+        res_dcbc['test_data'] = dset
+
+        results = pd.concat([results, res_dcbc], ignore_index=True)
+    return results
+
+
+def evaluate_timeseries(model_name, dset, atlas, CV_setting):
+    # # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
+
+    cond_ind = 'time_id'
+    _, _, tds = ds.get_dataset(
+        ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+
+    results = pd.DataFrame()
+    for (indivtrain_ind, indivtrain_values) in CV_setting:
+        # If type is tseries, then evaluate each subject separately - otherwise data is too large
+        res_dcbc = pd.DataFrame()
+        for s, sub in enumerate(tds.get_participants().participant_id):
+            for sess in tds.sessions:
+                print(f'\tSubject {s}, session {sess}')
+                tdata, tinfo = tds.get_data(space=space,
+                                            ses_id=sess, type='Tseries', subj=[s])
                 train_indx = tinfo[indivtrain_ind] == indivtrain_values
                 test_indx = tinfo[indivtrain_ind] != indivtrain_values
-                # 1. Run DCBC
-                res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
-                                       train_indx=train_indx,
-                                       test_indx=test_indx,
-                                       cond_vec=cond_vec,
-                                       part_vec=part_vec,
-                                       device=ut.default_device)
-                res_dcbc['indivtrain_ind'] = indivtrain_ind
-                res_dcbc['indivtrain_val'] = indivtrain_values
-                res_dcbc['test_data'] = dset
+                cond_vec = tinfo[cond_ind].values.reshape(-1, )
+                part_vec = tinfo['half'].values
+                res_sub_sess = ev.run_dcbc(model_name, tdata, atlas,
+                                           train_indx=train_indx,
+                                           test_indx=test_indx,
+                                           cond_vec=cond_vec,
+                                           part_vec=part_vec,
+                                           device=ut.default_device)
+                res_sub_sess['indivtrain_ind'] = indivtrain_ind
+                res_sub_sess['indivtrain_val'] = indivtrain_values
+                res_sub_sess['test_data'] = dset + '-Tseries'
+                res_dcbc = pd.concat(res_dcbc, res_sub_sess, index=[0])
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
+
     return results
 
 
@@ -237,6 +286,10 @@ def evaluate_existing(test_on='task', models=None):
     elif test_on == ['task', 'rest']:
         test_on = 'task+rest'
         test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
+        test_datasets = T.name.iloc[test_datasets].tolist()
+    elif test_on == ['tseries']:
+        test_on = 'tseries'
+        test_datasets = [7]
         test_datasets = T.name.iloc[test_datasets].tolist()
 
     par_name = []
