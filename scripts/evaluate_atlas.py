@@ -471,4 +471,6 @@ if __name__ == "__main__":
     # evaluate_existing(test_on=['task', 'rest'])
 
     # evaluate_existing(test_on=['tseries'])
+
+    compare_existing()
     pass
