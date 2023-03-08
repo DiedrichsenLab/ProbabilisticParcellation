@@ -149,6 +149,8 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
                                            cond_vec=cond_vec,
                                            part_vec=part_vec,
                                            device=ut.default_device)
+                res_sub_sess['subj_num'] = s
+                res_sub_sess['test_sess'] = sess
                 res_sub_sess['indivtrain_ind'] = indivtrain_ind
                 res_sub_sess['indivtrain_val'] = indivtrain_values
                 res_sub_sess['test_data'] = dset + '-Tseries'
