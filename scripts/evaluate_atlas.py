@@ -127,34 +127,26 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
     space = model_name.split('space-')[-1].split('_')[0]
 
     cond_ind = 'time_id'
-    _, _, tds = ds.get_dataset(
+    tdata, tinfo, tds = ds.get_dataset(
         ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+
+    cond_vec = tinfo[cond_ind].values.reshape(-1, )
+    part_vec = tinfo['half'].values
 
     results = pd.DataFrame()
     for (indivtrain_ind, indivtrain_values) in CV_setting:
-        # If type is tseries, then evaluate each subject separately - otherwise data is too large
-        res_dcbc = pd.DataFrame()
-        for s, sub in enumerate(tds.get_participants().participant_id):
-            for sess in tds.sessions:
-                print(f'\tSubject {s}, session {sess}')
-                tdata, tinfo = tds.get_data(space=space,
-                                            ses_id=sess, type='Tseries', subj=[s])
-                train_indx = tinfo[indivtrain_ind] == indivtrain_values
-                test_indx = tinfo[indivtrain_ind] != indivtrain_values
-                cond_vec = tinfo[cond_ind].values.reshape(-1, )
-                part_vec = tinfo['half'].values
-                res_sub_sess = ev.run_dcbc(model_name, tdata, atlas,
-                                           train_indx=train_indx,
-                                           test_indx=test_indx,
-                                           cond_vec=cond_vec,
-                                           part_vec=part_vec,
-                                           device=ut.default_device)
-                res_sub_sess['indivtrain_ind'] = indivtrain_ind
-                res_sub_sess['indivtrain_val'] = indivtrain_values
-                res_sub_sess['test_data'] = dset + '-Tseries'
-                res_dcbc = pd.concat(res_dcbc, res_sub_sess, ignore_index=True)
-
-            results = pd.concat([results, res_dcbc], ignore_index=True)
+        # This can only be run on the Heavy server, not the GPU server
+        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+        test_indx = tinfo[indivtrain_ind] != indivtrain_values
+        res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device=ut.default_device,
+                               verbose=False)
+        res_dcbc['test_data'] = dset + '-Tseries'
+        results = pd.concat([results, res_dcbc], ignore_index=True)
 
     return results
 
@@ -273,6 +265,7 @@ def evaluate_existing(test_on='task', models=None):
     """
 
     parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+    space = 'MNISymC3'
     if models is None:
         models = ['Models_03/asym_Md_space-MNISymC3_K-10.pickle']
 
@@ -306,13 +299,29 @@ def evaluate_existing(test_on='task', models=None):
         print(
             f'\nEvaluating existing parcellations...\nTest on {test_on}.')
         results = pd.DataFrame()
-        for ds in test_datasets:
-            print(f'Testdata: {ds}\n')
-            R = ev.run_dcbc_group(par_name,
-                                  space='MNISymC3',
-                                  test_data=ds,
-                                  test_sess='all')
-            results = pd.concat([results, R], ignore_index=True)
+        for dset in test_datasets:
+            print(f'Testdata: {dset}\n')
+            if test_on == 'tseries' and dset == 'HCP':
+
+                tdata, tinfo, tds = ds.get_dataset(
+                    ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+                res_dcbc = pd.DataFrame()
+                # This can only be run on the Heavy server, not the GPU server
+                res_sub_sess = ev.run_dcbc_group(par_name,
+                                                 space=space,
+                                                 test_data=dset + '-Tseries',
+                                                 test_sess='all',
+                                                 tdata=tdata,
+                                                 verbose=True)
+                res_dcbc = pd.concat(
+                    [res_dcbc, res_sub_sess], ignore_index=True)
+            else:
+                res_dcbc = ev.run_dcbc_group(par_name,
+                                             space=space,
+                                             test_data=dset,
+                                             test_sess='all')
+            # Concatenate results
+            results = pd.concat([results, res_dcbc], ignore_index=True)
         results.to_csv(res_dir + fname, index=False, sep='\t')
 
     pass
@@ -460,4 +469,8 @@ if __name__ == "__main__":
     #                'task', 'rest'], compare='symmetry')
 
     # evaluate_existing(test_on=['task', 'rest'])
+
+    # evaluate_existing(test_on=['tseries'])
+
+    compare_existing()
     pass
