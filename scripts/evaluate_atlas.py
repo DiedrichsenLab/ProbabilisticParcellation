@@ -445,11 +445,11 @@ if __name__ == "__main__":
     # evaluate_selected(test_on='task')
     # evaluate_selected(test_on='rest')
 
-    ks = [10, 20, 34, 40, 68]
+    # ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    evaluate_models(ks, model_types=['all'], model_on=[
-                    'task'], test_on='tseries')
+    # evaluate_models(ks, model_types=['all'], model_on=[
+    #                 'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
@@ -460,4 +460,6 @@ if __name__ == "__main__":
     #                'task', 'rest'], compare='symmetry')
 
     # evaluate_existing(test_on=['task', 'rest'])
+
+    evaluate_existing(test_on=['tseries'])
     pass
