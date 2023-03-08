@@ -27,7 +27,7 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None):
+def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None, weighting=None):
 
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -40,7 +40,8 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
     parcel = Prob.argmax(axis=0) + 1
 
     # Get parcel similarity:
-    w_cos_sym, _, _ = cl.parcel_similarity(model, plot=True, sym=sym)
+    w_cos_sym, _, _ = cl.parcel_similarity(
+        model, plot=True, sym=sym, weighting=weighting)
 
     # Do Clustering:
     if clustering == 'agglomative':

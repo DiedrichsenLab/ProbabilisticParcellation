@@ -38,42 +38,116 @@ from datetime import datetime
 res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
 
-def evaluation(model_name, test_datasets):
-    # determine space:
+def evaluation(model_name, test_datasets, tseries=False):
+    """
+    Evaluate a given model on a number of specified test datasets.
+
+    Args:
+        model_name (str): Name of the model to be evaluated.
+        test_datasets (list of str): List of test datasets to be evaluated on.
+        tseries (bool, optional): Whether the test data is in timeseries format. Defaults to False.
+
+    Returns:
+        pd.DataFrame: Results of the evaluation.
+    """
+
+    # Cross Valudation setting
+    CV_setting = [('half', 1), ('half', 2)]
+
+    # # determine space:
     space = model_name.split('space-')[-1].split('_')[0]
 
-    results = pd.DataFrame()
+    # Get atlas
+    atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
+
+    # Get results
+    Results = pd.DataFrame()
     for dset in test_datasets:
         print(f'Testdata: {dset}\n')
+        if tseries and dset == 'HCP':
+            results = evaluate_timeseries(
+                model_name, dset, atlas, CV_setting)
+        else:
+            results = evaluate_standard(model_name, dset, atlas, CV_setting)
+        Results = pd.concat([Results, results])
+    return Results
 
-        # Preparing atlas, cond_vec, part_vec
-        atlas, _ = am.get_atlas(space, atlas_dir=ut.base_dir + '/Atlases')
-        tdata, tinfo, tds = ds.get_dataset(
-            ut.base_dir, dset, atlas=space, sess='all')
-        # default from dataset class
-        cond_vec = tinfo[tds.cond_ind].values.reshape(-1, )
-        part_vec = tinfo['half'].values
-        # part_vec = np.ones((tinfo.shape[0],), dtype=int)
-        CV_setting = [('half', 1), ('half', 2)]
 
-        ################ CV starts here ################
-        for (indivtrain_ind, indivtrain_values) in CV_setting:
-            # get train/test index for cross validation
-            train_indx = tinfo[indivtrain_ind] == indivtrain_values
-            test_indx = tinfo[indivtrain_ind] != indivtrain_values
+def evaluate_standard(model_name, dset, atlas, CV_setting):
+    """
+    Evaluate a given model on a standard dataset.
 
-            # 1. Run DCBC
-            res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
-                                   train_indx=train_indx,
-                                   test_indx=test_indx,
-                                   cond_vec=cond_vec,
-                                   part_vec=part_vec,
-                                   device=ut.default_device)
-            res_dcbc['indivtrain_ind'] = indivtrain_ind
-            res_dcbc['indivtrain_val'] = indivtrain_values
-            res_dcbc['test_data'] = dset
+    Args:
+        model_name (str): Name of the model to be evaluated.
+        dset (str): Name of the dataset to be evaluated on.
+        atlas (ndarray): Atlas used for the evaluation.
+        CV_setting (list of tuples): Cross-validation settings.
 
-            results = pd.concat([results, res_dcbc], ignore_index=True)
+    Returns:
+        pd.DataFrame: Results of the evaluation.
+    """
+    # # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
+
+    tdata, tinfo, tds = ds.get_dataset(
+        ut.base_dir, dset, atlas=space, sess='all')
+
+    # default from dataset class
+    cond_ind = tds.cond_ind
+    cond_vec = tinfo[cond_ind].values.reshape(-1, )
+
+    part_vec = tinfo['half'].values
+    # part_vec = np.ones((tinfo.shape[0],), dtype=int)
+
+    ################ CV starts here ################
+    results = pd.DataFrame()
+    for (indivtrain_ind, indivtrain_values) in CV_setting:
+        # If type is tseries, then evaluate each subject separately - otherwise data is too large
+
+        # get train/test index for cross validation
+        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+        test_indx = tinfo[indivtrain_ind] != indivtrain_values
+        # 1. Run DCBC
+        res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device=ut.default_device)
+        res_dcbc['indivtrain_ind'] = indivtrain_ind
+        res_dcbc['indivtrain_val'] = indivtrain_values
+        res_dcbc['test_data'] = dset
+
+        results = pd.concat([results, res_dcbc], ignore_index=True)
+    return results
+
+
+def evaluate_timeseries(model_name, dset, atlas, CV_setting):
+    # # determine space:
+    space = model_name.split('space-')[-1].split('_')[0]
+
+    cond_ind = 'time_id'
+    tdata, tinfo, tds = ds.get_dataset(
+        ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+
+    cond_vec = tinfo[cond_ind].values.reshape(-1, )
+    part_vec = tinfo['half'].values
+
+    results = pd.DataFrame()
+    for (indivtrain_ind, indivtrain_values) in CV_setting:
+        # This can only be run on the Heavy server, not the GPU server
+        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+        test_indx = tinfo[indivtrain_ind] != indivtrain_values
+        res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
+                               train_indx=train_indx,
+                               test_indx=test_indx,
+                               cond_vec=cond_vec,
+                               part_vec=part_vec,
+                               device=ut.default_device,
+                               verbose=False)
+        res_dcbc['test_data'] = dset + '-Tseries'
+        results = pd.concat([results, res_dcbc], ignore_index=True)
+
     return results
 
 
@@ -98,10 +172,17 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
             else:
                 print(
                     f'\nEvaluating {mname}...\nTrained on {T.name.iloc[datasets].tolist()}.')
-                test_datasets = get_test_datasets(model_on, test_on, datasets)
+                if test_on == 'tseries':
+                    tseries = True
+                    test_datasets = get_test_datasets(
+                        model_on, test_on='rest', model_datasets=datasets)
+                else:
+                    test_datasets = get_test_datasets(
+                        model_on, test_on=test_on, model_datasets=datasets)
                 test_datasets = T.name.iloc[test_datasets].tolist()
+
                 # Evaluate
-                results = evaluation(mname, test_datasets)
+                results = evaluation(mname, test_datasets, tseries=tseries)
 
                 # Save file
                 results.to_csv(res_dir + fname, index=False, sep='\t')
@@ -184,14 +265,23 @@ def evaluate_existing(test_on='task', models=None):
     """
 
     parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+    space = 'MNISymC3'
     if models is None:
-        models = ['Models_01/asym_Md_space-MNISymC3_K-10.pickle']
+        models = ['Models_03/asym_Md_space-MNISymC3_K-10.pickle']
 
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     if test_on == 'task':
         test_datasets = [0, 1, 2, 3, 4, 5, 6]
         test_datasets = T.name.iloc[test_datasets].tolist()
     elif test_on == 'rest':
+        test_datasets = [7]
+        test_datasets = T.name.iloc[test_datasets].tolist()
+    elif test_on == ['task', 'rest']:
+        test_on = 'task+rest'
+        test_datasets = [0, 1, 2, 3, 4, 5, 6, 7]
+        test_datasets = T.name.iloc[test_datasets].tolist()
+    elif test_on == ['tseries']:
+        test_on = 'tseries'
         test_datasets = [7]
         test_datasets = T.name.iloc[test_datasets].tolist()
 
@@ -209,13 +299,29 @@ def evaluate_existing(test_on='task', models=None):
         print(
             f'\nEvaluating existing parcellations...\nTest on {test_on}.')
         results = pd.DataFrame()
-        for ds in test_datasets:
-            print(f'Testdata: {ds}\n')
-            R = ev.run_dcbc_group(par_name,
-                                  space='MNISymC3',
-                                  test_data=ds,
-                                  test_sess='all')
-            results = pd.concat([results, R], ignore_index=True)
+        for dset in test_datasets:
+            print(f'Testdata: {dset}\n')
+            if test_on == 'tseries' and dset == 'HCP':
+
+                tdata, tinfo, tds = ds.get_dataset(
+                    ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
+                res_dcbc = pd.DataFrame()
+                # This can only be run on the Heavy server, not the GPU server
+                res_sub_sess = ev.run_dcbc_group(par_name,
+                                                 space=space,
+                                                 test_data=dset + '-Tseries',
+                                                 test_sess='all',
+                                                 tdata=tdata,
+                                                 verbose=True)
+                res_dcbc = pd.concat(
+                    [res_dcbc, res_sub_sess], ignore_index=True)
+            else:
+                res_dcbc = ev.run_dcbc_group(par_name,
+                                             space=space,
+                                             test_data=dset,
+                                             test_sess='all')
+            # Concatenate results
+            results = pd.concat([results, res_dcbc], ignore_index=True)
         results.to_csv(res_dir + fname, index=False, sep='\t')
 
     pass
@@ -244,30 +350,28 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
 
     # get info for file name
     model_type = '-'.join(model_types)
-    allK = [str(k) for k in ks]
-    allK = '-'.join(allK)
 
-    if compare == 'train_data':
+    for k in ks:
+        if compare == 'train_data':
+            model_names = [
+                f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
+            fname = res_dir + \
+                f'ARI_{msym}_{model_type}_space-{space}_K-{k}_.tsv'
+            combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
+                            for j in range(i + 1, len(model_names))]
 
-        model_names = [
-            f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets for k in ks]
-        fname = res_dir + \
-            f'ARI_{msym}_{model_type}_space-{space}_K-{allK}_.tsv'
-        combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
-                        for j in range(i + 1, len(model_names))]
+        elif compare == 'symmetry':
+            combinations = [
+                (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets]
+            model_names = [m for c in combinations for m in c]
+            fname = res_dir + \
+                f'ARI_sym-asym_{model_type}_space-{space}_K-{k}_.tsv'
 
-    elif compare == 'symmetry':
-        combinations = [
-            (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets for k in ks]
-        model_names = [m for c in combinations for m in c]
-        fname = res_dir + \
-            f'ARI_sym-asym_{model_type}_space-{space}_K-{allK}_.tsv'
+        loaded_models, loaded_info = get_models(
+            model_names)
 
-    loaded_models, loaded_info = get_models(
-        model_names)
-
-    results = compare_ari(combinations, loaded_models, loaded_info)
-    results.to_csv(fname, index=False, sep='\t')
+        results = compare_ari(combinations, loaded_models, loaded_info)
+        results.to_csv(fname, index=False, sep='\t')
 
 
 def get_models(model_names):
@@ -322,13 +426,17 @@ def compare_ari(combinations, loaded_models, loaded_info):
         print(f'ARI {a} vs {b}: {ari_group.item():.3f}')
 
         # 1. Run ARI
-        res_ari = pd.DataFrame({'model_name': [info_a['name'], info_b['name']],
+        res_ari = pd.DataFrame({'model_name_a': info_a['name'],
+                                'model_name_b': info_b['name'],
                                 'atlas': info_a.atlas,
-                               'K': info_a.K,
-                                'train_data': [info_a.datasets, info_b.datasets],
-                                'train_loglik': [info_a.loglik, info_b.loglik],
-                                'ari': ari_group.item(),
-                                })
+                                'K': info_a.K,
+                                'train_data_a': info_a.datasets,
+                                'train_data_b': info_b.datasets,
+                                'train_loglik_a': info_a.loglik,
+                                'train_loglik_b': info_b.loglik,
+                                'ari': ari_group.item()},
+                               index=[0]
+                               )
         results = pd.concat([results, res_ari], ignore_index=True)
 
     return results
@@ -349,8 +457,8 @@ if __name__ == "__main__":
     ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    # evaluate_models(ks, model_types=['loo'], model_on=[
-    #                 'task', 'rest'], test_on='task')
+    evaluate_models(ks, model_types=['all'], model_on=[
+                    'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
@@ -360,5 +468,9 @@ if __name__ == "__main__":
     # compare_models(ks=ks, model_types=['indiv', 'all'], model_on=[
     #                'task', 'rest'], compare='symmetry')
 
-    evaluate_existing(test_on='task')
+    # evaluate_existing(test_on=['task', 'rest'])
+
+    # evaluate_existing(test_on=['tseries'])
+
+    compare_existing()
     pass
