@@ -152,7 +152,8 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
                 res_sub_sess['indivtrain_ind'] = indivtrain_ind
                 res_sub_sess['indivtrain_val'] = indivtrain_values
                 res_sub_sess['test_data'] = dset + '-Tseries'
-                res_dcbc = pd.concat([res_dcbc, res_sub_sess], ignore_index=True)
+                res_dcbc = pd.concat(
+                    [res_dcbc, res_sub_sess], ignore_index=True)
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
 
@@ -273,6 +274,7 @@ def evaluate_existing(test_on='task', models=None):
     """
 
     parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+    space = 'MNISymC3'
     if models is None:
         models = ['Models_03/asym_Md_space-MNISymC3_K-10.pickle']
 
@@ -308,10 +310,28 @@ def evaluate_existing(test_on='task', models=None):
         results = pd.DataFrame()
         for ds in test_datasets:
             print(f'Testdata: {ds}\n')
-            R = ev.run_dcbc_group(par_name,
-                                  space='MNISymC3',
-                                  test_data=ds,
-                                  test_sess='all')
+            if test_on == 'tseries' and ds == 'HCP':
+                tds = ds.get_dataset(ds)
+                _, _, tds = ds.get_dataset(
+                    ut.base_dir, ds, atlas=space, sess='all', type='Tseries', info_only=True)
+                for s, sub in enumerate(tds.get_participants().participant_id):
+                    for sess in tds.sessions:
+                        tdata, _ = tds.get_data(space=space,
+                                                ses_id=sess, type='Tseries', subj=[s])
+                        res_sub_sess = ev.run_dcbc_group(par_name,
+                                                         space=space,
+                                                         test_data=ds,
+                                                         test_sess='all',
+                                                         tdata=tdata)
+                        res_sub_sess['test_data'] = ds + '-Tseries'
+                        res_dcbc = pd.concat(
+                            [res_dcbc, res_sub_sess], ignore_index=True)
+
+            else:
+                R = ev.run_dcbc_group(par_name,
+                                      space=space,
+                                      test_data=ds,
+                                      test_sess='all')
             results = pd.concat([results, R], ignore_index=True)
         results.to_csv(res_dir + fname, index=False, sep='\t')
 

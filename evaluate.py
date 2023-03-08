@@ -135,7 +135,8 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
 
     dcbc_values = []
     for sub in range(testdata.shape[0]):
-        print(f'Subject {sub}', end=':')
+        if verbose:
+            print(f'Subject {sub}', end=':')
         tic = time.perf_counter()
         if parcels.ndim == 1:
             D = compute_DCBC(maxDist=max_dist, binWidth=bin_width,
@@ -147,7 +148,8 @@ def calc_test_dcbc(parcels, testdata, dist, max_dist=110, bin_width=5,
                              dist=dist, func=testdata[sub].T)
         dcbc_values.append(D['DCBC'])
         toc = time.perf_counter()
-        print(f"{toc-tic:0.4f}s")
+        if verbose:
+            print(f"{toc-tic:0.4f}s")
     return pt.stack(dcbc_values)
 
 
@@ -295,7 +297,7 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
 
 
 def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
-                   device=None):
+                   device=None, tdata=None):
     """ Run DCBC group evaluation
 
     Args:
@@ -306,12 +308,14 @@ def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
         space (str): Atlas space (SUIT3, MNISym3C)... 
         test_data (str): Data set string 
         test_sess (str, optional): Data set test. Defaults to 'all'.
+        tdata (np.array, optional): Data to use for testing. Defaults to None. Use when running dcbc subject by subject for timeseries evaluation if loading all subjects is not feasible.
 
     Returns:
         DataFrame: Results
     """
-    tdata, tinfo, tds = ds.get_dataset(base_dir, test_data,
-                                       atlas=space, sess=test_sess)
+    if tdata is None:
+        tdata, _, _ = ds.get_dataset(base_dir, test_data,
+                                     atlas=space, sess=test_sess)
     atlas, _ = am.get_atlas(space, atlas_dir=base_dir + '/Atlases')
     dist = compute_dist(atlas.world.T, resolution=1)
 
@@ -435,8 +439,10 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
         # Now run the DCBC evaluation fo the group and individuals
         Pgroup = pt.argmax(Prop, dim=0) + 1
         Pindiv = pt.argmax(U_indiv, dim=1) + 1
-        dcbc_group = calc_test_dcbc(Pgroup, tdata[:, test_indx, :], dist)
-        dcbc_indiv = calc_test_dcbc(Pindiv, tdata[:, test_indx, :], dist)
+        dcbc_group = calc_test_dcbc(
+            Pgroup, tdata[:, test_indx, :], dist, verbose)
+        dcbc_indiv = calc_test_dcbc(
+            Pindiv, tdata[:, test_indx, :], dist, verbose)
 
         # ------------------------------------------
         # Collect the information from the evaluation
