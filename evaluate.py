@@ -297,7 +297,7 @@ def run_prederror(model_names, test_data, test_sess, cond_ind,
 
 
 def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
-                   device=None, tdata=None):
+                   device=None, tdata=None, verbose=True):
     """ Run DCBC group evaluation
 
     Args:
