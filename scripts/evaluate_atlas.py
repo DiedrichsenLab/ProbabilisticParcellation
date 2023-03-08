@@ -130,15 +130,14 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
     tdata, tinfo, tds = ds.get_dataset(
         ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
 
-    train_indx = tinfo[indivtrain_ind] == indivtrain_values
-    test_indx = tinfo[indivtrain_ind] != indivtrain_values
     cond_vec = tinfo[cond_ind].values.reshape(-1, )
     part_vec = tinfo['half'].values
 
     results = pd.DataFrame()
     for (indivtrain_ind, indivtrain_values) in CV_setting:
-        # If type is tseries, then evaluate each subject separately - otherwise data is too large
-
+        # This can only be run on the Heavy server, not the GPU server
+        train_indx = tinfo[indivtrain_ind] == indivtrain_values
+        test_indx = tinfo[indivtrain_ind] != indivtrain_values
         res_dcbc = ev.run_dcbc(model_name, tdata, atlas,
                                train_indx=train_indx,
                                test_indx=test_indx,
