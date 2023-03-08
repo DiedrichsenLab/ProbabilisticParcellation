@@ -315,7 +315,7 @@ def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
     """
     if tdata is None:
         tdata, _, _ = ds.get_dataset(base_dir, test_data,
-                                     atlas=space, sess=test_sess)
+                                     atlas=space, sess=test_sess, verbose=True)
     atlas, _ = am.get_atlas(space, atlas_dir=base_dir + '/Atlases')
     dist = compute_dist(atlas.world.T, resolution=1)
 
@@ -347,7 +347,7 @@ def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
         if i == 0:
             dcbc = pt.zeros((len(par_names), tdata.shape[0]))
         print(f"Number zeros {(par==0).sum()}")
-        dcbc[i, :] = calc_test_dcbc(par, tdata, dist)
+        dcbc[i, :] = calc_test_dcbc(par, tdata, dist, verbose=verbose)
         num_subj = tdata.shape[0]
 
         ev_df = pd.DataFrame({'fit_type': [fileparts[0]] * num_subj,
