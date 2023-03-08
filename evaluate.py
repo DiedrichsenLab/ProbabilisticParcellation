@@ -336,6 +336,9 @@ def run_dcbc_group(par_names, space, test_data, test_sess='all', saveFile=None,
             par = pt.argmax(Prop, dim=0) + 1
         elif pname_parts[-1] == 'nii':
             par = atlas.read_data(pn, 0)
+            if not pt.is_tensor(par):
+                par = pt.tensor(par)
+
         # Initialize result array
         if i == 0:
             dcbc = pt.zeros((len(par_names), tdata.shape[0]))
