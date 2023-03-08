@@ -315,25 +315,19 @@ def evaluate_existing(test_on='task', models=None):
             print(f'Testdata: {dset}\n')
             if test_on == 'tseries' and dset == 'HCP':
 
-                _, _, tds = ds.get_dataset(
+                tdata, tinfo, tds = ds.get_dataset(
                     ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
                 res_dcbc = pd.DataFrame()
-                for s, sub in enumerate(tds.get_participants().participant_id):
-                    for sess in tds.sessions:
-                        print(f'Subject {s}, session {sess}...')
-                        tdata, _ = tds.get_data(space=space,
-                                                ses_id=sess, type='Tseries', subj=[s])
-                        res_sub_sess = ev.run_dcbc_group(par_name,
-                                                         space=space,
-                                                         test_data=dset,
-                                                         test_sess='all',
-                                                         tdata=tdata,
-                                                         verbose=False)
-                        res_sub_sess['test_data'] = dset + '-Tseries'
-                        res_sub_sess['subj_num'] = s
-                        res_sub_sess['test_sess'] = sess
-                        res_dcbc = pd.concat(
-                            [res_dcbc, res_sub_sess], ignore_index=True)
+                # This can only be run on the Heavy server, not the GPU server
+                res_sub_sess = ev.run_dcbc_group(par_name,
+                                                 space=space,
+                                                 test_data=dset,
+                                                 test_sess='all',
+                                                 tdata=tdata,
+                                                 verbose=True)
+                res_sub_sess['test_data'] = dset + '-Tseries'
+                res_dcbc = pd.concat(
+                    [res_dcbc, res_sub_sess], ignore_index=True)
             else:
                 res_dcbc = ev.run_dcbc_group(par_name,
                                              space=space,
