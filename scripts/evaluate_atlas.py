@@ -311,12 +311,12 @@ def evaluate_existing(test_on='task', models=None):
         print(
             f'\nEvaluating existing parcellations...\nTest on {test_on}.')
         results = pd.DataFrame()
-        for ds in test_datasets:
-            print(f'Testdata: {ds}\n')
-            if test_on == 'tseries' and ds == 'HCP':
-                tds = ds.get_dataset(ds)
+        for dset in test_datasets:
+            print(f'Testdata: {dset}\n')
+            if test_on == 'tseries' and dset == 'HCP':
+
                 _, _, tds = ds.get_dataset(
-                    ut.base_dir, ds, atlas=space, sess='all', type='Tseries', info_only=True)
+                    ut.base_dir, dset, atlas=space, sess='all', type='Tseries', info_only=True)
                 res_dcbc = pd.DataFrame()
                 for s, sub in enumerate(tds.get_participants().participant_id):
                     for sess in tds.sessions:
@@ -325,11 +325,11 @@ def evaluate_existing(test_on='task', models=None):
                                                 ses_id=sess, type='Tseries', subj=[s])
                         res_sub_sess = ev.run_dcbc_group(par_name,
                                                          space=space,
-                                                         test_data=ds,
+                                                         test_data=dset,
                                                          test_sess='all',
                                                          tdata=tdata,
                                                          verbose=False)
-                        res_sub_sess['test_data'] = ds + '-Tseries'
+                        res_sub_sess['test_data'] = dset + '-Tseries'
                         res_sub_sess['subj_num'] = s
                         res_sub_sess['test_sess'] = sess
                         res_dcbc = pd.concat(
@@ -337,7 +337,7 @@ def evaluate_existing(test_on='task', models=None):
             else:
                 res_dcbc = ev.run_dcbc_group(par_name,
                                              space=space,
-                                             test_data=ds,
+                                             test_data=dset,
                                              test_sess='all')
             # Concatenate results
             results = pd.concat([results, res_dcbc], ignore_index=True)
