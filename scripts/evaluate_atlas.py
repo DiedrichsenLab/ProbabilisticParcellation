@@ -152,7 +152,7 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
                 res_sub_sess['indivtrain_ind'] = indivtrain_ind
                 res_sub_sess['indivtrain_val'] = indivtrain_values
                 res_sub_sess['test_data'] = dset + '-Tseries'
-                res_dcbc = pd.concat(res_dcbc, res_sub_sess, index=[0])
+                res_dcbc = pd.concat(res_dcbc, res_sub_sess, ignore_index=True)
 
             results = pd.concat([results, res_dcbc], ignore_index=True)
 
