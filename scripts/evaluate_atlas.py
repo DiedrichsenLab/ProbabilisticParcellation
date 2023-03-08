@@ -321,11 +321,10 @@ def evaluate_existing(test_on='task', models=None):
                 # This can only be run on the Heavy server, not the GPU server
                 res_sub_sess = ev.run_dcbc_group(par_name,
                                                  space=space,
-                                                 test_data=dset,
+                                                 test_data=dset + 'Tseries',
                                                  test_sess='all',
                                                  tdata=tdata,
                                                  verbose=True)
-                res_sub_sess['test_data'] = dset + '-Tseries'
                 res_dcbc = pd.concat(
                     [res_dcbc, res_sub_sess], ignore_index=True)
             else:
@@ -467,11 +466,11 @@ if __name__ == "__main__":
     # evaluate_selected(test_on='task')
     # evaluate_selected(test_on='rest')
 
-    # ks = [10, 20, 34, 40, 68]
+    ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    # evaluate_models(ks, model_types=['all'], model_on=[
-    #                 'task'], test_on='tseries')
+    evaluate_models(ks, model_types=['all'], model_on=[
+                    'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
@@ -483,5 +482,5 @@ if __name__ == "__main__":
 
     # evaluate_existing(test_on=['task', 'rest'])
 
-    evaluate_existing(test_on=['tseries'])
+    # evaluate_existing(test_on=['tseries'])
     pass
