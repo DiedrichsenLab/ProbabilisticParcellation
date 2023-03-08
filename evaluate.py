@@ -440,9 +440,9 @@ def run_dcbc(model_names, tdata, atlas, train_indx, test_indx, cond_vec,
         Pgroup = pt.argmax(Prop, dim=0) + 1
         Pindiv = pt.argmax(U_indiv, dim=1) + 1
         dcbc_group = calc_test_dcbc(
-            Pgroup, tdata[:, test_indx, :], dist, verbose)
+            Pgroup, tdata[:, test_indx, :], dist, verbose=verbose)
         dcbc_indiv = calc_test_dcbc(
-            Pindiv, tdata[:, test_indx, :], dist, verbose)
+            Pindiv, tdata[:, test_indx, :], dist, verbose=verbose)
 
         # ------------------------------------------
         # Collect the information from the evaluation
