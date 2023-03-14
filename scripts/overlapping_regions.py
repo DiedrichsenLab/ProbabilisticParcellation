@@ -4,16 +4,11 @@ Script to analyze parcels using clustering and colormaps
 
 import pandas as pd
 import numpy as np
-from Functional_Fusion.dataset import *
-from scipy.linalg import block_diag
 import torch as pt
 import matplotlib.pyplot as plt
+import seaborn as sb
+from Functional_Fusion.dataset import *
 import ProbabilisticParcellation.util as ut
-import PcmPy as pcm
-import torch as pt
-from matplotlib.colors import ListedColormap
-from scipy.cluster.hierarchy import dendrogram, linkage
-from scipy.spatial.distance import squareform
 from copy import deepcopy
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
@@ -26,19 +21,98 @@ import generativeMRF.evaluation as ev
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def inspect_model_regions():
+def inspect_model_regions_68():
     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     info, model = ut.load_batch_best(mname)
     w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
     Prob = np.array(model.arrange.marginal_prob())
-
+    vol = Prob.sum(axis=1)
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
-
     spatial_sim = P @ P.T
-    pass
+    
+    D = pd.read_csv(ut.model_dir + '/Atlases/mixed_assignment_68_16.csv')
+    idx =D.parcel_orig_idx 
+    plt.figure(figsize=(16,8))
+    plt.subplot(1,2,1)
+    plt.imshow(w_cos_sim[idx,:][:,idx])
+    plt.subplot(1,2,2)
+    plt.imshow(spatial_sim[idx,:][:,idx])
+    P.sum(axis=1)
+    vol[idx]
+    pass 
+
+def inspect_model_regions_32():
+    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    info, model = ut.load_batch_best(mname)
+    w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
+    Prob = np.array(model.arrange.marginal_prob())
+    vol = Prob.sum(axis=1)
+    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
+    spatial_sim = P @ P.T
+    
+    D = pd.read_csv(ut.model_dir + '/Atlases/mixed_assignment_68_16.csv')
+    plt.figure(figsize=(16,8))
+    plt.subplot(1,2,1)
+    plt.imshow(w_cos_sim)
+    plt.subplot(1,2,2)
+    plt.imshow(spatial_sim)
+    P.sum(axis=1)
+    vol[idx]
+    pass 
+
+def individ_parcellation(mname): 
+    # Individual training dataset:
+    info, model = ut.load_batch_best(mname)
+    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
+                                  sess=['ses-s1'], type='CondHalf')
+
+    # Test data set:
+    tdata,tinfo,tds = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
+                                  sess=['ses-s2'], type='CondHalf')
+
+    idata = pt.tensor(idata,dtype=pt.float32)
+    tdata = pt.tensor(tdata,dtype=pt.float32)
+
+    # Build the individual training model on session 1:
+    m1 = deepcopy(model)
+    m1.emissions = [m1.emissions[0]]
+    m1.emissions[0].initialize(idata)
+    m1.initialize()
+    
+    emloglik = m1.emissions[0].Estep()
+    emloglik = emloglik.to(pt.float32)
+    Uhat, _ = m1.arrange.Estep(emloglik)
+
+    indx_group = pt.argmax(model.marginal_prob(),dim=0)
+    indx_indiv = pt.argmax(Uhat,dim=1)
+    indx_data = pt.argmax(emloglik,dim=1)
+
+    sn = 4
+    avrgD = pt.linalg.pinv(m1.emissions[0].X) @ idata[sn]
+    plt.figure()
+    plt.subplot(1,3,1)
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_data[sn],[29,30])
+    plt.subplot(1,3,2)
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_indiv[sn],[29,30])
+    plt.subplot(1,3,3)
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_group,[29,30])
+
+    return
+
+def calculate_alignment(V,data,indx,regions):
+    v=V[:,regions]
+    i = (indx==regions[0]) | (indx==regions[1])
+    D = data[:,i]
+    normD = np.sqrt((D**2).sum(dim=0))
+    nD = D/normD
+    
+    angle = v.T @ nD 
+    sb.scatterplot(angle[0],angle[1],hue=indx[i])
+    pass 
 
 if __name__ == "__main__":
-    inspect_model_regions()
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
+    individ_parcellation(mname)
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',
