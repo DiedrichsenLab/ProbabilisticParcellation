@@ -101,7 +101,7 @@ if __name__ == "__main__":
     #            rest_included=True, indiv_on_rest_only=True)
     # fit_models(ks=ks, fit_datasets=['loo'], rest_included=True)
 
-    # fit_asym_from_sym(
-    #     mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68')
     fit_asym_from_sym(
-        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed')
+        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
+    # fit_asym_from_sym(
+    #     mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed')

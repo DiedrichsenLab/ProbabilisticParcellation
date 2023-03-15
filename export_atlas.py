@@ -1,6 +1,6 @@
 """ Export_atlas.py
-Functionality to go from fitted model to a sharable atlas (nifti/gifti) 
-and colormap 
+Functionality to go from fitted model to a sharable atlas (nifti/gifti)
+and colormap
 """
 
 import numpy as np
@@ -16,6 +16,7 @@ import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 from copy import deepcopy
+import logging
 
 
 def save_cortex_cifti(fname):
@@ -35,7 +36,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     """Exports a new atlas map as a Nifti (probseg), Nifti (desg), Gifti, and lut-file.
 
     Args:
-        data (probabilities): Marginal probabilities of the arrangement model 
+        data (probabilities): Marginal probabilities of the arrangement model
         atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3, fs32k)
         cmap (ListedColormap): Colormap
         labels (list): List of labels for fields
@@ -77,15 +78,15 @@ def export_map(data, atlas, cmap, labels, base_name):
 
 
 def renormalize_probseg(probseg):
-    """ Renormalizes a probsegmentation file 
-    after resampling, so that the probabilies add up to 1 
+    """ Renormalizes a probsegmentation file
+    after resampling, so that the probabilies add up to 1
 
     Args:
-        probseg (nifti_img): 
+        probseg (nifti_img):
 
     Returns:
-        probseg_img (NiftiImage): renormalize Prob segmentation 
-        dseg_img (NiftiImage): desementation file 
+        probseg_img (NiftiImage): renormalize Prob segmentation
+        dseg_img (NiftiImage): desementation file
     """
     X = probseg.get_fdata()
     xs = np.sum(X, axis=3)
@@ -133,17 +134,17 @@ def resample_atlas(fname,
     nb.save(dnii, targ_dir + f'/atl-{fname}_space-{target_space}_dseg.nii')
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None, weighting=None):
+def colour_parcel(mname, sym=True, plot=True, labels=None, clusters=None, reorder=None, weighting=None):
     """
-    Analyzes the parcellation of a model, and performs clustering on the parcels.
+    Colours the parcellation of a model.
+    Derived from deprecated function in analyze_parcel in parcel_hierarchy, but without clustering.
 
     Args:
     - mname (str): path of the model to be analyzed.
-    - sym (bool): whether or not to symmetrize the connectivity matrix. Default is True.
+    - sym (bool): Generate similarity in a symmetric fashion? Defaults to True.
     - num_cluster (int): number of clusters to generate if agglomerative clustering is used. Default is 5.
-    - clustering (str): type of clustering to use. Either "agglomative" or "model_guided". Default is "agglomative".
-    - cluster_by (str): path to the model to use for guided clustering. Only required if clustering is "model_guided".
     - plot (bool): whether or not to generate plots. Default is True.
+    - clusters (ndarray): distorts color towards cluster mean
     - labels (ndarray): labels for the parcels, if they have already been generated. Default is None.
     - weighting (str): type of weighting to use for calculating parcel similarity. Default is None.
 
@@ -163,48 +164,21 @@ def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', clu
 
     # Get winner-take all parcels
     Prob = np.array(model.arrange.marginal_prob())
+    if reorder is not None:
+        Prob = Prob[reorder]
     parcel = Prob.argmax(axis=0) + 1
 
-    # Get parcel similarity:
-    w_cos_sym, _, _ = cl.parcel_similarity(
-        model, plot=True, sym=sym, weighting=weighting)
-
-    # Do Clustering:
-    if clustering == 'agglomative':
-        labels_new, clusters, leaves = cl.agglomative_clustering(
-            w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
-        while np.unique(clusters).shape[0] < 2:
-            num_cluster = num_cluster - 1
-            labels_new, clusters, _ = cl.agglomative_clustering(
-                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
-            logging.warning(
-                f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
-    if clustering == 'model_guided':
-        if cluster_by is None:
-            raise ('Need to specify model that guides clustering')
-        cluster_info, cluster_model = ut.load_batch_best(cluster_by)
-        clusters_half, clusters = cl.guided_clustering(
-            mname, cluster_by)
-        labels, cluster_counts = cl.cluster_labels(clusters)
-        print(
-            f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
-
-    # Make a colormap...
+    # Make a colormap.
     w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
     W = sc.calc_mds(w_cos_sim, center=True)
+    if reorder is not None:
+        W = W[reorder]
 
     # Define color anchors
     m, regions, colors = sc.get_target_points(atlas, parcel)
     cmap = sc.colormap_mds(W, target=(m, regions, colors),
                            clusters=clusters, gamma=0)
     sc.plot_colorspace(cmap(np.arange(model.K)))
-
-    # Replot the Clustering dendrogram, this time with the correct color map
-    if clustering == 'agglomative':
-        if labels is None:
-            labels = labels_new
-            cl.agglomative_clustering(
-                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
 
     plt.figure(figsize=(5, 10))
     cl.plot_parcel_size(Prob, cmap, labels, wta=True)

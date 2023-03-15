@@ -23,6 +23,7 @@ import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
+# from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
 import nitools as nt
 
@@ -30,14 +31,37 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 def export_asym_from_sym():
-    'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym'
     space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    assignment = pd.read_csv(
+        f'{ut.model_dir}/Atlases/{f_assignment}')
 
-    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
-        mname_fine, sym=True)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}')
+    labels = assignment['parcel_fine']
+    labels_left = labels + 'L'
+    labels_right = labels + 'R'
+    labels = ['0'] + labels_left.tolist() + labels_right.tolist()
+
+    order = assignment['parcel_orig_idx'].values
+    order = np.concatenate([order, order + 34])
+    cluster_names, clusters = np.unique(
+        assignment['domain'], return_inverse=True)
+    clusters = clusters + 1
+    clusters = np.concatenate([clusters, clusters])
+
+    Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
+        mname, sym=False, labels=labels, clusters=clusters, reorder=order)
+
+    # Get colour map from symmetric 68 model
+    _, cmap_sym, _ = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                 f'sym_MdPoNiIbWmDeSo_space-{space}_K-68' + '.lut')
+    cmap_sym = ListedColormap(cmap_sym)
+
+    ea.export_map(Prob, atlas.name, cmap_sym, labels,
+                  f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
+    print('Exported atlas to ' +
+          f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
+    pass
 
 
 def export_orig_68():
