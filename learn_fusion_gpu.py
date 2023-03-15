@@ -489,8 +489,8 @@ def fit_all_datasets(space='MNISymC2',
                     print(f'model {t} with K={k} already fitted as {fname}')
 
 
-def refit_model(model, new_info):
-    """Refits model.
+def refit_model(model, new_info, fit='emission', sym_new=None):
+    """Refits emission models.
 
     Args:
         model:      Model to be refitted
@@ -501,10 +501,28 @@ def refit_model(model, new_info):
 
     """
 
-    if type(model.arrange) is ar.ArrangeIndependentSymmetric:
+    if sym_new is None and type(model.arrange) is ar.ArrangeIndependentSymmetric:
         M = fm.FullMultiModel(model.arrange, model.emissions)
-    else:
-        M = fm.FullMultiModel(model.arrange, model.emissions)
+
+    elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
+        # Make arrangement model asymmetric
+        new_arrange = ar.ArrangeIndependent(model.K,
+                                            spatial_specific=model.arrange.spatial_specific,
+                                            remove_redundancy=model.arrange.rem_red,
+                                            )
+        new_arrange.logpi = model.arrange.logpi
+        M = fm.FullMultiModel(new_arrange, model.emissions)
+        M.nsubj = model.nsubj
+        M.n_emission = model.n_emission
+        M.nsubj_list = model.nsubj_list
+        M.subj_ind = model.subj_ind
+        if hasattr(model, 'ds_weight'):
+            M.ds_weight = model.ds_weight
+
+        # Update arrangement model parameters to get the symmetric log likelihoods into the asymmetric model
+        new_logpi = model.arrange.map_to_full(model.arrange.logpi)
+        M.arrange.logpi = new_logpi
+        M.arrange.set_param_list(['logpi'])
 
     model_settings = {'Models_01': [True, True, False],
                       'Models_02': [False, True, False],
@@ -516,9 +534,9 @@ def refit_model(model, new_info):
     join_sess = model_settings[new_info.model_type][1]
     join_sess_part = model_settings[new_info.model_type][2]
 
-    datasets = new_info.datasets.strip("'[").strip("]'").split("' '")
-    sessions = new_info.sess.strip("'[").strip("]'").split("' '")
-    types = new_info.type.strip("'[").strip("]'").split("' '")
+    datasets = new_info.datasets
+    sessions = new_info.sess
+    types = new_info.type
 
     data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
                                                          atlas=new_info.atlas,
@@ -526,27 +544,42 @@ def refit_model(model, new_info):
                                                          type=types,
                                                          join_sess=join_sess,
                                                          join_sess_part=join_sess_part)
-
     # Attach the data
     M.initialize(data, subj_ind=subj_ind)
 
-    # Refit emission models
-    print(f'Freezing arrangement model and fitting emission models...\n')
+    if fit == 'emission':
 
-    M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
-                           fit_emission=True,
-                           fit_arrangement=False,
-                           first_evidence=True)
+        # Refit emission models
+        print(f'Freezing arrangement model and fitting emission models...\n')
 
-    # make info from a Series back to a dataframe
-    new_info = pd.DataFrame(new_info.to_dict(), index=[0])
-    new_info['loglik'] = ll[-1].item()
+        M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
+                               fit_emission=True,
+                               fit_arrangement=False,
+                               first_evidence=True)
+
+        # make info from a Series back to a dataframe
+        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+        new_info['loglik'] = ll[-1].item()
+
+    elif fit == 'arrangement':
+        # Refit arrangement model
+        print(f'Freezing emission models and fitting arrangement model...\n')
+
+        M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
+                               fit_emission=False,
+                               fit_arrangement=True,
+                               first_evidence=True)
+
+        # make info from a Series back to a dataframe
+        new_info = new_info.to_frame().T
+        new_info['loglik'] = ll[-1].item()
+
     # Plot ll
     #
     # pt.Tensor.ndim = property(lambda self: len(self.shape))
     # x = pt.linspace(0,ll.shape[0], ll.shape[0])
     # plt.figure()
-    # plt.plot(x[1:], ll[1:])
+    # plt.plot(x[0:], ll[0:])
 
     return M, new_info
 

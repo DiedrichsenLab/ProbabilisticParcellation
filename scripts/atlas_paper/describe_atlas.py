@@ -20,165 +20,129 @@ import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
-import ProbabilisticParcellation.scripts.fit_C2_from_C3 as ft
+import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
+# from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
 import nitools as nt
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def correlate(X, Y):
-    """ Correlate X and Y numpy arrays after standardizing them"""
-    X = util.zstandarize_ts(X)
-    Y = util.zstandarize_ts(Y)
-    return Y.T @ X / X.shape[0]
+def export_asym_from_sym():
+    space = 'MNISymC2'
+    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    assignment = pd.read_csv(
+        f'{ut.model_dir}/Atlases/{f_assignment}')
+
+    labels = assignment['parcel_fine']
+    labels_left = labels + 'L'
+    labels_right = labels + 'R'
+    labels = ['0'] + labels_left.tolist() + labels_right.tolist()
+
+    order = assignment['parcel_orig_idx'].values
+    order = np.concatenate([order, order + 34])
+    cluster_names, clusters = np.unique(
+        assignment['domain'], return_inverse=True)
+    clusters = clusters + 1
+    clusters = np.concatenate([clusters, clusters])
+
+    Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
+        mname, sym=False, labels=labels, clusters=clusters, reorder=order)
+
+    # Get colour map from symmetric 68 model
+    _, cmap_sym, _ = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                 f'sym_MdPoNiIbWmDeSo_space-{space}_K-68' + '.lut')
+    cmap_sym = ListedColormap(cmap_sym)
+
+    ea.export_map(Prob, atlas.name, cmap_sym, labels,
+                  f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
+    print('Exported atlas to ' +
+          f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
+    pass
 
 
-def get_correlated_cortex(mname, weighting=False):
-    """ Get the cortex correlated with the parcel profiles"""
-    # Load model
-    info, model = ut.load_batch_best(mname)
-    info = fp.recover_info(info, model, mname)
+def export_orig_68():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
 
-    # Get parcel profile
-    profile_file = f'{ut.model_dir}/Atlases/Profiles/{mname.split("/")[-1]}_profile.tsv'
-    if Path(profile_file).exists():
-        parcel_profiles = pd.read_csv(
-            profile_file, sep="\t"
-        )
-    else:
-        parcel_profiles, profile_data = fp.get_profiles(model, info)
-
-    # Make profile into numpy array
-    if isinstance(parcel_profiles, pd.DataFrame):
-        idx_start = parcel_profiles.columns.tolist().index('condition') + 1
-        parcel_names = parcel_profiles.columns[idx_start:idx_start + info.K]
-        profile = parcel_profiles.iloc[:, idx_start:idx_start + info.K]
-        profile = profile.values
-
-    # Get cortical data
-    dat = []
-    for d, dataset in enumerate(info.datasets):
-
-        D, d_info, dataset = ds.get_dataset(
-            ut.base_dir, dataset, atlas='fs32k', sess=info.sess[d], type=info.type[d])
-        D = np.nanmean(D, axis=0)
-        if re.findall('[A-Z][^A-Z]*', info.type[d])[1] == 'Half':
-            # Average across the two halves
-            D = np.nanmean(
-                np.stack([D[d_info.half == 1, :], D[d_info.half == 2, :]]), axis=0)
-
-        # Weigh the V vectors by kappa (certainty) and the square root of the number of subjects
-        # This is to make the profiles comparable across datasets with different number of subjects
-        if weighting == True:
-            em = model.emissions[d]
-            D = D * em.kappa.item() * np.sqrt(em.num_subj)
-
-        dat.append(D)
-    data = np.concatenate(dat, axis=0)
-
-    # Correlate parcel profiles with cortical data
-    cortex = correlate(data, profile)
-
-    return cortex
+    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
+        mname_fine, sym=True)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}')
 
 
-def get_modelled_cortex(mname, mname_new=None, symmetry=None):
-    model, info = ft.refit_model_in_new_space(
-        mname, mname_new=mname_new, new_space='fs32k', symmetry=symmetry)
-    cortex = model.arrange.marginal_prob()
+def make_NettekovenSym68c32():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new = 'Models_03/NettekovenSym68c32'
+    f_assignment = 'mixed_assignment_68_16.csv'
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment='mixed_assignment_68_16.csv',
+                                     refit_model=True, save_model=True)
 
-    return cortex, info
-
-
-def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed', symmetry=None):
-    mname_new = f'{mname.split("/")[-1]}_cortex-{method}'
-
-    # Get corresponding cortical parcels
-    if method == 'corr':
-        cortex = get_correlated_cortex(mname)
-    elif method == 'model':
-        cortex, info = get_modelled_cortex(
-            mname, mname_new=mname_new, symmetry=symmetry)
-
-    lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
-    if Path(lut_file).exists():
-        index, cmap, labels = nt.read_lut(lut_file)
-    if labels[0] == '0':
-        labels = labels[1:]
-
-    # Get the fs32k atlas
-    atlas, _ = am.get_atlas('fs32k', ut.atlas_dir)
-
-    C = atlas.data_to_cifti(cortex, labels)
-    nb.save(
-        C, f'{ut.model_dir}/Atlases/{mname_new}.dscalar.nii')
+    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
+    ea.resample_atlas('NettekovenSym68c32',
+                      atlas='MNISymC2',
+                      target_space='SUIT')
 
 
-def export_cortex(mname):
+def profile_NettekovenSym68c32():
+    space = 'MNISymC2'
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_new = 'Models_03/NettekovenSym68c32'
+    f_assignment = 'mixed_assignment_68_16'
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment=f_assignment,
+                                     refit_model=False, save_model=False)
 
-    info, model = ut.load_batch_best(mname)
-    info = fp.recover_info(info, model, mname)
+    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+    info, model = ut.load_batch_best(mname_new)
+    info = fp.recover_info(info, model, mname_new)
+    fp.export_profile(mname_new, info, model, labels)
+    features = fp.cognitive_features(mname_new)
 
-    lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
-    if Path(lut_file).exists():
-        index, cmap, labels = nt.read_lut(lut_file)
 
-    base_name = f'{ut.model_dir}/Atlases/{mname_new}'
+def export_model_merged(mname_new):
+    space = mname_new.split('space-')[1].split('_')[0]
+    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    f_assignment = 'mixed_assignment_68_16'
+    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+                                     mname_new=mname_new,
+                                     f_assignment=f_assignment,
+                                     refit_model=False, save_model=False)
 
-    if not isinstance(cmap, np.ndarray):
-        cmap = cmap(np.arange(cmap.N))
+    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
+        mname_new, sym=True, labels=labels)
+    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+    info, model = ut.load_batch_best(mname_new)
+    info = fp.recover_info(info, model, mname_new)
 
-    map_space = 'fs32k'
-    atlas, _ = am.get_atlas(map_space, ut.atlas_dir)
-    surf_probseg = model.arrange.marginal_prob()
-    surf_parcel = np.argmax(surf_probseg, axis=0) + 1
+    ea.export_map(Prob, atlas.name, cmap, labels,
+                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
 
-    # get the gifti of the mask
-    gii_mask = [nb.load(ut.atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-L_mask.label.gii'),
-                nb.load(ut.atlas_dir + f'/tpl-fs32k/tpl-fs32k_hemi-R_mask.label.gii')]
 
-    gifti_img = []
-    for i, name in zip([0, 1], ['CortexLeft', 'CortexRight']):
-        # get data for the hemisphere
-        data = surf_probseg[:, int(surf_probseg.shape[1] / 2)].T
-
-        # get the labels for the hemisphere
-        # half = int(len(labels[1:]) / 2)
-        # labels_hem = labels[1:][:half]
-        # labels_hem = [l[:2] for l in labels_hem]
-
-        # # get the map for the contrast of interest
-        # con_map = data[info_con.cond_num.values - 1, :]
-
-        # # get threshold value (ignoring nans)
-        # percentile_value = np.nanpercentile(con_map, q=threshold)
-
-        # # apply threshold
-        # thresh_data = con_map > percentile_value
-        # # convert 0 to nan
-        # thresh_data[thresh_data != False] = np.nan
-        # create label gifti
-        gifti_img.append(nt.make_label_gifti(
-            data, anatomical_struct=name, label_names=labels[1:]))
-    nb.save(gifti_img[0], filename='test.label.gii')
-
-    Gifti = nt.make_label_gifti(surf_parcel.reshape(-1, 1),
-                                anatomical_struct=[
-                                    'CortexLeft', 'CortexRight'],
-                                label_names=labels,
-                                label_RGBA=cmap)
-    # nb.save(dseg, base_name + f'_dseg.nii')
-    # nb.save(probseg, base_name + f'_probseg.nii')
-    nb.save(Gifti, base_name + '_dseg.label.gii')
-    nt.save_lut(base_name, np.arange(len(labels)), cmap[:, 0:4], labels)
-    print(f'Exported {base_name}.')
-
-    for i, h in enumerate(['L', 'R']):
-        nb.save(roi_gifti[i], save_dir + '/tpl-fs32k' +
-                f'/vertical-{condition_1}_vs_{condition_2}.32k.{h}.label.gii')
+def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
+    plt.figure(figsize=(7, 10))
+    ut.plot_model_pmaps(Prob, atlas,
+                        labels=labels[1:],
+                        subset=subset,
+                        grid=(3, 2))
+    plt.savefig(f'pmaps_01.png', format='png')
+    pass
 
 
 if __name__ == "__main__":
@@ -196,14 +160,7 @@ if __name__ == "__main__":
 
     # features = fp.cognitive_features(mname)
 
-    # -- Get correlated cortex --
-    method = 'corr'
-    symmetry = 'sym'
-    cortex = get_cortex(mname=mname, method=method)
-    # # cortex = get_cortex(mname=mname, method=method, symmetry=symmetry)
-
-    # mname_new = '_'.join(mname.split("/")[-1].split("_")[1:])
-    # mname_new = f'Models_03/{symmetry}_{mname_new}_cortex-{method}'
-    # export_cortex(mname=mname_new)
+    # --- Export asymmetric model fitted from symmetric model ---
+    export_asym_from_sym()
 
     pass

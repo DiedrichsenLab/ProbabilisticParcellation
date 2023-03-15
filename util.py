@@ -20,8 +20,8 @@ if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+# if not Path(model_dir).exists():
+#     model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(model_dir).exists():
     model_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(model_dir).exists():
@@ -59,6 +59,49 @@ def report_cuda_memory():
         mr = pt.cuda.memory_reserved() / 1024 / 1024
         print(
             f'Allocated:{ma:.2f} MB, MaxAlloc:{mma:.2f} MB, Reserved {mr:.2f} MB')
+
+
+def recover_info(info, model=None, mname=None, info_type='model_info'):
+    """Recovers info fields that were lists from tsv-saved strings and adds model type information.
+    Args:
+        info: Model info loaded form tsv
+    Returns:
+        info: Model info with list fields.
+
+    """
+    if info_type == 'model_info':
+        variables = ['datasets', 'sess', 'type']
+        # Recover model info from tsv file format
+        for var in variables:
+            if not isinstance(info[var], list):
+                v = eval(info[var])
+                if len(model.emissions) > 2 and len(v) == 1:
+                    v = eval(info[var].replace(" ", ","))
+                info[var] = v
+
+        model_settings = {
+            "Models_01": [True, True, False],
+            "Models_02": [False, True, False],
+            "Models_03": [True, False, False],
+            "Models_04": [False, False, False],
+            "Models_05": [False, True, True],
+        }
+
+        info["model_type"] = f'Models_{mname.split("Models_")[1].split("/")[0]}'
+        uniform_kappa = model_settings[info.model_type][0]
+        joint_sessions = model_settings[info.model_type][1]
+
+        info["uniform_kappa"] = uniform_kappa
+        info["joint_sessions"] = joint_sessions
+    elif info_type == 'evaluation_info':
+        var = 'train_data'
+        if not isinstance(info[var], list):
+            v = eval(info[var])
+            if len(v) == 1 and len(re.findall('[A-Z][^A-Z]*', v[0])) > 5:
+                v = info[var].strip("[]'").split("' '")
+            info[var] = v
+
+    return info
 
 
 def cal_corr(Y_target, Y_source):
