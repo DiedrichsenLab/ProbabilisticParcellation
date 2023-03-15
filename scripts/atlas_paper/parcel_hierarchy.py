@@ -27,73 +27,6 @@ import logging
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def analyze_parcel(mname, sym=True, num_cluster=5, clustering='agglomative', cluster_by=None, plot=True, labels=None, weighting=None):
-
-    # Get model and atlas.
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
-    info, model = ut.load_batch_best(mname)
-    atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
-
-    # Get winner-take all parcels
-    Prob = np.array(model.arrange.marginal_prob())
-    parcel = Prob.argmax(axis=0) + 1
-
-    # Get parcel similarity:
-    w_cos_sym, _, _ = cl.parcel_similarity(
-        model, plot=True, sym=sym, weighting=weighting)
-
-    # Do Clustering:
-    if clustering == 'agglomative':
-        labels_new, clusters, leaves = cl.agglomative_clustering(
-            w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
-        while np.unique(clusters).shape[0] < 2:
-            num_cluster = num_cluster - 1
-            labels_new, clusters, _ = cl.agglomative_clustering(
-                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=False)
-            logging.warning(
-                f' Number of desired clusters too small to find at least two clusters. Set number of clusters to {num_cluster} and found {np.unique(clusters).shape[0]} clusters')
-    if clustering == 'model_guided':
-        if cluster_by is None:
-            raise ('Need to specify model that guides clustering')
-        cluster_info, cluster_model = ut.load_batch_best(cluster_by)
-        clusters_half, clusters = cl.guided_clustering(
-            mname, cluster_by)
-        labels, cluster_counts = cl.cluster_labels(clusters)
-        print(
-            f'Found {len(cluster_counts)} clusters with no of regions: {cluster_counts}\n')
-
-    # Make a colormap...
-    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
-    W = sc.calc_mds(w_cos_sim, center=True)
-
-    # Define color anchors
-    m, regions, colors = sc.get_target_points(atlas, parcel)
-    cmap = sc.colormap_mds(W, target=(m, regions, colors),
-                           clusters=clusters, gamma=0)
-    sc.plot_colorspace(cmap(np.arange(model.K)))
-
-    # Replot the Clustering dendrogram, this time with the correct color map
-    if clustering == 'agglomative':
-        if labels is None:
-            labels = labels_new
-            cl.agglomative_clustering(
-                w_cos_sym, sym=sym, num_clusters=num_cluster, plot=True, cmap=cmap)
-
-    plt.figure(figsize=(5, 10))
-    cl.plot_parcel_size(Prob, cmap, labels, wta=True)
-
-    # Plot the parcellation
-    if plot:
-        ax = ut.plot_data_flat(Prob, atlas.name, cmap=cmap,
-                               dtype='prob',
-                               labels=labels,
-                               render='plotly')
-        ax.show()
-
-    return Prob, parcel, atlas, labels, cmap
-
-
 def merge_clusters(ks, space='MNISymC3'):
     # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
     # --- Merge parcels at K=20, 34 & 40 ---
@@ -109,16 +42,6 @@ def merge_clusters(ks, space='MNISymC3'):
             mname_fine, mname_coarse, refit_model=True, save_model=True)
         merged_models.append(mname_merged)
     return merged_models
-
-
-def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
-    plt.figure(figsize=(7, 10))
-    ut.plot_model_pmaps(Prob, atlas,
-                        labels=labels[1:],
-                        subset=subset,
-                        grid=(3, 2))
-    plt.savefig(f'pmaps_01.png', format='png')
-    pass
 
 
 def query_similarity(mname, label):
@@ -142,7 +65,7 @@ def plot_model_taskmaps(mname, n_highest=3, n_lowest=2, datasets=['Somatotopic',
         f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     )
     atlas = mname.split('space-')[1].split('_')[0]
-    Prob, parcel, _, labels, cmap = analyze_parcel(mname, sym=True)
+    Prob, parcel, _, labels, cmap = ea.analyze_parcel(mname, sym=True)
     labels_sorted = sorted(labels)
 
     for dataset in datasets:
@@ -205,77 +128,6 @@ def save_taskmaps(mname):
     plt.savefig(f'tmaps_01.png', format='png')
 
 
-def export_orig_68():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_fine, sym=True)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}')
-
-
-def make_NettekovenSym68c32():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new = 'Models_03/NettekovenSym68c32'
-    f_assignment = 'mixed_assignment_68_16.csv'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment='mixed_assignment_68_16.csv',
-                                     refit_model=True, save_model=True)
-
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
-    ea.resample_atlas('NettekovenSym68c32',
-                      atlas='MNISymC2',
-                      target_space='SUIT')
-
-
-def profile_NettekovenSym68c32():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new = 'Models_03/NettekovenSym68c32'
-    f_assignment = 'mixed_assignment_68_16'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment=f_assignment,
-                                     refit_model=False, save_model=False)
-
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
-    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
-    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
-    info, model = ut.load_batch_best(mname_new)
-    info = fp.recover_info(info, model, mname_new)
-    fp.export_profile(mname_new, info, model, labels)
-    features = fp.cognitive_features(mname_new)
-
-
-def export_model_merged(mname_new):
-    space = mname_new.split('space-')[1].split('_')[0]
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    f_assignment = 'mixed_assignment_68_16'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment=f_assignment,
-                                     refit_model=False, save_model=False)
-
-    Prob, parcel, atlas, labels, cmap = analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
-    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
-    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
-    info, model = ut.load_batch_best(mname_new)
-    info = fp.recover_info(info, model, mname_new)
-
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
-
-
 if __name__ == "__main__":
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
@@ -310,11 +162,11 @@ if __name__ == "__main__":
 
     # --- Export merged models ---
 
-    model_names = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
+    # model_names = [
+    #     'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
 
-    for model_name in model_names:
-        # --- Export merged model ---
-        export_model_merged(model_name)
+    # for model_name in model_names:
+    #     # --- Export merged model ---
+    #     export_model_merged(model_name)
 
 pass
