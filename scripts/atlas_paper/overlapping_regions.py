@@ -60,7 +60,7 @@ def inspect_model_regions_32():
     vol[idx]
     pass 
 
-def individ_parcellation(mname): 
+def individ_parcellation(mname,sn=0,regions = [29,30],plot='hist'): 
     # Individual training dataset:
     info, model = ut.load_batch_best(mname)
     idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
@@ -87,32 +87,53 @@ def individ_parcellation(mname):
     indx_indiv = pt.argmax(Uhat,dim=1)
     indx_data = pt.argmax(emloglik,dim=1)
 
-    sn = 4
+    uni, countsG = np.unique(indx_group, return_counts=True)
+    uni, countsI = np.unique(indx_indiv, return_counts=True)
+    countsI = countsI / 24
+
     avrgD = pt.linalg.pinv(m1.emissions[0].X) @ idata[sn]
-    plt.figure()
+    plt.figure(figsize=(17,6))
     plt.subplot(1,3,1)
-    calculate_alignment(m1.emissions[0].V,avrgD,indx_data[sn],[29,30])
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_data[sn],regions,plot)
     plt.subplot(1,3,2)
-    calculate_alignment(m1.emissions[0].V,avrgD,indx_indiv[sn],[29,30])
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_indiv[sn],regions,plot)
     plt.subplot(1,3,3)
-    calculate_alignment(m1.emissions[0].V,avrgD,indx_group,[29,30])
+    calculate_alignment(m1.emissions[0].V,avrgD,indx_group,regions,plot)
 
     return
 
-def calculate_alignment(V,data,indx,regions):
+def calculate_alignment(V,data,indx,regions,plot='scatter'):
     v=V[:,regions]
+    cos_ang = v[:,0]@v[:,1]
+
+
     i = (indx==regions[0]) | (indx==regions[1])
     D = data[:,i]
     normD = np.sqrt((D**2).sum(dim=0))
     nD = D/normD
     
     angle = v.T @ nD 
-    sb.scatterplot(angle[0],angle[1],hue=indx[i])
+    dA =angle[0]-angle[1] # Difference in angle
+    
+    if plot=='scatter':
+        sb.scatterplot(dA,(angle[0]+angle[1])/2,hue=indx[i],palette='tab10')
+        plt.axvline(cos_ang/2)
+        plt.axvline(-cos_ang/2)
+    elif plot=='hist':        
+        sb.histplot(x=dA,hue=indx[i],element='step',
+                    palette='tab10',
+                    bins = np.linspace(-0.5,0.5,29))
+        plt.axvline(cos_ang/2)
+        plt.axvline(-cos_ang/2)
     pass 
+    
+    for r in range(2):
+        indx=
+
 
 if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
-    individ_parcellation(mname)
+    individ_parcellation(mname,sn=1,regions=[28,29])
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',

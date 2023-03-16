@@ -13,7 +13,7 @@ import sys
 from util import *
 import torch as pt
 from ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas import ARI_voxelwise
-
+from sklearn.metrics import adjusted_rand_score
 
 def test_same_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
     # load models
@@ -27,6 +27,15 @@ def test_same_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISy
     return
 
 
+def test_ARI(): 
+    a = pt.tensor([1,2,3,1,2,3,1,2,3,0,1,0,1])
+    b = pt.tensor([0,0,0,1,2,1,1,2,3,1,1,0,1])
+    x=adjusted_rand_score(a,b)
+    y=ev.ARI(a,b).item()
+    pass
+
+
 if __name__ == "__main__":
-    test_same_parcellation_ari()
+    test_ARI()
+    # test_same_parcellation_ari()
     pass
