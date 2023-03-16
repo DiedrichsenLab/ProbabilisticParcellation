@@ -30,27 +30,62 @@ import nitools as nt
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
-def export_asym_from_sym():
-    space = 'MNISymC2'
-    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym'
+def reorder_selected():
+    mnames = [
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym',
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym'
+    ]
+
     f_assignment = 'mixed_assignment_68_16.csv'
+    for mname in mnames:
+        symmetry = mname.split('/')[1].split('_')[0]
+        if symmetry == 'sym':
+            sym = True
+        else:
+            sym = False
+        model_reordered = ea.reorder_model(
+            mname, sym=sym, assignment=f_assignment, save_model=True)
+
+
+def export_selected():
+    mnames = [
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
+        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym_reordered',
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+    ]
+    for mname in mnames:
+        export(mname)
+
+
+def export(mname, sym=False):
+
+    space = mname.split('space-')[1].split('_')[0]
+    symmetry = mname.split('/')[1].split('_')[0]
+    if symmetry == 'sym':
+        sym = True
+    f_assignment = 'mixed_assignment_68_16.csv'
+
+    # Get assigned labels & clusters
     assignment = pd.read_csv(
         f'{ut.model_dir}/Atlases/{f_assignment}')
 
     labels = assignment['parcel_fine']
-    labels_left = labels + 'L'
-    labels_right = labels + 'R'
-    labels = ['0'] + labels_left.tolist() + labels_right.tolist()
-
-    order = assignment['parcel_orig_idx'].values
-    order = np.concatenate([order, order + 34])
     cluster_names, clusters = np.unique(
         assignment['domain'], return_inverse=True)
     clusters = clusters + 1
     clusters = np.concatenate([clusters, clusters])
 
+    # Extend symmetric labels to both hemispheres
+    labels_left = labels + 'L'
+    labels_right = labels + 'R'
+    labels = ['0'] + labels_left.tolist() + labels_right.tolist()
+
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname, sym=False, labels=labels, clusters=clusters, reorder=order)
+        mname, labels=labels, clusters=clusters)
 
     # Get colour map from symmetric 68 model
     _, cmap_sym, _ = nt.read_lut(ut.model_dir + '/Atlases/' +
@@ -160,7 +195,9 @@ if __name__ == "__main__":
 
     # features = fp.cognitive_features(mname)
 
+    # --- Reorder selected models according to our assignment ---
+    # reorder_selected()
     # --- Export asymmetric model fitted from symmetric model ---
-    export_asym_from_sym()
+    export_selected()
 
     pass

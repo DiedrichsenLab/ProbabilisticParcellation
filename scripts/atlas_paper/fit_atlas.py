@@ -34,7 +34,7 @@ def fit_asym_from_sym(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'):
     # Freeze emission model and fit arrangement model
     M, new_info = lf.refit_model(m, inf, fit='arrangement', sym_new='asym')
     # save new model
-    mname_new = f'{mname}_arrange-asym'
+    mname_new = f'asym_{mname.split('sym_')[1]}_arrange-asym'
     with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([M], file)
         # save new info
