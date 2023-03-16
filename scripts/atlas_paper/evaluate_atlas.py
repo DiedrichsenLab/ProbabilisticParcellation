@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Scripts for functional fusion model paper ONLY!
-It may not capatible with other major functions, use with caution!
-
-Created on 12/13/2022 at 12:39 PM
-Author: dzhi
+"""Scripts for atlas evaluation
 """
 from time import gmtime
 from pathlib import Path
