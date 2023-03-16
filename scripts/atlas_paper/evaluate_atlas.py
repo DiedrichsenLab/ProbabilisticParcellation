@@ -327,6 +327,39 @@ def evaluate_existing(test_on='task', models=None):
     pass
 
 
+def ARI_voxelwise(U, Uhat, sparse=True):
+    """Compute the 1 - (adjusted rand index) between the two parcellations
+    Args:
+        U: The true U's
+        Uhat: The estimated U's from fitted model
+    Returns:
+        the adjusted rand index score
+    """
+    # Get info from both U and Uhat
+    sameReg_U = (U[:, None] == U).int()
+    sameReg_Uhat = (Uhat[:, None] == Uhat).int()
+    sameReg_U = sameReg_U.fill_diagonal_(0)
+    sameReg_Uhat = sameReg_Uhat.fill_diagonal_(0)
+
+    n_11 = (sameReg_U * sameReg_Uhat).sum()
+    tmp = (1 - sameReg_U) * (1 - sameReg_Uhat)
+    n_00 = tmp.fill_diagonal_(0).sum()
+    tmp = sameReg_U - sameReg_Uhat
+    tmp[tmp < 0] = 0
+    n_10 = tmp.sum()
+    tmp = sameReg_Uhat - sameReg_U
+    tmp[tmp < 0] = 0
+    n_01 = tmp.sum()
+
+    # Special cases: empty data or full agreement (tn, fp), (fn, tp)
+    if n_01 == 0 and n_10 == 0:
+        return pt.tensor(1.0)
+
+    ari = 1 - 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
+                                                   * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
+    return ari
+
+
 def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
     """
     Compare models trained on different datasets on their Adjusted Rand Index (ARI)
