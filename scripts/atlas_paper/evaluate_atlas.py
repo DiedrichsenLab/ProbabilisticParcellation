@@ -327,37 +327,52 @@ def evaluate_existing(test_on='task', models=None):
     pass
 
 
-def ARI_voxelwise(U, Uhat, sparse=True):
-    """Compute the 1 - (adjusted rand index) between the two parcellations
+def ARI_voxelwise(U1, U2):
+    """Compute the adjusted rand index between two parcellations for each voxel.
     Args:
-        U: The true U's
-        Uhat: The estimated U's from fitted model
+        U1: First parcellation (usually estimatted Us from fitted model 1)
+        U2: Second parcellation (usually estimatted Us from fitted model 2)
     Returns:
-        the adjusted rand index score
+        the adjusted rand index per voxel
     """
-    # Get info from both U and Uhat
-    sameReg_U = (U[:, None] == U).int()
-    sameReg_Uhat = (Uhat[:, None] == Uhat).int()
-    sameReg_U = sameReg_U.fill_diagonal_(0)
-    sameReg_Uhat = sameReg_Uhat.fill_diagonal_(0)
+    # Get info from both U1 and U2
+    sameReg_U1 = (U1[:, None] == U1).int()
+    sameReg_U2 = (U2[:, None] == U2).int()
+    sameReg_U1 = sameReg_U1.fill_diagonal_(0)
+    sameReg_U2 = sameReg_U2.fill_diagonal_(0)
 
-    n_11 = (sameReg_U * sameReg_Uhat).sum()
-    tmp = (1 - sameReg_U) * (1 - sameReg_Uhat)
-    n_00 = tmp.fill_diagonal_(0).sum()
-    tmp = sameReg_U - sameReg_Uhat
+    n_11 = (sameReg_U1 * sameReg_U2)
+    tmp = (1 - sameReg_U1) * (1 - sameReg_U2)
+    n_00 = tmp.fill_diagonal_(0)
+    tmp = sameReg_U1 - sameReg_U2
     tmp[tmp < 0] = 0
-    n_10 = tmp.sum()
-    tmp = sameReg_Uhat - sameReg_U
+    n_10 = tmp
+    tmp = sameReg_U2 - sameReg_U1
     tmp[tmp < 0] = 0
-    n_01 = tmp.sum()
+    n_01 = tmp
 
     # Special cases: empty data or full agreement (tn, fp), (fn, tp)
-    if n_01 == 0 and n_10 == 0:
+    # Loop through entries in n_01 and n_10 and fill with 1 if both are 0
+
+    if pt.all(n_01 == 0) and pt.all(n_10 == 0):
         return pt.tensor(1.0)
 
     ari = 1 - 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
                                                    * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
     return ari
+
+
+def compare_models_voxelwise(mname_A, mname_B):
+    # load models
+    info_a, model_a = ut.load_batch_best(mname_A)
+    info_b, model_b = ut.load_batch_best(mname_B)
+
+    ari_voxelwise = ARI_voxelwise(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
+        model_b.arrange.marginal_prob(), dim=0))
+
+    print(f'ARI {mname_A} vs {mname_B}: {ari_group.item():.3f}')
+
+    pass
 
 
 def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
@@ -487,11 +502,11 @@ if __name__ == "__main__":
     # evaluate_selected(test_on='task')
     # evaluate_selected(test_on='rest')
 
-    ks = [10, 20, 34, 40, 68]
+    # ks = [10, 20, 34, 40, 68]
     # evaluate_models(ks, model_types=['loo'], model_on=[
     #                 'task'], test_on='task')
-    evaluate_models(ks, model_types=['all'], model_on=[
-                    'task'], test_on='tseries')
+    # evaluate_models(ks, model_types=['all'], model_on=[
+    # 'task'], test_on='tseries')
 
     # evaluate_existing(test_on='task')
 
@@ -505,5 +520,9 @@ if __name__ == "__main__":
 
     # evaluate_existing(test_on=['tseries'])
 
-    compare_existing()
+    # compare_existing()
+
+    mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+    ari = compare_models_voxelwise(mname1, mname2)
     pass
