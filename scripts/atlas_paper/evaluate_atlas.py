@@ -324,23 +324,18 @@ def evaluate_existing(test_on='task', models=None):
 
 
 def ARI_voxelwise(U_1, U_2):
-    """Compute the adjusted rand index between two parcellations for voxel i and all other voxels.
+    """Compute the adjusted rand index between two parcellations for all voxels.
     Args:
         U_1: First parcellation (usually estimated Us from fitted model 1)
         U_2: Second parcellation (usually estimated Us from fitted model 2)
-        i: Index of voxel of interest
     Returns:
-        Vector containing the adjusted rand index for voxel i and all other voxels
+        Vector containing the adjusted rand index for all voxels
     """
     # Initialize matrices
     sameReg_U_1 = (U_1[:, None] == U_1).int()
     sameReg_U_2 = (U_2[:, None] == U_2).int()
     sameReg_U_1.fill_diagonal_(0)
     sameReg_U_2.fill_diagonal_(0)
-    n_11 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
-    n_00 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
-    n_10 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
-    n_01 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
 
     # Compute ARI for each voxel
     # Initialize vector
@@ -382,57 +377,18 @@ def ARI_voxelwise(U_1, U_2):
     return ARI_voxelwise
 
 
-# def ARI_voxelwise(U_1, U_2):
-#     """Compute the adjusted rand index between two parcellations for each voxel.
-#     Args:
-#         U_1: First parcellation (usually estimatted Us from fitted model 1)
-#         U_2: Second parcellation (usually estimatted Us from fitted model 2)
-#     Returns:
-#         the adjusted rand index per voxel
-#     """
-#     # Get matrix indicating if any two voxels are in the same parcel (for both both U_1 and U_2, respectively)
-#     sameReg_U_1 = (U_1[:, None] == U_1).int()
-#     sameReg_U_2 = (U_2[:, None] == U_2).int()
-#     sameReg_U_1 = sameReg_U_1.fill_diagonal_(0)
-#     sameReg_U_2 = sameReg_U_2.fill_diagonal_(0)
-
-#     # Get voxel pairs that are in the same parcel in both U_1 and U_2
-#     n_11 = (sameReg_U_1 * sameReg_U_2).float()
-
-#     # Get voxel pairs that are in different parcels in both U_1 and U_2
-#     tmp = (1 - sameReg_U_1) * (1 - sameReg_U_2)
-#     n_00 = tmp.fill_diagonal_(0).float()
-
-#     # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
-#     tmp = sameReg_U_1 - sameReg_U_2
-#     tmp[tmp < 0] = 0
-#     n_10 = tmp.float()
-
-#     # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
-#     tmp = sameReg_U_2 - sameReg_U_1
-#     tmp[tmp < 0] = 0
-#     n_01 = tmp.float()
-
-#     # Special cases: empty data or full agreement (tn, fp), (fn, tp)
-#     if pt.all(n_01 == 0) and pt.all(n_10 == 0):
-#         return pt.ones((U_1.shape[1], U_2.shape[1]))
-
-#     ari = 1 - 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
-#                                                    * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
-#     return ari
-
-
-def compare_models_voxelwise(mname_A, mname_B):
+def compare_models_voxelwise(mname_A, mname_B, save_nifti=False):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
     info_b, model_b = ut.load_batch_best(mname_B)
     atlas = info_a.atlas
 
-    ari_voxelwise = ARI_voxelwise(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
-        model_b.arrange.marginal_prob(), dim=0))
-
+    parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
+    parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
+    ari_voxelwise = ARI_voxelwise(parcel_a, parcel_b)
     ari = ari_voxelwise.numpy()
 
+    # Plot ARIs on flatmap
     # Get 95th percentile of ARI_voxelwise for cscale limits
     ari_95 = np.percentile(ari, 95)
     ari_05 = np.percentile(ari, 5)
@@ -448,13 +404,28 @@ def compare_models_voxelwise(mname_A, mname_B):
                       colorbar=True)
     plt.show()
 
-    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
-    ari_data = suit_atlas.data_to_nifti(ari)
+    # Save ARI_voxelwise as nifti
+    if save_nifti:
+        suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
+        ari_data = suit_atlas.data_to_nifti(ari)
 
-    fname = ut.base_dir + '/Results/' + mname_A + '_' + mname_B + '_ARI.nii'
-    nb.save(ari_data, fname + f'_dseg.nii')
+        fname = ut.base_dir + '/Results/' + mname_A + '_' + mname_B + '_ARI.nii'
+        nb.save(ari_data, fname + f'_dseg.nii')
 
-    print(f'Saved ARI image {fname}.')
+        print(f'Saved ARI image {fname}.')
+
+    # Match
+
+    # Compute how many voxels land in the same parcellation
+    match = (parcel_a == parcel_b).int()
+
+    # Plot match on flatmap
+    plt.figure()
+    ut.plot_data_flat(match, atlas,
+                      dtype='label',
+                      render='matplotlib',
+                      colorbar=True)
+    plt.show()
 
     pass
 
