@@ -377,57 +377,64 @@ def ARI_voxelwise(U_1, U_2):
     return ARI_voxelwise
 
 
-def compare_models_voxelwise(mname_A, mname_B, save_nifti=False):
+def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
     info_b, model_b = ut.load_batch_best(mname_B)
     atlas = info_a.atlas
 
-    parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
-    parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
-    ari_voxelwise = ARI_voxelwise(parcel_a, parcel_b)
-    ari = ari_voxelwise.numpy()
+    # Calculate method-specific comparison
+    if method == 'ari':
+        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
+        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
+        comparison = ARI_voxelwise(parcel_a, parcel_b).numpy()
+    elif method == 'match':
+        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
+        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
+        comparison = (parcel_a == parcel_b).int().numpy()
+    else:
+        raise ValueError(f"Invalid method: {method}")
 
-    # Plot ARIs on flatmap
-    # Get 95th percentile of ARI_voxelwise for cscale limits
-    ari_95 = np.percentile(ari, 95)
-    ari_05 = np.percentile(ari, 5)
-
-    ari_nan = ari.copy()
-    ari_nan[ari < 0] = np.nan
-    # Plot ARI_voxelwise on flatmap
-    plt.figure()
-    ut.plot_data_flat(ari_nan, atlas,
-                      dtype='func',
-                      render='matplotlib',
-                      cscale=[ari_05, ari_95],
-                      colorbar=True)
-    plt.show()
-
-    # Save ARI_voxelwise as nifti
+    # Save comparison as nifti
     if save_nifti:
         suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
-        ari_data = suit_atlas.data_to_nifti(ari)
+        comp_data = suit_atlas.data_to_nifti(comparison)
 
-        fname = ut.base_dir + '/Results/' + mname_A + '_' + mname_B + '_ARI.nii'
-        nb.save(ari_data, fname + f'_dseg.nii')
+        fname = ut.base_dir + '/Results/' + \
+            mname_A + '_' + mname_B + f'_{method}.nii'
+        nb.save(comp_data, fname + '_dseg.nii')
 
-        print(f'Saved ARI image {fname}.')
+        print(f'Saved {method} image {fname}.')
 
-    # Match
+    # Plot comparison on flatmap
+    if plot:
+        if method == 'ari':
+            # vmin, vmax = np.percentile(comparison, [5, 95])
+            vmin, vmax = [-1, 1]
+            dtype = 'func'
+            cmap = 'RdYlBu_r'
+            labels = None,
+            colorbar = True
+        elif method == 'match':
+            vmin, vmax = 0, 1
+            dtype = 'label'
+            labels = ['No match', 'Match'],
+            cmap = 'tab10'
+            colorbar = False
+        else:
+            raise ValueError(f"Invalid method: {method}")
 
-    # Compute how many voxels land in the same parcellation
-    match = (parcel_a == parcel_b).int()
+        plt.figure()
+        ut.plot_data_flat(comparison, atlas,
+                          dtype=dtype,
+                          render='matplotlib',
+                          cmap=cmap,
+                          labels=labels,
+                          cscale=[vmin, vmax],
+                          colorbar=colorbar)
+        plt.show()
 
-    # Plot match on flatmap
-    plt.figure()
-    ut.plot_data_flat(match, atlas,
-                      dtype='label',
-                      render='matplotlib',
-                      colorbar=True)
-    plt.show()
-
-    pass
+    return comparison
 
 
 def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
