@@ -327,50 +327,138 @@ def evaluate_existing(test_on='task', models=None):
     pass
 
 
-def ARI_voxelwise(U1, U2):
-    """Compute the adjusted rand index between two parcellations for each voxel.
+def ARI_voxelwise(U_1, U_2):
+    """Compute the adjusted rand index between two parcellations for voxel i and all other voxels.
     Args:
-        U1: First parcellation (usually estimatted Us from fitted model 1)
-        U2: Second parcellation (usually estimatted Us from fitted model 2)
+        U_1: First parcellation (usually estimated Us from fitted model 1)
+        U_2: Second parcellation (usually estimated Us from fitted model 2)
+        i: Index of voxel of interest
     Returns:
-        the adjusted rand index per voxel
+        Vector containing the adjusted rand index for voxel i and all other voxels
     """
-    # Get info from both U1 and U2
-    sameReg_U1 = (U1[:, None] == U1).int()
-    sameReg_U2 = (U2[:, None] == U2).int()
-    sameReg_U1 = sameReg_U1.fill_diagonal_(0)
-    sameReg_U2 = sameReg_U2.fill_diagonal_(0)
+    # Initialize matrices
+    sameReg_U_1 = (U_1[:, None] == U_1).int()
+    sameReg_U_2 = (U_2[:, None] == U_2).int()
+    sameReg_U_1.fill_diagonal_(0)
+    sameReg_U_2.fill_diagonal_(0)
+    n_11 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
+    n_00 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
+    n_10 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
+    n_01 = pt.zeros_like(sameReg_U_1, dtype=pt.float32)
 
-    n_11 = (sameReg_U1 * sameReg_U2)
-    tmp = (1 - sameReg_U1) * (1 - sameReg_U2)
-    n_00 = tmp.fill_diagonal_(0)
-    tmp = sameReg_U1 - sameReg_U2
-    tmp[tmp < 0] = 0
-    n_10 = tmp
-    tmp = sameReg_U2 - sameReg_U1
-    tmp[tmp < 0] = 0
-    n_01 = tmp
+    # Compute ARI for each voxel
+    # Initialize vector
+    ARI_voxelwise = pt.zeros(U_1.shape[0], dtype=pt.float32)
+    for i in range(U_1.shape[0]):
+        # Compute ARI for voxel i and all other voxels
+        sameReg_U_1_voxel = sameReg_U_1[:, i]
+        sameReg_U_2_voxel = sameReg_U_2[:, i]
 
-    # Special cases: empty data or full agreement (tn, fp), (fn, tp)
-    # Loop through entries in n_01 and n_10 and fill with 1 if both are 0
+        # Get voxel pairs that are in the same parcel in both U_1 and U_2
+        n_11_voxel = (sameReg_U_1_voxel * sameReg_U_2_voxel).sum()
 
-    if pt.all(n_01 == 0) and pt.all(n_10 == 0):
-        return pt.tensor(1.0)
+        # Get voxel pairs that are in different parcels in both U_1 and U_2
+        n_00_voxel = (1 - sameReg_U_1_voxel) * (1 - sameReg_U_2_voxel)
+        # Set indices where voxel is compared to itself to 0
+        n_00_voxel[i] = 0
+        n_00_voxel = n_00_voxel.sum()
 
-    ari = 1 - 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
-                                                   * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
-    return ari
+        # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
+        tmp = sameReg_U_1_voxel - sameReg_U_2_voxel
+        tmp[tmp < 0] = 0
+        n_10_voxel = tmp.sum()
+
+        # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
+        tmp = sameReg_U_2_voxel - sameReg_U_1_voxel
+        tmp[tmp < 0] = 0
+        n_01_voxel = tmp.sum()
+
+        # Special cases: empty data or full agreement (tn, fp), (fn, tp)
+        if pt.all(n_01_voxel == 0) and pt.all(n_10_voxel == 0):
+            ari_voxel = pt.tensor(1.0)
+        else:
+            ari_voxel = 2.0 * (n_11_voxel * n_00_voxel - n_10_voxel * n_01_voxel) / ((n_11_voxel + n_10_voxel)
+                                                                                     * (n_10_voxel + n_00_voxel) +
+                                                                                     (n_11_voxel +
+                                                                                      n_01_voxel))
+        ARI_voxelwise[i] = ari_voxel
+
+    return ARI_voxelwise
+
+
+# def ARI_voxelwise(U_1, U_2):
+#     """Compute the adjusted rand index between two parcellations for each voxel.
+#     Args:
+#         U_1: First parcellation (usually estimatted Us from fitted model 1)
+#         U_2: Second parcellation (usually estimatted Us from fitted model 2)
+#     Returns:
+#         the adjusted rand index per voxel
+#     """
+#     # Get matrix indicating if any two voxels are in the same parcel (for both both U_1 and U_2, respectively)
+#     sameReg_U_1 = (U_1[:, None] == U_1).int()
+#     sameReg_U_2 = (U_2[:, None] == U_2).int()
+#     sameReg_U_1 = sameReg_U_1.fill_diagonal_(0)
+#     sameReg_U_2 = sameReg_U_2.fill_diagonal_(0)
+
+#     # Get voxel pairs that are in the same parcel in both U_1 and U_2
+#     n_11 = (sameReg_U_1 * sameReg_U_2).float()
+
+#     # Get voxel pairs that are in different parcels in both U_1 and U_2
+#     tmp = (1 - sameReg_U_1) * (1 - sameReg_U_2)
+#     n_00 = tmp.fill_diagonal_(0).float()
+
+#     # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
+#     tmp = sameReg_U_1 - sameReg_U_2
+#     tmp[tmp < 0] = 0
+#     n_10 = tmp.float()
+
+#     # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
+#     tmp = sameReg_U_2 - sameReg_U_1
+#     tmp[tmp < 0] = 0
+#     n_01 = tmp.float()
+
+#     # Special cases: empty data or full agreement (tn, fp), (fn, tp)
+#     if pt.all(n_01 == 0) and pt.all(n_10 == 0):
+#         return pt.ones((U_1.shape[1], U_2.shape[1]))
+
+#     ari = 1 - 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
+#                                                    * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
+#     return ari
 
 
 def compare_models_voxelwise(mname_A, mname_B):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
     info_b, model_b = ut.load_batch_best(mname_B)
+    atlas = info_a.atlas
 
     ari_voxelwise = ARI_voxelwise(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
         model_b.arrange.marginal_prob(), dim=0))
 
-    print(f'ARI {mname_A} vs {mname_B}: {ari_group.item():.3f}')
+    ari = ari_voxelwise.numpy()
+
+    # Get 95th percentile of ARI_voxelwise for cscale limits
+    ari_95 = np.percentile(ari, 95)
+    ari_05 = np.percentile(ari, 5)
+
+    ari_nan = ari.copy()
+    ari_nan[ari < 0] = np.nan
+    # Plot ARI_voxelwise on flatmap
+    plt.figure()
+    ut.plot_data_flat(ari_nan, atlas,
+                      dtype='func',
+                      render='matplotlib',
+                      cscale=[ari_05, ari_95],
+                      colorbar=True)
+    plt.show()
+
+    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
+    ari_data = suit_atlas.data_to_nifti(ari)
+
+    fname = ut.base_dir + '/Results/' + mname_A + '_' + mname_B + '_ARI.nii'
+    nb.save(ari_data, fname + f'_dseg.nii')
+
+    print(f'Saved ARI image {fname}.')
 
     pass
 
