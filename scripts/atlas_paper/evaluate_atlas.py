@@ -418,9 +418,9 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
         comp_data = suit_atlas.data_to_nifti(comparison)
 
-        fname = ut.base_dir + '/Results/' + \
-            mname_A + '_' + mname_B + f'_{method}.nii'
-        nb.save(comp_data, fname + '_dseg.nii')
+        save_dir = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/sym_vs_asym//'
+        fname = f'comparison-{method}_{mname_A.split("/")[1]}_VS_{mname_B.split("/")[1]}.nii'
+        nb.save(comp_data, save_dir + fname)
 
         print(f'Saved {method} image {fname}.')
 
@@ -607,6 +607,12 @@ if __name__ == "__main__":
     mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='cosang')
+                             mname2, plot=True, method='ari', save_nifti=True)
+    comp = compare_voxelwise(mname1,
+                             mname2, plot=True, method='ri', save_nifti=True)
+    comp = compare_voxelwise(mname1,
+                             mname2, plot=True, method='corr', save_nifti=True)
+    comp = compare_voxelwise(mname1,
+                             mname2, plot=True, method='cosang', save_nifti=True)
 
     pass
