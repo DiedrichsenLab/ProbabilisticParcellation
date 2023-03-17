@@ -323,7 +323,7 @@ def evaluate_existing(test_on='task', models=None):
     pass
 
 
-def ARI_voxelwise(U_1, U_2):
+def ARI_voxelwise(U_1, U_2, adjusted=True):
     """Compute the adjusted rand index between two parcellations for all voxels.
     Args:
         U_1: First parcellation (usually estimated Us from fitted model 1)
@@ -346,32 +346,33 @@ def ARI_voxelwise(U_1, U_2):
         sameReg_U_2_voxel = sameReg_U_2[:, i]
 
         # Get voxel pairs that are in the same parcel in both U_1 and U_2
-        n_11_voxel = (sameReg_U_1_voxel * sameReg_U_2_voxel).sum()
+        n_11 = (sameReg_U_1_voxel * sameReg_U_2_voxel).sum()
 
         # Get voxel pairs that are in different parcels in both U_1 and U_2
-        n_00_voxel = (1 - sameReg_U_1_voxel) * (1 - sameReg_U_2_voxel)
+        n_00 = (1 - sameReg_U_1_voxel) * (1 - sameReg_U_2_voxel)
         # Set indices where voxel is compared to itself to 0
-        n_00_voxel[i] = 0
-        n_00_voxel = n_00_voxel.sum()
+        n_00[i] = 0
+        n_00 = n_00.sum()
 
         # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
         tmp = sameReg_U_1_voxel - sameReg_U_2_voxel
         tmp[tmp < 0] = 0
-        n_10_voxel = tmp.sum()
+        n_10 = tmp.sum()
 
         # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
         tmp = sameReg_U_2_voxel - sameReg_U_1_voxel
         tmp[tmp < 0] = 0
-        n_01_voxel = tmp.sum()
+        n_01 = tmp.sum()
 
         # Special cases: empty data or full agreement (tn, fp), (fn, tp)
-        if pt.all(n_01_voxel == 0) and pt.all(n_10_voxel == 0):
+        if pt.all(n_01 == 0) and pt.all(n_10 == 0):
             ari_voxel = pt.tensor(1.0)
+        elif adjusted:
+            ari_voxel = 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
+                                                             * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
         else:
-            ari_voxel = 2.0 * (n_11_voxel * n_00_voxel - n_10_voxel * n_01_voxel) / ((n_11_voxel + n_10_voxel)
-                                                                                     * (n_10_voxel + n_00_voxel) +
-                                                                                     (n_11_voxel +
-                                                                                      n_01_voxel))
+            ari_voxel = (n_11 + n_00) / (n_11 + n_10 + n_01 + n_00)
+
         ARI_voxelwise[i] = ari_voxel
 
     return ARI_voxelwise
@@ -388,6 +389,23 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
         parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
         comparison = ARI_voxelwise(parcel_a, parcel_b).numpy()
+    elif method == 'ri':
+        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
+        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
+        comparison = ARI_voxelwise(parcel_a, parcel_b, adjusted=False).numpy()
+    elif method == 'corr':
+        prob_a = model_a.arrange.marginal_prob()
+        prob_b = model_b.arrange.marginal_prob()
+        comparison = ut.cal_corr(prob_a.T, prob_b.T).numpy()
+        comparison = np.mean(comparison, axis=0)
+    elif method == 'cosang':
+        prob_a = model_a.arrange.marginal_prob()
+        prob_b = model_b.arrange.marginal_prob()
+        dot_prod = prob_a.T @ prob_b
+        norm_a = pt.sqrt(prob_a.sum(dim=0))
+        norm_b = pt.sqrt(prob_b.sum(dim=0))
+        comparison = dot_prod / (norm_a * norm_b)
+        comparison = np.mean(comparison.numpy(), axis=0)
     elif method == 'match':
         parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
         parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
@@ -408,9 +426,9 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
 
     # Plot comparison on flatmap
     if plot:
-        if method == 'ari':
-            # vmin, vmax = np.percentile(comparison, [5, 95])
-            vmin, vmax = [-1, 1]
+        if method == 'ari' or method == 'ri' or method == 'corr' or method == 'cosang':
+            vmin, vmax = np.percentile(comparison, [5, 95])
+            # vmin, vmax = [-1, 1]
             dtype = 'func'
             cmap = 'RdYlBu_r'
             labels = None,
@@ -425,14 +443,16 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
             raise ValueError(f"Invalid method: {method}")
 
         plt.figure()
-        ut.plot_data_flat(comparison, atlas,
-                          dtype=dtype,
-                          render='matplotlib',
-                          cmap=cmap,
-                          labels=labels,
-                          cscale=[vmin, vmax],
-                          colorbar=colorbar)
+        ax = ut.plot_data_flat(comparison, atlas,
+                               dtype=dtype,
+                               render='matplotlib',
+                               cmap=cmap,
+                               labels=labels,
+                               cscale=[vmin, vmax],
+                               colorbar=colorbar)
         plt.show()
+
+        return comparison, ax
 
     return comparison
 
@@ -586,5 +606,7 @@ if __name__ == "__main__":
 
     mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
-    ari = compare_models_voxelwise(mname1, mname2)
+    comp = compare_voxelwise(mname1,
+                             mname2, plot=True, method='cosang')
+
     pass
