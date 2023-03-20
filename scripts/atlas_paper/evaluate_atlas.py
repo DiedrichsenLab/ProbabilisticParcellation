@@ -378,25 +378,48 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     return ARI_voxelwise
 
 
-def compare_probs(prob_a, prob_b, atlas, method='corr'):
+def corr(x, y):
+    """Compute correlation between two tensors along the last dimension.
+    Args:
+        x: First tensor
+        y: Second tensor
+    Returns:
+        Correlation between x and y
+    """
+
+    # Standardize for easier calculation
+    x = (x - x.mean()) / x.std()
+    y = (y - y.mean()) / y.std()
+
+    # Compute correlation
+    corr = (x * y).mean(dim=0)
+    return corr
+
+
+def compare_probs(prob_a, prob_b, atlas, method='corr', fold=True):
     suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
     indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
     indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
-    left_a = prob_a[:34, indx_left]
-    left_b = prob_b[:34, indx_left]
-    right_a = prob_a[34:, indx_right]
-    right_b = prob_b[34:, indx_right]
+
+    if fold:
+        # Fold left and right hemispheres
+        left_a = prob_a[:, indx_left]
+        right_a = prob_a[:, indx_right]
+        prob_a = left_a + right_a
+
+        left_b = prob_b[:, indx_left]
+        right_b = prob_b[:, indx_right]
+        prob_b = left_b + right_b
+
     comparison = np.empty(prob_a.shape[1])
 
     if method == 'corr':
-        comparison[indx_left] = np.nanmean(
-            ut.cal_corr(left_a.T, left_b.T).numpy(), axis=0)
-        comparison[indx_right] = np.nanmean(
-            ut.cal_corr(right_a.T, right_b.T).numpy(), axis=0)
+        c = corr(prob_a, prob_b).numpy()
+
     elif method == 'cosang':
-        dot_prod = left_a.T @ left_b
-        norm_a = pt.sqrt(left_a.sum(dim=0))
-        norm_b = pt.sqrt(left_b.sum(dim=0))
+        dot_prod = prob_a.T @ prob_b
+        norm_a = pt.sqrt(prob_a.sum(dim=0))
+        norm_b = pt.sqrt(prob_a.sum(dim=0))
         comparison[indx_left] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
 
         dot_prod = right_a.T @ right_b
@@ -404,10 +427,15 @@ def compare_probs(prob_a, prob_b, atlas, method='corr'):
         norm_b = pt.sqrt(right_b.sum(dim=0))
         comparison[indx_right] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
 
+    if fold:
+        comparison[indx_left] = c
+        comparison[indx_right] = c
+    else:
+        comparison = c
     return comparison
 
 
-def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None):
+def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None, fold=False):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
     _, model_b = ut.load_batch_best(mname_B)
@@ -429,7 +457,8 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     elif method == 'corr' or method == 'cosang':
         prob_a = model_a.arrange.marginal_prob()
         prob_b = model_b.arrange.marginal_prob()
-        comparison = compare_probs(prob_a, prob_b, atlas, method=method)
+        comparison = compare_probs(
+            prob_a, prob_b, atlas, method=method, fold=fold)
     else:
         raise ValueError(f"Invalid method: {method}")
 
@@ -633,7 +662,7 @@ if __name__ == "__main__":
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ri', save_nifti=True)
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='corr', save_nifti=False)
+                             mname2, plot=True, method='corr', save_nifti=False, fold=False)
     comp = compare_voxelwise(mname1,
                              mname2, plot=True, method='cosang', save_nifti=False)
 
