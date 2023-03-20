@@ -378,10 +378,39 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     return ARI_voxelwise
 
 
-def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False):
+def compare_probs(prob_a, prob_b, atlas, method='corr'):
+    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
+    indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
+    indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
+    left_a = prob_a[:34, indx_left]
+    left_b = prob_b[:34, indx_left]
+    right_a = prob_a[34:, indx_right]
+    right_b = prob_b[34:, indx_right]
+    comparison = np.empty(prob_a.shape[1])
+
+    if method == 'corr':
+        comparison[indx_left] = np.nanmean(
+            ut.cal_corr(left_a.T, left_b.T).numpy(), axis=0)
+        comparison[indx_right] = np.nanmean(
+            ut.cal_corr(right_a.T, right_b.T).numpy(), axis=0)
+    elif method == 'cosang':
+        dot_prod = left_a.T @ left_b
+        norm_a = pt.sqrt(left_a.sum(dim=0))
+        norm_b = pt.sqrt(left_b.sum(dim=0))
+        comparison[indx_left] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
+
+        dot_prod = right_a.T @ right_b
+        norm_a = pt.sqrt(right_a.sum(dim=0))
+        norm_b = pt.sqrt(right_b.sum(dim=0))
+        comparison[indx_right] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
+
+    return comparison
+
+
+def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
-    info_b, model_b = ut.load_batch_best(mname_B)
+    _, model_b = ut.load_batch_best(mname_B)
     atlas = info_a.atlas
 
     # Calculate method-specific comparison
@@ -393,23 +422,14 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
         parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
         comparison = ARI_voxelwise(parcel_a, parcel_b, adjusted=False).numpy()
-    elif method == 'corr':
-        prob_a = model_a.arrange.marginal_prob()
-        prob_b = model_b.arrange.marginal_prob()
-        comparison = ut.cal_corr(prob_a.T, prob_b.T).numpy()
-        comparison = np.mean(comparison, axis=0)
-    elif method == 'cosang':
-        prob_a = model_a.arrange.marginal_prob()
-        prob_b = model_b.arrange.marginal_prob()
-        dot_prod = prob_a.T @ prob_b
-        norm_a = pt.sqrt(prob_a.sum(dim=0))
-        norm_b = pt.sqrt(prob_b.sum(dim=0))
-        comparison = dot_prod / (norm_a * norm_b)
-        comparison = np.mean(comparison.numpy(), axis=0)
     elif method == 'match':
         parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
         parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
         comparison = (parcel_a == parcel_b).int().numpy()
+    elif method == 'corr' or method == 'cosang':
+        prob_a = model_a.arrange.marginal_prob()
+        prob_b = model_b.arrange.marginal_prob()
+        comparison = compare_probs(prob_a, prob_b, atlas, method=method)
     else:
         raise ValueError(f"Invalid method: {method}")
 
@@ -427,8 +447,10 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     # Plot comparison on flatmap
     if plot:
         if method == 'ari' or method == 'ri' or method == 'corr' or method == 'cosang':
-            vmin, vmax = np.percentile(comparison, [5, 95])
-            # vmin, vmax = [-1, 1]
+            if lim is None:
+                vmin, vmax = np.percentile(comparison, [5, 95])
+            else:
+                vmin, vmax = lim
             dtype = 'func'
             cmap = 'RdYlBu_r'
             labels = None,
@@ -606,13 +628,13 @@ if __name__ == "__main__":
 
     mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+    # comp = compare_voxelwise(mname1,
+    #                          mname2, plot=True, method='ari', save_nifti=True)
+    # comp = compare_voxelwise(mname1,
+    #                          mname2, plot=True, method='ri', save_nifti=True)
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='ari', save_nifti=True)
+                             mname2, plot=True, method='corr', save_nifti=False)
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='ri', save_nifti=True)
-    comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='corr', save_nifti=True)
-    comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='cosang', save_nifti=True)
+                             mname2, plot=True, method='cosang', save_nifti=False)
 
     pass
