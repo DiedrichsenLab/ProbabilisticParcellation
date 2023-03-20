@@ -396,25 +396,26 @@ def corr(x, y):
     return corr
 
 
-def compare_probs(prob_a, prob_b, atlas, method='corr', fold=True):
+def compare_probs(prob_a, prob_b, atlas, method='corr'):
     suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
     indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
     indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
 
-    if fold:
-        # Fold left and right hemispheres
-        left_a = prob_a[:, indx_left]
-        right_a = prob_a[:, indx_right]
-        prob_a = left_a + right_a
+    # Fold left and right hemispheres
+    left_a = prob_a[:, indx_left]
+    right_a = prob_a[:, indx_right]
+    prob_a = left_a + right_a
 
-        left_b = prob_b[:, indx_left]
-        right_b = prob_b[:, indx_right]
-        prob_b = left_b + right_b
+    left_b = prob_b[:, indx_left]
+    right_b = prob_b[:, indx_right]
+    prob_b = left_b + right_b
 
     comparison = np.empty(prob_a.shape[1])
 
     if method == 'corr':
         c = corr(prob_a, prob_b).numpy()
+        comparison[indx_left] = c[indx_left]
+        comparison[indx_right] = c[indx_right]
 
     elif method == 'cosang':
         dot_prod = prob_a.T @ prob_b
@@ -427,15 +428,10 @@ def compare_probs(prob_a, prob_b, atlas, method='corr', fold=True):
         norm_b = pt.sqrt(right_b.sum(dim=0))
         comparison[indx_right] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
 
-    if fold:
-        comparison[indx_left] = c
-        comparison[indx_right] = c
-    else:
-        comparison = c
     return comparison
 
 
-def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None, fold=False):
+def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None):
     # load models
     info_a, model_a = ut.load_batch_best(mname_A)
     _, model_b = ut.load_batch_best(mname_B)
@@ -458,7 +454,7 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         prob_a = model_a.arrange.marginal_prob()
         prob_b = model_b.arrange.marginal_prob()
         comparison = compare_probs(
-            prob_a, prob_b, atlas, method=method, fold=fold)
+            prob_a, prob_b, atlas, method=method)
     else:
         raise ValueError(f"Invalid method: {method}")
 
