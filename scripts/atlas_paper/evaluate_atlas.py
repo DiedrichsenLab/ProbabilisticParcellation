@@ -658,7 +658,7 @@ if __name__ == "__main__":
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ri', save_nifti=True)
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='corr', save_nifti=False, fold=False)
+                             mname2, plot=True, method='corr', save_nifti=False)
     comp = compare_voxelwise(mname1,
                              mname2, plot=True, method='cosang', save_nifti=False)
 
