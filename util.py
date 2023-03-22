@@ -428,7 +428,7 @@ def _compute_var_cov(data, cond='all', mean_centering=True):
 
     k = data.shape[1]
     cov = pt.matmul(data, data.T) / (k - 1)
-    sd = data.std(dim=1).reshape(-1, 1)  # standard deviation
+    sd = pt.sqrt((data**2).sum(dim=1)/(k-1))  # standard deviation
     var = pt.matmul(sd, sd.T)
 
     return cov, var
