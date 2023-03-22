@@ -386,27 +386,27 @@ def compare_probs(prob_a, prob_b, atlas, method='corr'):
 
     comparison = np.empty(prob_a.shape[1])
 
-    # Fold left and right hemispheres
-    left_a = prob_a[:, indx_left]
-    right_a = prob_a[:, indx_right]
-    prob_a = left_a + right_a
+    # Fold left hemisphere and right hemisphere parcels (first half and second half of rows)
+    prob_a_folded = prob_a[prob_a.shape[0] // 2:, :] + \
+        prob_a[:prob_a.shape[0] // 2, :]
 
-    left_b = prob_b[:, indx_left]
-    right_b = prob_b[:, indx_right]
-    prob_b = left_b + right_b
+    prob_b_folded = prob_b[prob_b.shape[0] // 2:, :] + \
+        prob_b[:prob_b.shape[0] // 2, :]
 
     if method == 'corr':
-        _, c = cev.calculate_R(prob_a.numpy(), prob_b.numpy())
-        comparison[indx_left] = c
-        comparison[indx_right] = c
+        # Subtract the mean
+        prob_a_norm = prob_a_folded - pt.mean(prob_a_folded, axis=0)
+        prob_b_norm = prob_b_folded - pt.mean(prob_b_folded, axis=0)
+        _, c = cev.calculate_R(prob_a_norm.numpy(), prob_b_norm.numpy())
+        comparison = c
+        # comparison[indx_left] = c
+        # comparison[indx_right] = c
 
     elif method == 'cosang':
-        dot_prod = prob_a.T @ prob_b
-        norm_a = pt.sqrt(prob_a.sum(dim=0))
-        norm_b = pt.sqrt(prob_a.sum(dim=0))
-        c = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
-        comparison[indx_left] = c
-        comparison[indx_right] = c
+        _, c = cev.calculate_R(prob_a_folded.numpy(), prob_b_folded.numpy())
+        comparison = c
+        # comparison[indx_left] = c
+        # comparison[indx_right] = c
 
     return comparison
 
