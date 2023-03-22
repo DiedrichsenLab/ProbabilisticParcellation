@@ -27,7 +27,7 @@ def test_same_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISy
     return
 
 
-def test_voxelwise_probs(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None):
+def test_voxelwise_probs():
     mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
 
@@ -56,6 +56,6 @@ def test_voxelwise_probs(mname_A, mname_B, method='ari', save_nifti=False, plot=
 
 
 if __name__ == "__main__":
-    test_same_parcellation_ari()
-
+    # test_same_parcellation_ari()
+    test_voxelwise_probs()
     pass

@@ -28,6 +28,7 @@ from itertools import combinations
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.functional_profiles as fp
+from cortico_cereb_connectivity import evaluation as cev
 from datetime import datetime
 
 
@@ -378,28 +379,12 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     return ARI_voxelwise
 
 
-def corr(x, y):
-    """Compute correlation between two tensors along the last dimension.
-    Args:
-        x: First tensor
-        y: Second tensor
-    Returns:
-        Correlation between x and y
-    """
-
-    # Standardize for easier calculation
-    x = (x - x.mean()) / x.std()
-    y = (y - y.mean()) / y.std()
-
-    # Compute correlation
-    corr = (x * y).mean(dim=0)
-    return corr
-
-
 def compare_probs(prob_a, prob_b, atlas, method='corr'):
     suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
     indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
     indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
+
+    comparison = np.empty(prob_a.shape[1])
 
     # Fold left and right hemispheres
     left_a = prob_a[:, indx_left]
@@ -410,23 +395,18 @@ def compare_probs(prob_a, prob_b, atlas, method='corr'):
     right_b = prob_b[:, indx_right]
     prob_b = left_b + right_b
 
-    comparison = np.empty(prob_a.shape[1])
-
     if method == 'corr':
-        c = corr(prob_a, prob_b).numpy()
-        comparison[indx_left] = c[indx_left]
-        comparison[indx_right] = c[indx_right]
+        _, c = cev.calculate_R(prob_a.numpy(), prob_b.numpy())
+        comparison[indx_left] = c
+        comparison[indx_right] = c
 
     elif method == 'cosang':
         dot_prod = prob_a.T @ prob_b
         norm_a = pt.sqrt(prob_a.sum(dim=0))
         norm_b = pt.sqrt(prob_a.sum(dim=0))
-        comparison[indx_left] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
-
-        dot_prod = right_a.T @ right_b
-        norm_a = pt.sqrt(right_a.sum(dim=0))
-        norm_b = pt.sqrt(right_b.sum(dim=0))
-        comparison[indx_right] = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
+        c = pt.mean(dot_prod / (norm_a * norm_b), dim=0)
+        comparison[indx_left] = c
+        comparison[indx_right] = c
 
     return comparison
 
@@ -658,7 +638,7 @@ if __name__ == "__main__":
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ri', save_nifti=True)
     comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='corr', save_nifti=False)
+                             mname2, plot=True, method='corr', save_nifti=False, lim=(0, 1))
     comp = compare_voxelwise(mname1,
                              mname2, plot=True, method='cosang', save_nifti=False)
 
