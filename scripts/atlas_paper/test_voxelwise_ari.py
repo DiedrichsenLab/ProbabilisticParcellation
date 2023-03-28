@@ -12,7 +12,7 @@ import seaborn as sb
 import sys
 from util import *
 import torch as pt
-from ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas import ARI_voxelwise
+from ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas import ARI_voxelwise, compare_probs
 from sklearn.metrics import adjusted_rand_score
 
 
@@ -56,6 +56,17 @@ def test_voxelwise_probs():
     plt.imshow(img_a.get_fdata()[:, :, 20, 41].squeeze())
 
 
+def test_corr():
+    # Initliaze tensor with two rows and random numbers
+    a = pt.rand(4, 13)
+    b = pt.rand(4, 13)
+    corr = compare_probs(a, b, method='corr')
+    a_folded = a[:2, :] + a[2:, :]
+    b_folded = b[:2, :] + b[2:, :]
+    corr_np = np.corrcoef(a_folded, b_folded)
+    pass
+
+
 def test_ARI():
     a = pt.tensor([1, 2, 3, 1, 2, 3, 1, 2, 3, 0, 1, 0, 1])
     b = pt.tensor([0, 0, 0, 1, 2, 1, 1, 2, 3, 1, 1, 0, 1])
@@ -68,6 +79,7 @@ if __name__ == "__main__":
     # test_same_parcellation_ari()
     # test_voxelwise_probs()
 
-    test_ARI()
+    # test_ARI()
     # test_same_parcellation_ari()
+    test_corr()
     pass

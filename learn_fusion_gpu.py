@@ -505,11 +505,24 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         M = fm.FullMultiModel(model.arrange, model.emissions)
 
     elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
-        # Make arrangement model asymmetric
-        new_arrange = ar.ArrangeIndependent(model.K,
-                                            spatial_specific=model.arrange.spatial_specific,
-                                            remove_redundancy=model.arrange.rem_red,
-                                            )
+        atlas, _ = am.get_atlas(new_info.atlas, ut.atlas_dir)
+        indx_hem = np.sign(atlas.world[0, :])
+        # Add first dimension to indx_hem
+        indx_hem = np.expand_dims(indx_hem, axis=0)
+
+        # Make arrangement model asymmetric but with hemispheres fitted separately
+        # ar_model = ar.ArrangeIndependentSymmetric(K,
+        #                                           atlas.indx_full,
+        #                                           atlas.indx_reduced,
+        #                                           same_parcels=False,
+        #                                           spatial_specific=True,
+        #                                           remove_redundancy=False)
+        new_arrange = ar.ArrangeIndependentSeparateHem(model.K,
+                                                       indx_hem=indx_hem,
+                                                       indx_full=model.arrange.indx_full,
+                                                       spatial_specific=model.arrange.spatial_specific,
+                                                       remove_redundancy=model.arrange.rem_red,
+                                                       )
         new_arrange.logpi = model.arrange.logpi
         M = fm.FullMultiModel(new_arrange, model.emissions)
         M.nsubj = model.nsubj

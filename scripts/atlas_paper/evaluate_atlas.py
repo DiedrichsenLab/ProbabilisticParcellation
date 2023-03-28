@@ -379,10 +379,10 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     return ARI_voxelwise
 
 
-def compare_probs(prob_a, prob_b, atlas, method='corr'):
-    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
-    indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
-    indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
+def compare_probs(prob_a, prob_b, atlas=None, method='corr'):
+    # suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
+    # indx_left = np.where(suit_atlas.world[0, :] <= 0)[0]
+    # indx_right = np.where(suit_atlas.world[0, :] >= 0)[0]
 
     comparison = np.empty(prob_a.shape[1])
 
@@ -395,8 +395,8 @@ def compare_probs(prob_a, prob_b, atlas, method='corr'):
 
     if method == 'corr':
         # Subtract the mean
-        prob_a_norm = prob_a_folded - pt.mean(prob_a_folded, axis=0)
-        prob_b_norm = prob_b_folded - pt.mean(prob_b_folded, axis=0)
+        prob_a_norm = prob_a_folded - pt.nanmean(prob_a_folded, axis=0)
+        prob_b_norm = prob_b_folded - pt.nanmean(prob_b_folded, axis=0)
         _, c = cev.calculate_R(prob_a_norm.numpy(), prob_b_norm.numpy())
         comparison = c
         # comparison[indx_left] = c
