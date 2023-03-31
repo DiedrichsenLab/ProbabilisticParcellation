@@ -34,8 +34,7 @@ def reorder_selected():
     mnames = [
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym'
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
     ]
 
     f_assignment = 'mixed_assignment_68_16.csv'
@@ -53,9 +52,8 @@ def export_selected():
     mnames = [
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym_reordered',
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'
     ]
     for mname in mnames:
         export(mname)
@@ -196,7 +194,7 @@ if __name__ == "__main__":
     # features = fp.cognitive_features(mname)
 
     # --- Reorder selected models according to our assignment ---
-    # reorder_selected()
+    reorder_selected()
     # --- Export asymmetric model fitted from symmetric model ---
     export_selected()
 

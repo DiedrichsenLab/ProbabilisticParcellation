@@ -507,8 +507,9 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
     elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
         atlas, _ = am.get_atlas(new_info.atlas, ut.atlas_dir)
         indx_hem = np.sign(atlas.world[0, :])
-        # Add first dimension to indx_hem
-        indx_hem = np.expand_dims(indx_hem, axis=0)
+        # Make indx_hem two-dimensional with the same entries
+        # Add empty row dimension to index_hem to make it 2D
+        indx_hem = indx_hem[np.newaxis, :]
 
         # Make arrangement model asymmetric but with hemispheres fitted separately
         # ar_model = ar.ArrangeIndependentSymmetric(K,
@@ -519,11 +520,9 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         #                                           remove_redundancy=False)
         new_arrange = ar.ArrangeIndependentSeparateHem(model.K,
                                                        indx_hem=indx_hem,
-                                                       indx_full=model.arrange.indx_full,
                                                        spatial_specific=model.arrange.spatial_specific,
                                                        remove_redundancy=model.arrange.rem_red,
                                                        )
-        new_arrange.logpi = model.arrange.logpi
         M = fm.FullMultiModel(new_arrange, model.emissions)
         M.nsubj = model.nsubj
         M.n_emission = model.n_emission
@@ -534,6 +533,8 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
 
         # Update arrangement model parameters to get the symmetric log likelihoods into the asymmetric model
         new_logpi = model.arrange.map_to_full(model.arrange.logpi)
+        # Halven the logpi for the reduced number of parcels
+        new_logpi = new_logpi[new_logpi.shape[0] // 2:]
         M.arrange.logpi = new_logpi
         M.arrange.set_param_list(['logpi'])
 

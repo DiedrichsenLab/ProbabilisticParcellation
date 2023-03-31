@@ -35,7 +35,7 @@ def fit_asym_from_sym_sep_hem(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3
     M, new_info = lf.refit_model(m, inf, fit='arrangement', sym_new='asym')
     # save new model
     if mname_new is None:
-        mname_new = f'asym_{mname.split("sym_")[1]}_arrange-asym'
+        mname_new = f'{mname.split("/")[0]}asym_{mname.split("sym_")[1]}_arrange-asym'
     with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([M], file)
         # save new info
@@ -123,4 +123,4 @@ if __name__ == "__main__":
     # fit_asym_from_sym(
     # mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
     fit_asym_from_sym_sep_hem(
-        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
+        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
