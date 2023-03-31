@@ -28,6 +28,19 @@ def test_same_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISy
     return
 
 
+def test_different_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered', mname_B='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'):
+    # load models
+    info_a, model_a = ut.load_batch_best(mname_A)
+    _, model_b = ut.load_batch_best(mname_B)
+
+    ari_voxelwise = ARI_voxelwise(pt.argmax(model_a.arrange.marginal_prob(), dim=0), pt.argmax(
+        model_b.arrange.marginal_prob(), dim=0), individual=True)
+
+    print(
+        f'Mean ARI_voxelwise: {ari_voxelwise.mean()}. All values are 1: {pt.all(ari_voxelwise == 1)}')
+    return
+
+
 def test_voxelwise_probs():
     mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
