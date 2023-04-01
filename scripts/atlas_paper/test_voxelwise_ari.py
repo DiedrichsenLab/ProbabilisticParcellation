@@ -77,7 +77,53 @@ def test_same_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISy
 
 def test_different_parcellation_ari(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered', mname_B='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'):
     # load models
-    ppev.compare_voxelwise(mname_A, mname_B, individual=True)
+    # ppev.compare_voxelwise(mname_A, mname_B, individual=True)
+
+    # prob_a = ppev.parcel_individual(
+    #     mname_A, subject='all', dataset=None, session=None)
+
+    # prob_b = ppev.parcel_individual(
+    #     mname_B, subject='all', dataset=None, session=None)
+
+    # pt.save(prob_a, f'{ut.model_dir}/Models/{mname_A}_Uhat.pt')
+    # pt.save(prob_b, f'{ut.model_dir}/Models/{mname_B}_Uhat.pt')
+
+    model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+                  'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
+    # load Uhats
+    prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
+    prob_b = pt.load(f'{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt')
+
+    parcel_a = pt.argmax(prob_a, dim=1)
+    parcel_b = pt.argmax(prob_b, dim=1)
+
+    comparison, comparison_group = ppev.ARI_voxelwise(
+        parcel_a, parcel_b).numpy()
+
+    plt.imshow(prob_a[:, (prob_a.shape[1] // 2) -
+               50: (prob_a.shape[1] // 2) + 50].squeeze())
+
+    plt.imshow(prob_b[:, (prob_b.shape[1] // 2) -
+                      50: (prob_b.shape[1] // 2) + 50].squeeze())
+
+    # Make first 25 rows into list of 25 entries
+    plt.figure(figsize=(20, 20))
+    parcel_a_list = [parcel_a[i, :] for i in range(parcel_a.shape[0])]
+    ax = ut.plot_multi_flat(parcel_a_list[:4], 'MNISymC2',
+                            grid=(2, 2),
+                            dtype='label',
+                            colorbar=False,
+                            cmap='tab20')
+    ax.show()
+
+    plt.figure(figsize=(20, 20))
+    parcel_b_list = [parcel_b[i, :] for i in range(parcel_b.shape[0])]
+    ax = ut.plot_multi_flat(parcel_b_list[:4], 'MNISymC2',
+                            grid=(2, 2),
+                            dtype='label',
+                            colorbar=False,
+                            cmap='tab20')
+    ax.show()
     return
 
 
