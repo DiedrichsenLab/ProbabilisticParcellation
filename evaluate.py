@@ -11,7 +11,7 @@ import generativeMRF.arrangements as ar
 import generativeMRF.full_model as fm
 import generativeMRF.evaluation as ev
 import ProbabilisticParcellation.util as ut
-
+from cortico_cereb_connectivity import evaluation as cev
 from scipy.linalg import block_diag
 import nibabel as nb
 import SUITPy as suit
@@ -22,6 +22,8 @@ import sys
 import time
 import pickle
 from ProbabilisticParcellation.util import *
+from copy import deepcopy
+import ProbabilisticParcellation.learn_fusion_gpu as lf
 ######################################################
 # The new GPU capatible DCBC evaluation function is now
 # callable in util.py. If you prefer use CPU version, please
@@ -748,51 +750,63 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     Returns:
         Vector containing the adjusted rand index for all voxels
     """
-    # Initialize matrices
-    sameReg_U_1 = (U_1[:, None] == U_1).int()
-    sameReg_U_2 = (U_2[:, None] == U_2).int()
-    sameReg_U_1.fill_diagonal_(0)
-    sameReg_U_2.fill_diagonal_(0)
+    # Loop through first dimension of U_1 and U_2
+    for sub in range(U_1.shape[0]):
+        # Extract parcellation for individual sub
+        print(f'Computing ARI for individual {sub}...')
+        U_1_individual = U_1[sub, :]
+        U_2_individual = U_2[sub, :]
 
-    # Compute ARI for each voxel
-    # Initialize vector
-    ARI_voxelwise = pt.zeros(U_1.shape[0], dtype=pt.float32)
-    for i in range(U_1.shape[0]):
-        # Compute ARI for voxel i and all other voxels
-        sameReg_U_1_voxel = sameReg_U_1[:, i]
-        sameReg_U_2_voxel = sameReg_U_2[:, i]
+        # Initialize matrices
+        sameReg_U_1 = (U_1_individual[:, None] == U_1_individual).int()
+        sameReg_U_2 = (U_2_individual[:, None] == U_2_individual).int()
+        sameReg_U_1.fill_diagonal_(0)
+        sameReg_U_2.fill_diagonal_(0)
 
-        # Get voxel pairs that are in the same parcel in both U_1 and U_2
-        n_11 = (sameReg_U_1_voxel * sameReg_U_2_voxel).sum()
+        # Compute ARI for each voxel
+        # Initialize vector
+        ARI_voxelwise = pt.zeros(U_1_individual.shape[0], dtype=pt.float32)
+        for i in range(U_1_individual.shape[0]):
+            # Compute ARI for voxel i and all other voxels
+            sameReg_U_1_voxel = sameReg_U_1[:, i]
+            sameReg_U_2_voxel = sameReg_U_2[:, i]
 
-        # Get voxel pairs that are in different parcels in both U_1 and U_2
-        n_00 = (1 - sameReg_U_1_voxel) * (1 - sameReg_U_2_voxel)
-        # Set indices where voxel is compared to itself to 0
-        n_00[i] = 0
-        n_00 = n_00.sum()
+            # Get voxel pairs that are in the same parcel in both U_1 and U_2
+            n_11 = (sameReg_U_1_voxel * sameReg_U_2_voxel).sum()
 
-        # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
-        tmp = sameReg_U_1_voxel - sameReg_U_2_voxel
-        tmp[tmp < 0] = 0
-        n_10 = tmp.sum()
+            # Get voxel pairs that are in different parcels in both U_1 and U_2
+            n_00 = (1 - sameReg_U_1_voxel) * (1 - sameReg_U_2_voxel)
+            # Set indices where voxel is compared to itself to 0
+            n_00[i] = 0
+            n_00 = n_00.sum()
 
-        # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
-        tmp = sameReg_U_2_voxel - sameReg_U_1_voxel
-        tmp[tmp < 0] = 0
-        n_01 = tmp.sum()
+            # Get voxel pairs that are in the same parcel in U_1 but different parcels in U_2
+            tmp = sameReg_U_1_voxel - sameReg_U_2_voxel
+            tmp[tmp < 0] = 0
+            n_10 = tmp.sum()
 
-        # Special cases: empty data or full agreement (tn, fp), (fn, tp)
-        if pt.all(n_01 == 0) and pt.all(n_10 == 0):
-            ari_voxel = pt.tensor(1.0)
-        elif adjusted:
-            ari_voxel = 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
-                                                             * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
+            # Get voxel pairs that are in the same parcel in U_2 but different parcels in U_1
+            tmp = sameReg_U_2_voxel - sameReg_U_1_voxel
+            tmp[tmp < 0] = 0
+            n_01 = tmp.sum()
+
+            # Special cases: empty data or full agreement (tn, fp), (fn, tp)
+            if pt.all(n_01 == 0) and pt.all(n_10 == 0):
+                ari_voxel = pt.tensor(1.0)
+            elif adjusted:
+                ari_voxel = 2.0 * (n_11 * n_00 - n_10 * n_01) / ((n_11 + n_10)
+                                                                 * (n_10 + n_00) + (n_11 + n_01) * (n_01 + n_00))
+            else:
+                ari_voxel = (n_11 + n_00) / (n_11 + n_10 + n_01 + n_00)
+
+            ARI_voxelwise[i] = ari_voxel
+        # Save ARI for individual i
+        if sub == 0:
+            ARI = ARI_voxelwise
         else:
-            ari_voxel = (n_11 + n_00) / (n_11 + n_10 + n_01 + n_00)
+            ARI = pt.stack((ARI, ARI_voxelwise), dim=0)
 
-        ARI_voxelwise[i] = ari_voxel
-
-    return ARI_voxelwise
+    return ARI
 
 
 def compare_probs(prob_a, prob_b, method='corr'):
@@ -828,34 +842,101 @@ def compare_probs(prob_a, prob_b, method='corr'):
     return comparison
 
 
-def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None):
-    # load models
-    info_a, model_a = ut.load_batch_best(mname_A)
-    _, model_b = ut.load_batch_best(mname_B)
-    atlas = info_a.atlas
+def parcel_individual(mname, subject='all', dataset=None, session=None):
+    """Calculate individual parcel maps for a model.
+    Args:
+        model_a: Model
+    Returns:
+        Uhats:   Individual parcellations
 
-    # Calculate method-specific comparison
-    if method == 'ari':
-        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
-        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
-        comparison = ARI_voxelwise(parcel_a, parcel_b).numpy()
-    elif method == 'ri':
-        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
-        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
-        comparison = ARI_voxelwise(parcel_a, parcel_b, adjusted=False).numpy()
-    elif method == 'match':
-        parcel_a = pt.argmax(model_a.arrange.marginal_prob(), dim=0)
-        parcel_b = pt.argmax(model_b.arrange.marginal_prob(), dim=0)
-        comparison = (parcel_a == parcel_b).int().numpy()
-    elif method == 'corr' or method == 'cosang':
+    """
+
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
+    if subject == 'all':  # get all subjects
+        model_settings = {'Models_01': [True, True, False],
+                          'Models_02': [False, True, False],
+                          'Models_03': [True, False, False],
+                          'Models_04': [False, False, False],
+                          'Models_05': [False, True, True]}
+
+        # uniform_kappa = model_settings[new_info.model_type][0]
+        join_sess = model_settings[info.model_type][1]
+        join_sess_part = model_settings[info.model_type][2]
+
+        # Get all data
+        data, _, _, subj_ind = lf.build_data_list(info.datasets,
+                                                  atlas=info.atlas,
+                                                  sess=info.sess,
+                                                  type=info.type,
+                                                  join_sess=join_sess,
+                                                  join_sess_part=join_sess_part)
+        # Attach the individual data
+        m = deepcopy(model)
+        m.initialize(data, subj_ind=subj_ind)
+
+    # elif type(subject) == list:
+    #     if session is None:
+    #         session = 'all'
+    #     idata, iinfo, ids = ds.get_dataset(ut.base_dir, dataset, atlas=info.atlas,
+    #                                        sess=session, type=info.type[info.datasets.index(dataset)], subjects=subject)
+
+    #     # Attach the individual data
+    #     m = deepcopy(model)
+    #     m.emissions = [m.emissions[0]]
+    #     m.emissions[0].initialize(idata)
+    #     m.initialize()
+
+    # Get the individual parcellation
+    Uhats = [m.emissions[d].Estep() for d in range(len(info.datasets))]
+    Uhats = [Uhat.to(pt.float32) for Uhat in Uhats]
+    # Collect Uhat into a single tensor
+    # TODO: Implement it such that each subject is only counted once? (i.e. if subject is in multiple datasets) --> Talk to Joern
+    Uhats = pt.cat(Uhats, dim=0)
+
+    return Uhats
+
+
+def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=False, lim=None, individual=False):
+
+    # ------ Get parcellations to compare ------
+    if not individual:  # Calculate method-specific comparison for group map
+        # load models
+        info_a, model_a = ut.load_batch_best(mname_A)
+        _, model_b = ut.load_batch_best(mname_B)
+        atlas = info_a.atlas
+        # Get group probability maps
         prob_a = model_a.arrange.marginal_prob()
         prob_b = model_b.arrange.marginal_prob()
+        # Add dimension to prob_a and prob_b for compatibility with individual parcellation
+        prob_a = prob_a.unsqueeze(0)
+        prob_b = prob_b.unsqueeze(0)
+
+    elif individual:  # Calculate method-specific comparison for each individual subject, then average
+        # Get individual parcellation
+        prob_a = parcel_individual(mname_A)
+        prob_b = parcel_individual(mname_B)
+
+    # Get group parcellation
+    parcel_a = pt.argmax(prob_a, dim=1)
+    parcel_b = pt.argmax(prob_b, dim=1)
+
+    # ------ Calculate comparison ------
+    if method == 'ari' or method == 'ri' or method == 'match':
+        if method == 'ari':
+            comparison = ARI_voxelwise(parcel_a, parcel_b).numpy()
+        elif method == 'ri':
+            comparison = ARI_voxelwise(
+                parcel_a, parcel_b, adjusted=False).numpy()
+        elif method == 'match':
+            comparison = (parcel_a == parcel_b).int().numpy()
+    elif method == 'corr' or method == 'cosang':
         comparison = compare_probs(
             prob_a, prob_b, atlas, method=method)
     else:
         raise ValueError(f"Invalid method: {method}")
 
-    # Save comparison as nifti
+    # ------ Save comparison as nifti ------
     if save_nifti:
         suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
         comp_data = suit_atlas.data_to_nifti(comparison)
@@ -866,7 +947,7 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
 
         print(f'Saved {method} image {fname}.')
 
-    # Plot comparison on flatmap
+    # ------ Plot comparison on flatmap ------
     if plot:
         if method == 'ari' or method == 'ri' or method == 'corr' or method == 'cosang':
             if lim is None:
@@ -899,53 +980,6 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         return comparison, ax
 
     return comparison
-
-
-def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
-    """
-    Compare models trained on different datasets on their Adjusted Rand Index (ARI)
-
-    Args:
-    - ks: list of integers (parcel numbers for models)
-    - model_types: list of strings representing the model types to be used for comparison. Default: ['all', 'loo', 'indiv']
-    - model_on: list of strings representing the data type (task, rest or both) on which the models were fitted. Default: ['task', 'rest']
-
-
-    """
-
-    model_datasets = get_model_datasets(model_on, model_types)
-
-    ########## Settings ##########
-    space = 'MNISymC3'  # Set atlas space
-    msym = 'sym'  # Set model symmetry
-    t = '03'  # Set model type
-
-    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
-
-    # get info for file name
-    model_type = '-'.join(model_types)
-
-    for k in ks:
-        if compare == 'train_data':
-            model_names = [
-                f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
-            fname = res_dir + \
-                f'ARI_{msym}_{model_type}_space-{space}_K-{k}_.tsv'
-            combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
-                            for j in range(i + 1, len(model_names))]
-
-        elif compare == 'symmetry':
-            combinations = [
-                (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets]
-            model_names = [m for c in combinations for m in c]
-            fname = res_dir + \
-                f'ARI_sym-asym_{model_type}_space-{space}_K-{k}_.tsv'
-
-        loaded_models, loaded_info = get_models(
-            model_names)
-
-        results = compare_ari(combinations, loaded_models, loaded_info)
-        results.to_csv(fname, index=False, sep='\t')
 
 
 if __name__ == "__main__":

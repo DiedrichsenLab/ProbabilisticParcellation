@@ -392,6 +392,53 @@ def compare_ari(combinations, loaded_models, loaded_info):
     return results
 
 
+def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], compare='train_data'):
+    """
+    Compare models trained on different datasets on their Adjusted Rand Index (ARI)
+
+    Args:
+    - ks: list of integers (parcel numbers for models)
+    - model_types: list of strings representing the model types to be used for comparison. Default: ['all', 'loo', 'indiv']
+    - model_on: list of strings representing the data type (task, rest or both) on which the models were fitted. Default: ['task', 'rest']
+
+
+    """
+
+    model_datasets = get_model_datasets(model_on, model_types)
+
+    ########## Settings ##########
+    space = 'MNISymC3'  # Set atlas space
+    msym = 'sym'  # Set model symmetry
+    t = '03'  # Set model type
+
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+
+    # get info for file name
+    model_type = '-'.join(model_types)
+
+    for k in ks:
+        if compare == 'train_data':
+            model_names = [
+                f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets]
+            fname = res_dir + \
+                f'ARI_{msym}_{model_type}_space-{space}_K-{k}_.tsv'
+            combinations = [(model_names[i], model_names[j]) for i in range(len(model_names))
+                            for j in range(i + 1, len(model_names))]
+
+        elif compare == 'symmetry':
+            combinations = [
+                (f'Models_03/sym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}', f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}') for datasets in model_datasets]
+            model_names = [m for c in combinations for m in c]
+            fname = res_dir + \
+                f'ARI_sym-asym_{model_type}_space-{space}_K-{k}_.tsv'
+
+        loaded_models, loaded_info = get_models(
+            model_names)
+
+        results = compare_ari(combinations, loaded_models, loaded_info)
+        results.to_csv(fname, index=False, sep='\t')
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -430,9 +477,9 @@ if __name__ == "__main__":
     #                          mname2, plot=True, method='ari', save_nifti=True)
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ri', save_nifti=True)
-    comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='corr', save_nifti=False, lim=(0, 1))
-    comp = compare_voxelwise(mname1,
-                             mname2, plot=True, method='cosang', save_nifti=False)
+    comp = ev.compare_voxelwise(mname1,
+                                mname2, plot=True, method='corr', save_nifti=False, lim=(0, 1))
+    comp = ev.compare_voxelwise(mname1,
+                                mname2, plot=True, method='cosang', save_nifti=False)
 
     pass
