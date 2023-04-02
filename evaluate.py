@@ -814,7 +814,7 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     ARI = pt.stack(ARI, dim=0)
 
     # Return ARI and mean ARI across subjects
-    return ARI, ARI.mean(dim=0, nan_policy='omit')
+    return ARI, np.nanmean(ARI, axis=0)
 
 
 def compare_probs(prob_a, prob_b, method='corr'):
@@ -826,7 +826,6 @@ def compare_probs(prob_a, prob_b, method='corr'):
     Returns:
         Comparison vector
     """
-
     if method == 'corr':
         print(f'Calculating correlation between probability maps...')
     elif method == 'cosang':

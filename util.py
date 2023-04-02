@@ -280,7 +280,7 @@ def plot_multi_flat(data, atlas, grid,
                     cscale=None,
                     titles=None,
                     colorbar=False,
-                    save_fig=True,
+                    save_fig=False,
                     save_under=None):
     """Plots a grid of flatmaps with some data
 
