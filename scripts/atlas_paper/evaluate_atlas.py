@@ -30,7 +30,8 @@ import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.functional_profiles as fp
 from cortico_cereb_connectivity import evaluation as cev
 from datetime import datetime
-
+import seaborn as sns
+import re
 
 res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
@@ -261,7 +262,7 @@ def evaluate_existing(test_on='task', models=None):
     """Evalute existing parcellations (MDTB, Buckner).
     """
 
-    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Buckner17', 'Ji10']
+    parcels = ['Anatom', 'MDTB10', 'Buckner7', 'Ji10', 'Buckner17']
     space = 'MNISymC3'
     if models is None:
         models = ['Models_03/asym_Md_space-MNISymC3_K-10.pickle']
@@ -361,6 +362,8 @@ def compare_ari(combinations, loaded_models, loaded_info):
     Returns:
     - results: DataFrame with columns 'model_name', 'atlas', 'K', 'train_data', 'train_loglik', and 'ari'
     """
+    if combinations == 'all':
+        combinations = list(it.combinations(loaded_models.keys(), 2))
 
     results = pd.DataFrame()
     for (a, b) in combinations:
@@ -439,6 +442,315 @@ def compare_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'r
         results.to_csv(fname, index=False, sep='\t')
 
 
+def calc_ari(parcels):
+    """
+    Calculate ARI between all parcellations in a list of parcellations
+
+    Args:
+    - parcels (np.array or list): parcellations to be compared
+
+    Returns:
+    - ari (np.array): ARI matrix
+
+    """
+    if isinstance(parcels[0], list):  # if parcels are two lists of parcellations to compare
+        ari = np.zeros((len(parcels[0]), len(parcels[1])))
+        for i in range(len(parcels[0])):
+            for j in range(len(parcels[1])):
+                ari[i, j] = gev.ARI(parcels[0][i], parcels[1][j]).item()
+    else:
+        ari = np.zeros((len(parcels), len(parcels)))
+        for i in range(len(parcels)):
+            for j in range(len(parcels)):
+                ari[i, j] = gev.ARI(parcels[i], parcels[j]).item()
+    return ari
+
+
+def load_existing_parcellations(space):
+    """
+    Load existing parcellations
+
+    Args:
+    - space (str): atlas space
+
+    Returns:
+    - existing (list): list of existing parcellations
+    - labels (list): list of labels for existing parcellations
+
+    """
+
+    # Load existing parcellations
+    existing = ['/tpl-MNI152NLin2009cSymC/atl-Buckner7_space-MNI152NLin2009cSymC_dseg.nii',
+                '/tpl-MNI152NLin2009cSymC/atl-Ji10_space-MNI152NLin2009cSymC_dseg.nii',
+                '/tpl-MNI152NLin2009cSymC/atl-Buckner17_space-MNI152NLin2009cSymC_dseg.nii',
+                '/tpl-MNI152NLin2009cSymC/atl-MDTB10_space-MNI152NLin2009cSymC_dseg.nii',
+                '/tpl-MNI152NLin2009cSymC/atl-Anatom_space-MNI152NLin2009cSymC_dseg.nii', ]
+    labels = ['Buckner7', 'Ji10', 'Buckner17', 'MDTB10', 'Anatom']
+    atlas, _ = am.get_atlas(
+        space, atlas_dir=ut.base_dir + '/Atlases')
+    parcels = []
+    for i in range(len(existing)):
+        par = nb.load(ut.atlas_dir + existing[i])
+        Pgroup = pt.tensor(atlas.read_data(par, 0) + 1,
+                           dtype=pt.get_default_dtype())
+        parcels.append(Pgroup)
+
+    return parcels, labels
+
+
+def load_individual_parcellations(ks, space):
+    """Returns parcellations for individual datasets
+
+    Args:
+    - ks (list): list of integers representing the number of parcels for each model
+    - space (str): atlas space
+
+    Returns:
+    - parcels (list): list of parcellations
+    - labels (list): list of labels for parcellations
+    """
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+
+    model_datasets = [[0], [1], [2], [3], [4], [5], [6], [7]]
+
+    # Load individual parcellations
+    # for idx, k in enumerate(ks):
+    for idx, datasets in enumerate(model_datasets):
+        model_names = [
+            f'Models_03/asym_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for k in ks]
+        loaded_models, _ = get_models(
+            model_names)
+        # get model parcellations
+        parcels = [(pt.argmax(model.arrange.marginal_prob(), dim=0))
+                   for model in loaded_models.values()]
+
+        # Make labels
+        labels = [
+            f'{"".join(T.two_letter_code[datasets])}_asym_{k}' for k in ks]
+
+        if idx == 0:
+            all_parcels = [parcels]
+            all_labels = [labels]
+        else:
+            all_parcels.append(parcels)
+            all_labels.append(labels)
+
+    return all_parcels, all_labels
+
+
+def get_compMat(criterion='ari', ks=[10, 20, 34, 68], model_types=['all', 'loo', 'indiv'], sym=['sym', 'asym'], space='MNISymC3'):
+    """
+    Gets the comparison matrix for the given criterion
+
+    Args:
+    - criterion: string representing the criterion to be used for MDS. Default: 'ARI'
+    - ks: list of integers (parcel numbers for models)
+    - model_types: list of strings representing the model types to be used for comparison. Default: ['all', 'loo', 'indiv']
+    - model_on: list of strings representing the data type (task, rest or both) on which the models were fitted. Default: ['task', 'rest']
+    - compare: string representing the comparison to be made. Default: 'train_data'
+
+    Returns:
+    - compMat: comparison matrix
+    - labels: list of labels for the comparison matrix
+
+    """
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+
+    # Load models
+    for idx, k in enumerate(ks):
+        model_datasets = [[0], [1], [2], [3], [4], [5], [6], [
+            0, 1, 2, 3, 4, 5, 6], [7], [0, 1, 2, 3, 4, 5, 6, 7]]
+        model_names = [
+            f'Models_03/{msym}_{"".join(T.two_letter_code[datasets])}_space-{space}_K-{k}' for datasets in model_datasets for msym in sym]
+        loaded_models, _ = get_models(
+            model_names)
+        # get model parcellations
+        parcels = [(pt.argmax(model.arrange.marginal_prob(), dim=0))
+                   for model in loaded_models.values()]
+
+        # Make labels
+        labels = [
+            f'{"".join(T.two_letter_code[datasets])}_{msym}' for datasets in model_datasets for msym in sym]
+        informative_labels = {'MdPoNiIbWmDeSo_sym': 'Task_sym',
+                              'MdPoNiIbWmDeSoHc_sym': 'Task+Rest_sym',
+                              'Hc_sym': 'Rest_sym',
+                              'MdPoNiIbWmDeSo_asym': 'Task_asym',
+                              'MdPoNiIbWmDeSoHc_asym': 'Task+Rest_asym',
+                              'Hc_asym': 'Rest_asym'}
+        labels = [informative_labels[label] if label in informative_labels.keys(
+        ) else label for label in labels]
+
+        # load existing
+        existing, existing_labels = load_existing_parcellations(space)
+        parcels = parcels + existing
+        labels = labels + existing_labels
+
+        # Calculate ARI
+        results = calc_ari(parcels)
+
+        # Store results in third dimension
+        if idx == 0:
+            compMat = np.zeros(
+                (len(parcels), len(parcels), len(ks)))
+        compMat[:, :, idx] = results
+        idx += 1
+
+    return compMat, labels
+
+
+def plot_mds(Results, labels):
+
+    # Average across Ks
+    Results_avg = np.mean(Results, axis=2)
+    # ---------------- Plotting ----------------
+
+    # ---- Plot correlation matrix ----
+   # Create a mask to hide the diagonal for visualisation
+    mask = np.zeros_like(Results_avg)
+    mask[np.diag_indices(Results_avg)] = True
+
+    # TODO: Derive eigenvectors from only task data and then project the data
+
+    # Plot correlation matrix
+    fig, ax = plt.subplots(figsize=(10, 10))
+    sns.heatmap(Results_avg, mask=mask, annot=True, ax=ax, cmap='RdYlBu_r')
+    ax.set_xticklabels(
+        labels)
+    ax.set_yticklabels(
+        labels)
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45,
+             ha="right", rotation_mode="anchor")
+    plt.setp(ax.get_yticklabels(), rotation=45,
+             ha="right", rotation_mode="anchor")
+
+    # ---- Plot MDS ----
+    # Remove Anatomical parcellation before calculating MDS
+    labels_func = labels[:-1]
+    results_func = Results_avg[:-1, :-1]
+
+    # Calculate the eigenvalues and eigenvectors of the correlation coefficient matrix
+    eigenvalues, eigenvectors = np.linalg.eig(results_func)
+
+    # Choose the two eigenvectors with the highest eigenvalues
+    idx = eigenvalues.argsort()[::-1][:2]
+    pos = eigenvectors[:, idx]
+
+    # Project the data onto the eigenvectors of just the functional data?
+
+    # Plot the resulting points
+    plt.figure()
+    plt.scatter(pos[:, 0], pos[:, 1])
+    for j in range(pos.shape[0]):
+        plt.text(pos[j, 0] + 0.005, pos[j, 1], labels[j],
+                 fontdict=dict(alpha=0.5))
+
+    # ---- Plot 3D MDS ----
+    # Choose the three eigenvectors with the highest eigenvalues
+    idx = eigenvalues.argsort()[::-1][:3]
+    pos = eigenvectors[:, idx]
+    # Plot in 3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2])
+    for j in range(pos.shape[0]):
+        ax.text(pos[j, 0] + 0.005, pos[j, 1], pos[j, 2], labels[j],
+                fontdict=dict(alpha=0.5))
+
+    pass
+
+
+def compare_across_granularity(plot=False):
+    """Calculate the ARI between every granularity of parcellation 1 and every granularity of parcellation 2
+
+    """
+    ks = [10, 20, 34, 40, 68]
+    space = 'MNISymC3'
+    # Get models at different granularities
+    parcels, labels = load_individual_parcellations(ks, space)
+    # Get existing Rest parcellations at different granularities (Buckner7, Ji10, Buckner17)
+    existing, existing_labels = load_existing_parcellations(space)
+    existing_gran = [existing[0], existing[1], existing[2]]
+    labels_gran = [existing_labels[0], existing_labels[1], existing_labels[2]]
+    parcels.append(existing_gran)
+    labels.append(labels_gran)
+    # TODO: Get existing MDTB parcellations at different granularities (MDTB07, MDTB10, MDTB17)
+
+    # Build subplot with all matrices
+    ARI = np.zeros((len(parcels), len(parcels)))
+    aris = []
+    a = 0
+    for i, parcel1 in enumerate(parcels):
+        for j, parcel2 in enumerate(parcels):
+            ari = calc_ari([parcel1, parcel2])
+            print(f'ARI between {labels[i]} and {labels[j]}: {ari}')
+
+            # Store labels for matrix
+            if a == 0:
+                labels_vs = []
+            labels_vs.append(f'{labels[i]}_{labels[j]}')
+
+            # Store mean ARI in matrix
+            ARI[i, j] = np.mean(ari)
+            ARI[j, i] = np.mean(ari)
+            # Store entire matrix
+            aris.append(ari)
+            a += 1
+
+    # Get numbers at the end of the labels
+    granularity_labels = []
+    dataset_labels = []
+    for label in labels:
+        granularity_labels.append([re.findall(r'\d+', l)[0]
+                                   for l in label])
+        dataset_labels.append([re.findall(r'\D+', l)[0]
+                               for idx, l in enumerate(label) if idx == 0][0])
+
+    if plot:
+
+        # Set up the matplotlib figure
+        fig, ax = plt.subplots(figsize=(11, 9))
+        grid = (len(parcels), len(parcels))
+        a = 0
+        for i, parcel1 in enumerate(parcels):
+            for j, parcel2 in enumerate(parcels):
+
+                plt.subplot(grid[0], grid[1], i * grid[0] + j + 1)
+                # sns.heatmap(aris[a], annot=False, vmin=0, vmax=1)
+                # sns.heatmap(aris[a], annot=False)
+                # plot axis labels
+                if i == 0:  # first row
+                    plt.title(dataset_labels[j])
+                if j == 0:  # first column
+                    plt.ylabel(dataset_labels[i])
+
+                # Remove xticks and yticks for each matrix
+                plt.xticks([])
+                plt.yticks([])
+
+                a += 1
+
+    # Average off-diagonal elements of each matrix
+    ARI_offdiag = np.zeros((len(parcels), len(parcels)))
+    for i, parcel1 in enumerate(parcels):
+        for j, parcel2 in enumerate(parcels):
+            ari = aris[i * len(parcels) + j]
+            if i == j:
+                mask = np.zeros_like(ari, dtype=bool)
+                mask[np.diag_indices(ari.shape[0])] = True
+                ARI_offdiag[i, j] = np.mean(ari[~mask])
+            else:
+                ARI_offdiag[i, j] = np.mean(ari)
+    if plot:
+        # Plot off-diagonal elements
+        fig, ax = plt.subplots(figsize=(11, 9))
+        sns.heatmap(ARI_offdiag, annot=True, vmin=0, vmax=0.5, ax=ax,
+                    xticklabels=dataset_labels, yticklabels=dataset_labels)
+        plt.title('Average ARI between granularities')
+        plt.show()
+        pass
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -471,15 +783,23 @@ if __name__ == "__main__":
 
     # compare_existing()
 
-    mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
-    mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+    # mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    # mname2 = 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ari', save_nifti=True)
     # comp = compare_voxelwise(mname1,
     #                          mname2, plot=True, method='ri', save_nifti=True)
-    comp = ev.compare_voxelwise(mname1,
-                                mname2, plot=True, method='corr', save_nifti=False, lim=(0, 1))
-    comp = ev.compare_voxelwise(mname1,
-                                mname2, plot=True, method='cosang', save_nifti=False)
+    # comp = ev.compare_voxelwise(mname1,
+    #                             mname2, plot=True, method='corr', save_nifti=False, lim=(0, 1))
+    # comp = ev.compare_voxelwise(mname1,
+    #                             mname2, plot=True, method='cosang', save_nifti=False)
 
+    # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
+    #     'all', 'indiv'], sym=['asym'])
+    # plot_mds(compMat, labels)
+
+    # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
+    #     'all', 'indiv'], sym=['asym'])
+
+    compare_across_granularity()
     pass
