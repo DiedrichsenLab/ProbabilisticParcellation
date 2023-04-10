@@ -660,11 +660,10 @@ def plot_mds(Results, labels):
     pass
 
 
-def compare_across_granularity(plot=False):
+def compare_across_granularity(ks):
     """Calculate the ARI between every granularity of parcellation 1 and every granularity of parcellation 2
 
     """
-    ks = [10, 20, 34, 40, 68]
     space = 'MNISymC3'
     # Get models at different granularities
     parcels, labels = load_individual_parcellations(ks, space)
@@ -696,6 +695,10 @@ def compare_across_granularity(plot=False):
             # Store entire matrix
             aris.append(ari)
             a += 1
+    return ARI, ari, labels, parcels
+
+
+def plot_comp_matrix(aris, labels, parcels):
 
     # Get numbers at the end of the labels
     granularity_labels = []
@@ -705,8 +708,6 @@ def compare_across_granularity(plot=False):
                                    for l in label])
         dataset_labels.append([re.findall(r'\D+', l)[0]
                                for idx, l in enumerate(label) if idx == 0][0])
-
-    if plot:
 
         # Set up the matplotlib figure
         fig, ax = plt.subplots(figsize=(11, 9))
@@ -730,6 +731,9 @@ def compare_across_granularity(plot=False):
 
                 a += 1
 
+
+def average_comp_matrix(parcels, aris, plot=False):
+
     # Average off-diagonal elements of each matrix
     ARI_offdiag = np.zeros((len(parcels), len(parcels)))
     for i, parcel1 in enumerate(parcels):
@@ -741,14 +745,16 @@ def compare_across_granularity(plot=False):
                 ARI_offdiag[i, j] = np.mean(ari[~mask])
             else:
                 ARI_offdiag[i, j] = np.mean(ari)
-    if plot:
-        # Plot off-diagonal elements
-        fig, ax = plt.subplots(figsize=(11, 9))
-        sns.heatmap(ARI_offdiag, annot=True, vmin=0, vmax=0.5, ax=ax,
-                    xticklabels=dataset_labels, yticklabels=dataset_labels)
-        plt.title('Average ARI between granularities')
-        plt.show()
-        pass
+    return ARI_offdiag
+
+
+def plot_average_comp_matrix(ARI_offdiag, dataset_labels):
+    # Plot off-diagonal elements
+    fig, ax = plt.subplots(figsize=(11, 9))
+    sns.heatmap(ARI_offdiag, annot=True, vmin=0, vmax=0.5, ax=ax,
+                xticklabels=dataset_labels, yticklabels=dataset_labels)
+    plt.title('Average ARI between granularities')
+    plt.show()
 
 
 if __name__ == "__main__":
