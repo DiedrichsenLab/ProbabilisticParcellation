@@ -23,6 +23,7 @@ import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
 import generativeMRF.evaluation as ev
+import ProbabilisticParcellation.evaluate as ppev
 # from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
 import nitools as nt
@@ -34,8 +35,7 @@ def reorder_selected():
     mnames = [
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym'
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
     ]
 
     f_assignment = 'mixed_assignment_68_16.csv'
@@ -53,9 +53,8 @@ def export_selected():
     mnames = [
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_arrange-asym_reordered',
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_reordered'
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'
     ]
     for mname in mnames:
         export(mname)
@@ -180,9 +179,23 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
     pass
 
 
+def export_uhats(mname_A='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered', mname_B='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'):
+    # load models
+    ppev.compare_voxelwise(mname_A, mname_B, individual=True)
+
+    prob_a = ppev.parcel_individual(
+        mname_A, subject='all', dataset=None, session=None)
+
+    prob_b = ppev.parcel_individual(
+        mname_B, subject='all', dataset=None, session=None)
+
+    pt.save(prob_a, f'{ut.model_dir}/Models/{mname_A}_Uhat.pt')
+    pt.save(prob_b, f'{ut.model_dir}/Models/{mname_B}_Uhat.pt')
+
+
 if __name__ == "__main__":
 
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
 
     # # --- Export merged model profile ---
     # fileparts = mname.split('/')
@@ -195,9 +208,38 @@ if __name__ == "__main__":
 
     # features = fp.cognitive_features(mname)
 
-    # --- Reorder selected models according to our assignment ---
+    # # --- Reorder selected models according to our assignment ---
     # reorder_selected()
-    # --- Export asymmetric model fitted from symmetric model ---
-    export_selected()
+    # # --- Export asymmetric model fitted from symmetric model ---
+    # export_selected()
+    # # --- Export individual parcellations ---
+    # export_uhats()
+    # --- Export ARIs ---
+    # load Uhats
+    model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+                  'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
 
-    pass
+    prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
+    prob_b = pt.load(f'{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt')
+    parcel_a = pt.argmax(prob_a, dim=1)
+    parcel_b = pt.argmax(prob_b, dim=1)
+
+    # Load model
+    info_a, model_a = ut.load_batch_best(model_pair[0])
+
+    # ------ Calculate comparison ------
+    # comparison, comparison_group = ppev.ARI_voxelwise(
+    #     parcel_a, parcel_b).numpy()
+    # comparison, comparison_group = ppev.ARI_voxelwise(
+    #     parcel_a, parcel_b, adjusted=False).numpy()
+    comparison, comparison_group = ppev.compare_probs(
+        prob_a, prob_b, method='corr')
+
+    ax = ut.plot_multi_flat([comparison_group], 'MNISymC2',
+                            grid=(1, 1),
+                            dtype='func',
+                            cmap='RdYlBu_r',
+                            cscale=[0, 1],
+                            colorbar=True)
+    comparison = ppev.compare_probs(
+        prob_a, prob_b, method='cosang')

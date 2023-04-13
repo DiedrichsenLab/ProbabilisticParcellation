@@ -168,7 +168,15 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
 
     # Reorder the model
     new_model = deepcopy(model)
-    new_model.arrange.logpi = model.arrange.logpi[order_arrange]
+    if new_model.arrange.logpi.shape[0] == order_arrange.shape[0]:
+        new_model.arrange.logpi = model.arrange.logpi[order_arrange]
+    elif new_model.arrange.logpi.shape[0] * 2 == order_arrange.shape[0]:
+        new_model.arrange.logpi = model.arrange.logpi[order_arrange[:len(
+            order_arrange) // 2]]
+    else:
+        raise ValueError(
+            'The number of parcels in the model does not match the number of parcels in the assignment.')
+
     for e, em in enumerate(new_model.emissions):
         new_model.emissions[e].V = em.V[:, order_emission]
 
@@ -195,7 +203,7 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
     return new_model
 
 
-def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None):
+def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None, gamma=0):
     """
     Colours the parcellation of a model.
 
@@ -206,6 +214,7 @@ def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None):
     - labels (ndarray): Labels for the parcels if they have already been generated. Defaults to None.
     - clusters (ndarray): Distorts color towards cluster mean.
     - weighting (str): Type of weighting to use for calculating parcel similarity. Defaults to None.
+    - gamma (float): The gamma value used for the colormap.
 
     Returns:
     - Prob (ndarray): The winner-take-all probabilities for each region.
@@ -232,7 +241,7 @@ def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None):
     # Define color anchors
     m, regions, colors = sc.get_target_points(atlas, parcel)
     cmap = sc.colormap_mds(W, target=(m, regions, colors),
-                           clusters=clusters, gamma=0)
+                           clusters=clusters, gamma=gamma)
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     plt.figure(figsize=(5, 10))

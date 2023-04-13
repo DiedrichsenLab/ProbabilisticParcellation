@@ -280,7 +280,7 @@ def plot_multi_flat(data, atlas, grid,
                     cscale=None,
                     titles=None,
                     colorbar=False,
-                    save_fig=True,
+                    save_fig=False,
                     save_under=None):
     """Plots a grid of flatmaps with some data
 
@@ -292,6 +292,9 @@ def plot_multi_flat(data, atlas, grid,
         dtype (str, optional):'label' or 'func'
         cscale (_type_, optional): Scale of data (None)
         titles (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        ax: Axis / figure of plot
     """
     if isinstance(data, np.ndarray):
         n_subplots = data.shape[0]
@@ -303,12 +306,12 @@ def plot_multi_flat(data, atlas, grid,
 
     for i in np.arange(n_subplots):
         plt.subplot(grid[0], grid[1], i + 1)
-        plot_data_flat(data[i], atlas,
-                       cmap=cmap[i],
-                       dtype=dtype,
-                       cscale=cscale,
-                       render='matplotlib',
-                       colorbar=(i == 0) & colorbar)
+        ax = plot_data_flat(data[i], atlas,
+                            cmap=cmap[i],
+                            dtype=dtype,
+                            cscale=cscale,
+                            render='matplotlib',
+                            colorbar=(i == 0) & colorbar)
         if titles is not None:
             plt.title(titles[i])
             if save_fig:
@@ -318,6 +321,8 @@ def plot_multi_flat(data, atlas, grid,
                 plt.savefig(fname, format='png')
                 # plt.savefig(f'rel_{titles[i]}_{i}.png', format='png',
                 #             bbox_inches='tight', pad_inches=0)
+
+    return ax
 
 
 def hard_max(Prob):
@@ -428,7 +433,7 @@ def _compute_var_cov(data, cond='all', mean_centering=True):
 
     k = data.shape[1]
     cov = pt.matmul(data, data.T) / (k - 1)
-    sd = pt.sqrt((data**2).sum(dim=1)/(k-1))  # standard deviation
+    sd = pt.sqrt((data**2).sum(dim=1) / (k - 1))  # standard deviation
     var = pt.matmul(sd, sd.T)
 
     return cov, var

@@ -27,6 +27,25 @@ from copy import deepcopy
 import time
 
 
+def fit_asym_from_sym_sep_hem(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68', mname_new=None):
+    # Load model
+    inf, m = ut.load_batch_best(mname)
+    inf = ut.recover_info(inf, m, mname)
+    # Freeze emission model and fit arrangement model
+    M, new_info = lf.refit_model(m, inf, fit='arrangement', sym_new='asym')
+    # save new model
+    if mname_new is None:
+        mname_new = f'{mname.split("/")[0]}asym_{mname.split("sym_")[1]}_arrange-asym'
+    with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
+        pickle.dump([M], file)
+        # save new info
+        new_info.to_csv(f'{ut.model_dir}/Models/{mname_new}.tsv',
+                        sep='\t', index=False)
+        print(
+            f'Done. Saved asymmetric model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
+    return M, new_info
+
+
 def fit_asym_from_sym(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'):
     # Load model
     inf, m = ut.load_batch_best(mname)
@@ -34,7 +53,7 @@ def fit_asym_from_sym(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'):
     # Freeze emission model and fit arrangement model
     M, new_info = lf.refit_model(m, inf, fit='arrangement', sym_new='asym')
     # save new model
-    mname_new = f'asym_{mname.split('sym_')[1]}_arrange-asym'
+    mname_new = f'asym_{mname.split("sym_")[1]}_arrange-asym'
     with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([M], file)
         # save new info
@@ -101,7 +120,7 @@ if __name__ == "__main__":
     #            rest_included=True, indiv_on_rest_only=True)
     # fit_models(ks=ks, fit_datasets=['loo'], rest_included=True)
 
-    fit_asym_from_sym(
-        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
     # fit_asym_from_sym(
-    #     mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed')
+    # mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
+    fit_asym_from_sym_sep_hem(
+        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
