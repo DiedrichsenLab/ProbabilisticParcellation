@@ -776,6 +776,18 @@ def norm_comp_matrix(aris, ARI_avg):
     return ARI_norm, aris_norm
 
 
+def save_ari():
+    ARI, aris, labels, parcels = compare_across_granularity(
+        ks=[10, 20, 34, 40, 68], exsting_included=False)
+
+    # Normalize aris by within-dataset reliability
+    ARI_avg = average_comp_matrix(aris)
+    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+
+    # Save results
+    np.save(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', aris)
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -826,20 +838,17 @@ if __name__ == "__main__":
     # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
     #     'all', 'indiv'], sym=['asym'])
 
-    ARI, aris, labels, parcels = compare_across_granularity(
-        ks=[10, 20, 34, 40, 68], exsting_included=False)
+    # ---- Load results ----
+    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', 'rb') as f:
+        aris = np.load(f)
 
     # Normalize aris by within-dataset reliability
     ARI_avg = average_comp_matrix(aris)
     ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
-    granularity_labels = []
-    dataset_labels = []
-    for label in labels:
-        granularity_labels.append([re.findall(r'\d+', l)[0]
-                                   for l in label])
-        dataset_labels.append([re.findall(r'\D+', l)[0]
-                               for idx, l in enumerate(label) if idx == 0][0])
+    # ---- Plots ----
+    dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
+                      'Wm', 'De', 'So', 'Hc']
 
     fig, ax = plt.subplots(figsize=(11, 9))
     sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
@@ -853,10 +862,11 @@ if __name__ == "__main__":
     plt.title('Average ARI between granularities')
     plt.show()
 
+    # ---- Stats ----
     # Test whether task based datasets are more similar to MDTB than to HCP
     n_parcellations = int(np.sqrt(len(aris)))
-    mdtb_row = dataset_labels.index('Md_asym_')
-    hcp_row = dataset_labels.index('Hc_asym_')
+    mdtb_row = dataset_labels.index('Md')
+    hcp_row = dataset_labels.index('Hc')
 
     mdtb_values = [aris_norm[i * n_parcellations + j]
                    for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
