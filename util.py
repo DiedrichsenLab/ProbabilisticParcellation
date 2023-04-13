@@ -12,6 +12,7 @@ import generativeMRF.full_model as fm
 from pathlib import Path
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.hierarchical_clustering as cl
+import re
 
 # Set directories for the entire project - just set here and import everywhere
 # else
