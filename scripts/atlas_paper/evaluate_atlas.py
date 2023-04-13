@@ -607,7 +607,7 @@ def plot_mds(Results, labels):
     # ---- Plot correlation matrix ----
    # Create a mask to hide the diagonal for visualisation
     mask = np.zeros_like(Results_avg)
-    mask[np.diag_indices(Results_avg)] = True
+    mask[np.diag_indices(Results_avg.shape[0])] = True
 
     # TODO: Derive eigenvectors from only task data and then project the data
 
@@ -660,20 +660,21 @@ def plot_mds(Results, labels):
     pass
 
 
-def compare_across_granularity(plot=False):
+def compare_across_granularity(ks, verbose=False, exsting_included=True):
     """Calculate the ARI between every granularity of parcellation 1 and every granularity of parcellation 2
 
     """
-    ks = [10, 20, 34, 40, 68]
     space = 'MNISymC3'
     # Get models at different granularities
     parcels, labels = load_individual_parcellations(ks, space)
     # Get existing Rest parcellations at different granularities (Buckner7, Ji10, Buckner17)
-    existing, existing_labels = load_existing_parcellations(space)
-    existing_gran = [existing[0], existing[1], existing[2]]
-    labels_gran = [existing_labels[0], existing_labels[1], existing_labels[2]]
-    parcels.append(existing_gran)
-    labels.append(labels_gran)
+    if exsting_included:
+        existing, existing_labels = load_existing_parcellations(space)
+        existing_gran = [existing[0], existing[1], existing[2]]
+        labels_gran = [existing_labels[0],
+                       existing_labels[1], existing_labels[2]]
+        parcels.append(existing_gran)
+        labels.append(labels_gran)
     # TODO: Get existing MDTB parcellations at different granularities (MDTB07, MDTB10, MDTB17)
 
     # Build subplot with all matrices
@@ -683,7 +684,8 @@ def compare_across_granularity(plot=False):
     for i, parcel1 in enumerate(parcels):
         for j, parcel2 in enumerate(parcels):
             ari = calc_ari([parcel1, parcel2])
-            print(f'ARI between {labels[i]} and {labels[j]}: {ari}')
+            if verbose:
+                print(f'ARI between {labels[i]} and {labels[j]}: {ari}')
 
             # Store labels for matrix
             if a == 0:
@@ -696,6 +698,10 @@ def compare_across_granularity(plot=False):
             # Store entire matrix
             aris.append(ari)
             a += 1
+    return ARI, aris, labels, parcels
+
+
+def plot_comp_matrix(aris, labels, parcels):
 
     # Get numbers at the end of the labels
     granularity_labels = []
@@ -706,49 +712,80 @@ def compare_across_granularity(plot=False):
         dataset_labels.append([re.findall(r'\D+', l)[0]
                                for idx, l in enumerate(label) if idx == 0][0])
 
-    if plot:
-
-        # Set up the matplotlib figure
-        fig, ax = plt.subplots(figsize=(11, 9))
-        grid = (len(parcels), len(parcels))
-        a = 0
-        for i, parcel1 in enumerate(parcels):
-            for j, parcel2 in enumerate(parcels):
-
-                plt.subplot(grid[0], grid[1], i * grid[0] + j + 1)
-                # sns.heatmap(aris[a], annot=False, vmin=0, vmax=1)
-                # sns.heatmap(aris[a], annot=False)
-                # plot axis labels
-                if i == 0:  # first row
-                    plt.title(dataset_labels[j])
-                if j == 0:  # first column
-                    plt.ylabel(dataset_labels[i])
-
-                # Remove xticks and yticks for each matrix
-                plt.xticks([])
-                plt.yticks([])
-
-                a += 1
-
-    # Average off-diagonal elements of each matrix
-    ARI_offdiag = np.zeros((len(parcels), len(parcels)))
+    # Set up the matplotlib figure
+    fig, ax = plt.subplots(figsize=(11, 9))
+    grid = (len(parcels), len(parcels))
+    a = 0
     for i, parcel1 in enumerate(parcels):
         for j, parcel2 in enumerate(parcels):
-            ari = aris[i * len(parcels) + j]
+
+            plt.subplot(grid[0], grid[1], i * grid[0] + j + 1)
+            sns.heatmap(aris[a], annot=False, vmin=0, vmax=0.8)
+            # sns.heatmap(aris[a], annot=False)
+            # plot axis labels
+            if i == 0:  # first row
+                plt.title(dataset_labels[j])
+            if j == 0:  # first column
+                plt.ylabel(dataset_labels[i])
+
+            # Remove xticks and yticks for each matrix
+            plt.xticks([])
+            plt.yticks([])
+
+            a += 1
+
+
+def average_comp_matrix(aris):
+    n_parcellations = int(np.sqrt(len(aris)))
+    # Average off-diagonal elements of each matrix
+    ARI_avg = np.zeros((n_parcellations, n_parcellations))
+    for i in np.arange(n_parcellations):
+        for j in np.arange(n_parcellations):
+            ari = aris[i * n_parcellations + j]
             if i == j:
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
-                ARI_offdiag[i, j] = np.mean(ari[~mask])
+                ARI_avg[i, j] = np.mean(ari[mask == False])
             else:
-                ARI_offdiag[i, j] = np.mean(ari)
-    if plot:
-        # Plot off-diagonal elements
-        fig, ax = plt.subplots(figsize=(11, 9))
-        sns.heatmap(ARI_offdiag, annot=True, vmin=0, vmax=0.5, ax=ax,
-                    xticklabels=dataset_labels, yticklabels=dataset_labels)
-        plt.title('Average ARI between granularities')
-        plt.show()
-        pass
+                ARI_avg[i, j] = np.mean(ari)
+    return ARI_avg
+
+
+def norm_comp_matrix(aris, ARI_avg):
+    n_parcellations = int(np.sqrt(len(aris)))
+
+    # Average off-diagonal elements of each matrix
+    ARI_norm = np.zeros((n_parcellations, n_parcellations))
+    aris_norm = []
+    for i in np.arange(n_parcellations):
+        for j in np.arange(n_parcellations):
+            ari = aris[i * n_parcellations + j]
+
+            if i == j:
+                mask = np.zeros_like(ari, dtype=bool)
+                mask[np.diag_indices(ari.shape[0])] = True
+                ari_norm = ari[mask == False] / \
+                    np.sqrt(ARI_avg[i, i] * ARI_avg[j, j])
+            else:
+                ari_norm = ari / np.sqrt(ARI_avg[i, i] * ARI_avg[j, j])
+
+            ARI_norm[i, j] = np.mean(ari_norm)
+            aris_norm.append(ari_norm)
+
+    # Normalize each row
+    return ARI_norm, aris_norm
+
+
+def save_ari():
+    ARI, aris, labels, parcels = compare_across_granularity(
+        ks=[10, 20, 34, 40, 68], exsting_included=False)
+
+    # Normalize aris by within-dataset reliability
+    ARI_avg = average_comp_matrix(aris)
+    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+
+    # Save results
+    np.save(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', aris)
 
 
 if __name__ == "__main__":
@@ -801,5 +838,52 @@ if __name__ == "__main__":
     # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
     #     'all', 'indiv'], sym=['asym'])
 
-    compare_across_granularity()
+    # ---- Load results ----
+    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', 'rb') as f:
+        aris = np.load(f)
+
+    # Normalize aris by within-dataset reliability
+    ARI_avg = average_comp_matrix(aris)
+    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+
+    # ---- Plots ----
+    dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
+                      'Wm', 'De', 'So', 'Hc']
+
+    fig, ax = plt.subplots(figsize=(11, 9))
+    sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
+                xticklabels=dataset_labels, yticklabels=dataset_labels)
+    plt.title('Average ARI between granularities')
+    plt.show()
+
+    fig, ax = plt.subplots(figsize=(11, 9))
+    sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
+                xticklabels=dataset_labels, yticklabels=dataset_labels)
+    plt.title('Average ARI between granularities')
+    plt.show()
+
+    # ---- Stats ----
+    # Test whether task based datasets are more similar to MDTB than to HCP
+    n_parcellations = int(np.sqrt(len(aris)))
+    mdtb_row = dataset_labels.index('Md')
+    hcp_row = dataset_labels.index('Hc')
+
+    mdtb_values = [aris_norm[i * n_parcellations + j]
+                   for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
+    mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
+
+    hcp_values = [aris_norm[i * n_parcellations + j]
+                  for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
+    hcp_values = [el for arr in hcp_values for row in arr for el in row]
+
+    task_values = [aris_norm[i * n_parcellations + j]
+                   for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
+    task_values = [el for arr in task_values for row in arr for el in row]
+
+    import scipy.stats as stats
+    print(stats.ttest_ind(mdtb_values, hcp_values))
+    print(np.mean(mdtb_values), np.mean(hcp_values))
+    print(stats.ttest_ind(task_values, hcp_values))
+    print(np.mean(task_values), np.mean(hcp_values))
+
     pass
