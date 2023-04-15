@@ -924,9 +924,6 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         # Get group probability maps
         prob_a = model_a.arrange.marginal_prob().unsqueeze(0)
         prob_b = model_b.arrange.marginal_prob().unsqueeze(0)
-        # Add dimension to prob_a and prob_b for compatibility with individual parcellation
-        prob_a = prob_a
-        prob_b = prob_b
 
     elif individual:  # Calculate method-specific comparison for each individual subject, then average
         # Get individual parcellation

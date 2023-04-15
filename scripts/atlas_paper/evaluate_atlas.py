@@ -795,7 +795,7 @@ def save_ari_granularity():
         f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', aris)
 
 
-def save_ari():
+def save_ari(save=False, individual=False):
     """Saves ARI between fused parcellation and individual parcellations (to see how much each dataset drives the fused parcellation)
     """
 
@@ -805,25 +805,22 @@ def save_ari():
         f'Models_03/sym_{dataset}_space-MNISymC3_K-68' for dataset in T.two_letter_code]
     aris = []
     for mname2 in mnames_indiv:
-        ari, ari_group = ev.compare_voxelwise(
-            mname1, mname2, method='ari', save_nifti=False, individual=False)
-        aris.append(ari)
+        ari, _ = ev.compare_voxelwise(
+            mname1, mname2, method='ari', save_nifti=False, individual=individual)
+        if isinstance(ari, pt.Tensor):
+            ari = ari.numpy()
+        aris.append(ari.squeeze())
 
     # Save results
     # Stack list of tensors into single numpy array
-    np.stack(aris, axis=2)
-    aris = np.array(aris)
+    aris = np.stack(aris, axis=1)
+    if individual:
+        fname = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets_individual.npy'
+    else:
+        fname = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets_group.npy'
 
-    np.save(
-        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets.npy', aris)
-
-    # Normalize aris by within-dataset reliability
-    ARI_avg = average_comp_matrix(aris)
-    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
-
-    # Save results
-    np.save(
-        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_indiv.npy', aris)
+    if save:
+        np.save(fname, aris)
 
 
 if __name__ == "__main__":
@@ -878,52 +875,52 @@ if __name__ == "__main__":
 
     save_ari()
 
-    # ---- Load results ----
-    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
-        aris = np.load(f)
+    # # ---- Load results ----
+    # with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
+    #     aris = np.load(f)
 
-    # Normalize aris by within-dataset reliability
-    ARI_avg = average_comp_matrix(aris)
-    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+    # # Normalize aris by within-dataset reliability
+    # ARI_avg = average_comp_matrix(aris)
+    # ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
-    # ---- Plots ----
-    dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
-                      'Wm', 'De', 'So', 'Hc']
+    # # ---- Plots ----
+    # dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
+    #                   'Wm', 'De', 'So', 'Hc']
 
-    fig, ax = plt.subplots(figsize=(11, 9))
-    sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
-                xticklabels=dataset_labels, yticklabels=dataset_labels)
-    plt.title('Average ARI between granularities')
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(11, 9))
+    # sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
+    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
+    # plt.title('Average ARI between granularities')
+    # plt.show()
 
-    fig, ax = plt.subplots(figsize=(11, 9))
-    sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
-                xticklabels=dataset_labels, yticklabels=dataset_labels)
-    plt.title('Average ARI between granularities')
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(11, 9))
+    # sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
+    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
+    # plt.title('Average ARI between granularities')
+    # plt.show()
 
-    # ---- Stats ----
-    # Test whether task based datasets are more similar to MDTB than to HCP
-    n_parcellations = int(np.sqrt(len(aris)))
-    mdtb_row = dataset_labels.index('Md')
-    hcp_row = dataset_labels.index('Hc')
+    # # ---- Stats ----
+    # # Test whether task based datasets are more similar to MDTB than to HCP
+    # n_parcellations = int(np.sqrt(len(aris)))
+    # mdtb_row = dataset_labels.index('Md')
+    # hcp_row = dataset_labels.index('Hc')
 
-    mdtb_values = [aris_norm[i * n_parcellations + j]
-                   for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
-    mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
+    # mdtb_values = [aris_norm[i * n_parcellations + j]
+    #                for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
+    # mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
 
-    hcp_values = [aris_norm[i * n_parcellations + j]
-                  for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
-    hcp_values = [el for arr in hcp_values for row in arr for el in row]
+    # hcp_values = [aris_norm[i * n_parcellations + j]
+    #               for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
+    # hcp_values = [el for arr in hcp_values for row in arr for el in row]
 
-    task_values = [aris_norm[i * n_parcellations + j]
-                   for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
-    task_values = [el for arr in task_values for row in arr for el in row]
+    # task_values = [aris_norm[i * n_parcellations + j]
+    #                for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
+    # task_values = [el for arr in task_values for row in arr for el in row]
 
-    import scipy.stats as stats
-    print(stats.ttest_ind(mdtb_values, hcp_values))
-    print(np.mean(mdtb_values), np.mean(hcp_values))
-    print(stats.ttest_ind(task_values, hcp_values))
-    print(np.mean(task_values), np.mean(hcp_values))
+    # import scipy.stats as stats
+    # print(stats.ttest_ind(mdtb_values, hcp_values))
+    # print(np.mean(mdtb_values), np.mean(hcp_values))
+    # print(stats.ttest_ind(task_values, hcp_values))
+    # print(np.mean(task_values), np.mean(hcp_values))
 
-    pass
+    # pass
