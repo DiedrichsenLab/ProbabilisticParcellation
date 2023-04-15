@@ -660,7 +660,7 @@ def plot_mds(Results, labels):
     pass
 
 
-def compare_across_granularity(ks, verbose=False, exsting_included=True):
+def compare_across_granularity(ks, verbose=False, exsting_included=True, fusion_included=True):
     """Calculate the ARI between every granularity of parcellation 1 and every granularity of parcellation 2
 
     """
@@ -675,9 +675,15 @@ def compare_across_granularity(ks, verbose=False, exsting_included=True):
                        existing_labels[1], existing_labels[2]]
         parcels.append(existing_gran)
         labels.append(labels_gran)
-    # TODO: Get existing MDTB parcellations at different granularities (MDTB07, MDTB10, MDTB17)
+    if fusion_included:
+        mname = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-68'
+        # Load models
+        _, model = ut.load_batch_best(mname)
+        # Get parcellations
+        parcels.append([pt.argmax(model.arrange.marginal_prob(), dim=0)])
+        labels.append([mname.split('/')[-1]])
 
-    # Build subplot with all matrices
+        # Build subplot with all matrices
     ARI = np.zeros((len(parcels), len(parcels)))
     aris = []
     a = 0
@@ -776,7 +782,7 @@ def norm_comp_matrix(aris, ARI_avg):
     return ARI_norm, aris_norm
 
 
-def save_ari():
+def save_ari_granularity():
     ARI, aris, labels, parcels = compare_across_granularity(
         ks=[10, 20, 34, 40, 68], exsting_included=False)
 
@@ -785,7 +791,36 @@ def save_ari():
     ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
     # Save results
-    np.save(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', aris)
+    np.save(
+        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', aris)
+
+
+def save_ari(save=False, individual=False):
+    """Saves ARI between fused parcellation and individual parcellations (to see how much each dataset drives the fused parcellation)
+    """
+
+    mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_reordered'
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    mnames_indiv = [
+        f'Models_03/sym_{dataset}_space-MNISymC3_K-68' for dataset in T.two_letter_code]
+    aris = []
+    for mname2 in mnames_indiv:
+        ari, _ = ev.compare_voxelwise(
+            mname1, mname2, method='ari', save_nifti=False, individual=individual)
+        if isinstance(ari, pt.Tensor):
+            ari = ari.numpy()
+        aris.append(ari.squeeze())
+
+    # Save results
+    # Stack list of tensors into single numpy array
+    aris = np.stack(aris, axis=1)
+    if individual:
+        fname = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets_individual.npy'
+    else:
+        fname = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets_group.npy'
+
+    if save:
+        np.save(fname, aris)
 
 
 if __name__ == "__main__":
@@ -838,52 +873,54 @@ if __name__ == "__main__":
     # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
     #     'all', 'indiv'], sym=['asym'])
 
-    # ---- Load results ----
-    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', 'rb') as f:
-        aris = np.load(f)
+    save_ari()
 
-    # Normalize aris by within-dataset reliability
-    ARI_avg = average_comp_matrix(aris)
-    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+    # # ---- Load results ----
+    # with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
+    #     aris = np.load(f)
 
-    # ---- Plots ----
-    dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
-                      'Wm', 'De', 'So', 'Hc']
+    # # Normalize aris by within-dataset reliability
+    # ARI_avg = average_comp_matrix(aris)
+    # ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
-    fig, ax = plt.subplots(figsize=(11, 9))
-    sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
-                xticklabels=dataset_labels, yticklabels=dataset_labels)
-    plt.title('Average ARI between granularities')
-    plt.show()
+    # # ---- Plots ----
+    # dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
+    #                   'Wm', 'De', 'So', 'Hc']
 
-    fig, ax = plt.subplots(figsize=(11, 9))
-    sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
-                xticklabels=dataset_labels, yticklabels=dataset_labels)
-    plt.title('Average ARI between granularities')
-    plt.show()
+    # fig, ax = plt.subplots(figsize=(11, 9))
+    # sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
+    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
+    # plt.title('Average ARI between granularities')
+    # plt.show()
 
-    # ---- Stats ----
-    # Test whether task based datasets are more similar to MDTB than to HCP
-    n_parcellations = int(np.sqrt(len(aris)))
-    mdtb_row = dataset_labels.index('Md')
-    hcp_row = dataset_labels.index('Hc')
+    # fig, ax = plt.subplots(figsize=(11, 9))
+    # sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
+    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
+    # plt.title('Average ARI between granularities')
+    # plt.show()
 
-    mdtb_values = [aris_norm[i * n_parcellations + j]
-                   for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
-    mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
+    # # ---- Stats ----
+    # # Test whether task based datasets are more similar to MDTB than to HCP
+    # n_parcellations = int(np.sqrt(len(aris)))
+    # mdtb_row = dataset_labels.index('Md')
+    # hcp_row = dataset_labels.index('Hc')
 
-    hcp_values = [aris_norm[i * n_parcellations + j]
-                  for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
-    hcp_values = [el for arr in hcp_values for row in arr for el in row]
+    # mdtb_values = [aris_norm[i * n_parcellations + j]
+    #                for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
+    # mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
 
-    task_values = [aris_norm[i * n_parcellations + j]
-                   for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
-    task_values = [el for arr in task_values for row in arr for el in row]
+    # hcp_values = [aris_norm[i * n_parcellations + j]
+    #               for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
+    # hcp_values = [el for arr in hcp_values for row in arr for el in row]
 
-    import scipy.stats as stats
-    print(stats.ttest_ind(mdtb_values, hcp_values))
-    print(np.mean(mdtb_values), np.mean(hcp_values))
-    print(stats.ttest_ind(task_values, hcp_values))
-    print(np.mean(task_values), np.mean(hcp_values))
+    # task_values = [aris_norm[i * n_parcellations + j]
+    #                for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
+    # task_values = [el for arr in task_values for row in arr for el in row]
 
-    pass
+    # import scipy.stats as stats
+    # print(stats.ttest_ind(mdtb_values, hcp_values))
+    # print(np.mean(mdtb_values), np.mean(hcp_values))
+    # print(stats.ttest_ind(task_values, hcp_values))
+    # print(np.mean(task_values), np.mean(hcp_values))
+
+    # pass

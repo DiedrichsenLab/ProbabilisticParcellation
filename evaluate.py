@@ -745,8 +745,8 @@ def concat_all_prederror(model_type, prefix, K, outfile):
 def ARI_voxelwise(U_1, U_2, adjusted=True):
     """Compute the adjusted rand index between two parcellations for all voxels.
     Args:
-        U_1: First parcellation (usually estimated Us from fitted model 1)
-        U_2: Second parcellation (usually estimated Us from fitted model 2)
+        U_1: First parcellation (usually estimated Us from fitted model 1) for all subjects (stacked in last dimension)
+        U_2: Second parcellation (usually estimated Us from fitted model 2) for all subjects (stacked in last dimension)
     Returns:
         Vector containing the adjusted rand index for all voxels
     """
@@ -924,9 +924,6 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         # Get group probability maps
         prob_a = model_a.arrange.marginal_prob().unsqueeze(0)
         prob_b = model_b.arrange.marginal_prob().unsqueeze(0)
-        # Add dimension to prob_a and prob_b for compatibility with individual parcellation
-        prob_a = prob_a
-        prob_b = prob_b
 
     elif individual:  # Calculate method-specific comparison for each individual subject, then average
         # Get individual parcellation
@@ -941,15 +938,18 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     if method == 'ari' or method == 'ri' or method == 'match':
         if method == 'ari':
             comparison, comparison_group = ARI_voxelwise(
-                parcel_a, parcel_b).numpy()
+                parcel_a, parcel_b)
         elif method == 'ri':
-            comparison = ARI_voxelwise(
+            comparison, comparison_group = ARI_voxelwise(
                 parcel_a, parcel_b, adjusted=False).numpy()
+
         elif method == 'match':
-            comparison = (parcel_a == parcel_b).int().numpy()
+            comparison, comparison_group = (parcel_a == parcel_b).int().numpy()
+
     elif method == 'corr' or method == 'cosang':
-        comparison = compare_probs(
-            prob_a, prob_b, atlas, method=method)
+        comparison, comparison_group = compare_probs(
+            prob_a, prob_b, method=method)
+
     else:
         raise ValueError(f"Invalid method: {method}")
 

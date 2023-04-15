@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 import string
 from itertools import combinations
 import PcmPy as pcm
-from ProbabilisticParcellation.scripts.parcel_hierarchy import analyze_parcel
 from copy import deepcopy
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
