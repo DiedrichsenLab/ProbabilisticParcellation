@@ -660,7 +660,7 @@ def plot_mds(Results, labels):
     pass
 
 
-def compare_across_granularity(ks, verbose=False, exsting_included=True):
+def compare_across_granularity(ks, verbose=False, exsting_included=True, fusion_included=True):
     """Calculate the ARI between every granularity of parcellation 1 and every granularity of parcellation 2
 
     """
@@ -675,9 +675,15 @@ def compare_across_granularity(ks, verbose=False, exsting_included=True):
                        existing_labels[1], existing_labels[2]]
         parcels.append(existing_gran)
         labels.append(labels_gran)
-    # TODO: Get existing MDTB parcellations at different granularities (MDTB07, MDTB10, MDTB17)
+    if fusion_included:
+        mname = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-68'
+        # Load models
+        _, model = ut.load_batch_best(mname)
+        # Get parcellations
+        parcels.append([pt.argmax(model.arrange.marginal_prob(), dim=0)])
+        labels.append([mname.split('/')[-1]])
 
-    # Build subplot with all matrices
+        # Build subplot with all matrices
     ARI = np.zeros((len(parcels), len(parcels)))
     aris = []
     a = 0
@@ -776,7 +782,7 @@ def norm_comp_matrix(aris, ARI_avg):
     return ARI_norm, aris_norm
 
 
-def save_ari():
+def save_ari_granularity():
     ARI, aris, labels, parcels = compare_across_granularity(
         ks=[10, 20, 34, 40, 68], exsting_included=False)
 
@@ -785,7 +791,39 @@ def save_ari():
     ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
     # Save results
-    np.save(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', aris)
+    np.save(
+        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', aris)
+
+
+def save_ari():
+    """Saves ARI between fused parcellation and individual parcellations (to see how much each dataset drives the fused parcellation)
+    """
+
+    mname1 = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68_reordered'
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    mnames_indiv = [
+        f'Models_03/sym_{dataset}_space-MNISymC3_K-68' for dataset in T.two_letter_code]
+    aris = []
+    for mname2 in mnames_indiv:
+        ari, ari_group = ev.compare_voxelwise(
+            mname1, mname2, method='ari', save_nifti=False, individual=False)
+        aris.append(ari)
+
+    # Save results
+    # Stack list of tensors into single numpy array
+    np.stack(aris, axis=2)
+    aris = np.array(aris)
+
+    np.save(
+        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_between-datasets.npy', aris)
+
+    # Normalize aris by within-dataset reliability
+    ARI_avg = average_comp_matrix(aris)
+    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+
+    # Save results
+    np.save(
+        f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_indiv.npy', aris)
 
 
 if __name__ == "__main__":
@@ -838,8 +876,10 @@ if __name__ == "__main__":
     # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
     #     'all', 'indiv'], sym=['asym'])
 
+    save_ari()
+
     # ---- Load results ----
-    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI.npy', 'rb') as f:
+    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
         aris = np.load(f)
 
     # Normalize aris by within-dataset reliability

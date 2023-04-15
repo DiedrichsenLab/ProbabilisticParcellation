@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
-from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -34,7 +34,7 @@ from wordcloud import WordCloud
 import re
 
 
-def get_profiles(model, info):
+def get_profiles(model, info, norm=False):
     """Returns the functional profile for each parcel
     Args:
         model: Loaded model
@@ -52,9 +52,10 @@ def get_profiles(model, info):
         parcel_profiles = pt.cat((parcel_profiles, prof), 0)
 
     # Normalize the parcel profiles to unit length
-    Psq = parcel_profiles**2
-    normp = parcel_profiles / \
-        np.sqrt(np.sum(Psq.numpy(), axis=1).reshape(-1, 1))
+    if norm:
+        Psq = parcel_profiles**2
+        normp = parcel_profiles / \
+            np.sqrt(np.sum(Psq.numpy(), axis=1).reshape(-1, 1))
 
     # --- Get conditions ---
     conditions = []
@@ -62,7 +63,7 @@ def get_profiles(model, info):
     datasets = []
     for d, dname in enumerate(info.datasets):
         _, dinfo, dataset = get_dataset(
-            base_dir,
+            ut.base_dir,
             dname,
             atlas=info.atlas,
             sess=info.sess[d],
@@ -82,7 +83,7 @@ def get_profiles(model, info):
             for s, ses in enumerate(dataset.sessions):
                 # get conditions from selected session
                 _, dinfo, dataset = get_dataset(
-                    base_dir,
+                    ut.base_dir,
                     dname,
                     atlas=info.atlas,
                     sess=dataset.sessions[s],
@@ -110,14 +111,14 @@ def get_profiles(model, info):
         {"dataset": datasets, "session": sessions, "condition": conditions}
     )
 
-    return normp, profile_data
+    return parcel_profiles, profile_data
 
 
 def export_profile(mname, info=None, model=None, labels=None):
     if info is None or model is None:
         # Get model
-        info, model = load_batch_best(mname)
-        info = recover_info(info, model, mname)
+        info, model = ut.load_batch_best(mname)
+        info = ut.recover_info(info, model, mname)
 
     # get functional profiles
     parcel_profiles, profile_data = get_profiles(model=model, info=info)
@@ -151,8 +152,9 @@ def export_profile(mname, info=None, model=None, labels=None):
     # --- Save profile ---
     # save functional profile as tsv
     Prof.to_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
+        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
     )
+    pass
 
 
 def plot_wordcloud_dataset(df, dset, region):
@@ -238,7 +240,7 @@ def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
 
 def dataset_colours(word, font_size, position, orientation, random_state=None, **kwargs):
     colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
-    profile = pd.read_csv(f"{model_dir}/Atlases/{colour_file}", sep="\t")
+    profile = pd.read_csv(f"{ut.model_dir}/Atlases/{colour_file}", sep="\t")
 
     colour = profile[profile.condition == word].dataset_colour.iloc[-1]
 
@@ -248,16 +250,16 @@ def dataset_colours(word, font_size, position, orientation, random_state=None, *
 def cognitive_features(mname):
     """Gets cognitive features for a model"""
     profile = pd.read_csv(
-        f'{model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
+        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
     )
     first_parcel = profile.columns.tolist().index('condition') + 1
     last_parcel = profile.columns.tolist().index('dataset_colour')
     parcel_columns = profile.columns[first_parcel:last_parcel]
     profile_matrix = profile[parcel_columns].to_numpy()
 
-    feature_dir = f'{model_dir}/Atlases/Profiles/Cognitive_Features'
+    feature_dir = f'{ut.model_dir}/Atlases/Profiles/Cognitive_Features'
     features = pd.read_csv(
-        f'{model_dir}/Atlases/Profiles/tags/tags.tsv', sep="\t")
+        f'{ut.model_dir}/Atlases/Profiles/tags/tags.tsv', sep="\t")
     first_feature = features.columns.tolist().index('condition') + 1
     feature_columns = features.columns[first_feature:]
     feature_matrix = features[feature_columns].to_numpy()
@@ -277,17 +279,17 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
-    info, model = load_batch_best(mname)
-    info = recover_info(info, model, mname)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
     fileparts = mname.split('/')
     index, cmap, labels = nt.read_lut(
-        model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+        ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
 
     export_profile(mname, info, model, labels)
     features = cognitive_features(mname)
     # profile = pd.read_csv(
-    #     f'{model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    #     f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     # )
     # wc = get_wordcloud(profile, selected_region=selected_region)
     # wc.recolor(color_func=dataset_colours)
