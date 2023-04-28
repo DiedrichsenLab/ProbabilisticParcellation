@@ -741,14 +741,16 @@ def plot_comp_matrix(aris, labels, parcels):
             a += 1
 
 
-def average_comp_matrix(aris):
+def average_comp_matrix(aris, diag=True):
     n_parcellations = int(np.sqrt(len(aris)))
-    # Average off-diagonal elements of each matrix
+
     ARI_avg = np.zeros((n_parcellations, n_parcellations))
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
-            if i == j:
+
+            if not diag and i == j:
+                # Average off-diagonal elements of each matrix
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
                 ARI_avg[i, j] = np.mean(ari[mask == False])
@@ -757,17 +759,19 @@ def average_comp_matrix(aris):
     return ARI_avg
 
 
-def norm_comp_matrix(aris, ARI_avg):
+def norm_comp_matrix(aris, ARI_avg, diag=True):
+    """
+    diag: Indicates whether to take out the diagonal when calculating reliability (during normalization)
+    """
     n_parcellations = int(np.sqrt(len(aris)))
 
-    # Average off-diagonal elements of each matrix
     ARI_norm = np.zeros((n_parcellations, n_parcellations))
     aris_norm = []
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
 
-            if i == j:
+            if not diag and i == j:
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
                 ari_norm = ari[mask == False] / \
