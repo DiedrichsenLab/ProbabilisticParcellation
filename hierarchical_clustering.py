@@ -281,7 +281,7 @@ def draw_cmap(ax, cmap, leaves, sym):
             ax.add_patch(rect)
 
 
-def make_asymmetry_map(mname, cmap='hot', cscale=[0.3, 1]):
+def make_symmetry_map(mname, cmap='hot', cscale=[0.3, 1]):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info, model = ut.load_batch_best(mname)
@@ -293,11 +293,12 @@ def make_asymmetry_map(mname, cmap='hot', cscale=[0.3, 1]):
     # Get similarity
     w_cos, _, _ = parcel_similarity(model, plot=False, sym=False)
     indx1 = np.arange(model.K)
-    v = np.arange(model.K_sym)
-    indx2 = np.concatenate([v + model.K_sym, v])
+    v = np.arange(model.arrange.K)
+    indx2 = np.concatenate([v + model.arrange.K, v])
     sym_score = w_cos[indx1, indx2]
 
-    suit_atlas, _ = am.get_atlas('MNISymC3', ut.base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas(split_mn[2].split(
+        'space-')[1], ut.base_dir + '/Atlases')
     Nifti = suit_atlas.data_to_nifti(parcel)
     surf_parcel = suit.flatmap.vol_to_surf(Nifti, stats='mode',
                                            space='MNISymC', ignore_zeros=True)

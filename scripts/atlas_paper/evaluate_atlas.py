@@ -827,6 +827,38 @@ def save_ari(save=False, individual=False):
         np.save(fname, aris)
 
 
+def save_corr():
+
+    model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+                  'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
+
+    atlas = 'MNISymC2'
+
+    # load Uhats
+    prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
+    prob_b = pt.load(f'{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt')
+
+    parcel_a = pt.argmax(prob_a, im=1) + 1
+    parcel_b = pt.argmax(prob_b, dim=1) + 1
+
+    # Save group-level correlation
+    corr, corr_group = ev.compare_probs(
+        prob_a, prob_b, method='corr')
+    np.save(f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr.npy', corr)
+
+    # Save individual-level correlation (based on each subject's Uhat)
+    comp, comp_group = ev.compare_voxelwise(model_pair[0],
+                                            model_pair[1], plot=False, method='corr', save_nifti=False, lim=(0, 1), individual=True)
+    np.save(
+        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_indiv.npy', comp)
+
+    comp = ev.compare_voxelwise(model_pair[0],
+                                model_pair[1], plot=False, method='corr', save_nifti=False, lim=(0, 1), individual=False)
+    np.save(
+        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
+    pass
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
