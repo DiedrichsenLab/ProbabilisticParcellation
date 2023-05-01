@@ -40,7 +40,7 @@ from copy import deepcopy
 import string
 
 
-def parcel_similarity(model, plot=False, sym=False, weighting=None):
+def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
     """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
 
     Args:
@@ -107,6 +107,25 @@ def parcel_similarity(model, plot=False, sym=False, weighting=None):
     return w_cos_sim, cos_sim, kappa
 
 
+def parcel_similarity_indiv(model, plot=False, sym=False, weighting=None):
+    """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
+
+    Args:
+        model (FullMultiModel): THe model 
+        plot (bool, optional): Generate plot? Defaults to False.
+        sym (bool, optional): Generate similarity in a symmetric fashion? Defaults to False.
+        weighting (ndarray, optional): possible weighting of different dataset. Defaults to None.
+
+    Returns:
+        w_cos_sim: Weighted cosine similarity (integrated)
+        cos_sim: Cosine similarity for each data set
+        kappa: Kappa from each dataset(?)
+
+    """
+
+    return w_cos_sim, cos_sim, kappa
+
+
 def similarity_matrices(mname, sym=True):
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -125,7 +144,7 @@ def similarity_matrices(mname, sym=True):
     labels = np.array(labels[1:K + 1])
 
     # Get parcel similarity:
-    w_cos_sim, cos_sim, _ = parcel_similarity(model, plot=False, sym=sym)
+    w_cos_sim, cos_sim, _ = parcel_similarity_group(model, plot=False, sym=sym)
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
 
     spatial_sim = P @ P.T
@@ -291,7 +310,7 @@ def make_symmetry_map(mname, cmap='hot', cscale=[0.3, 1]):
     parcel = Prob.argmax(axis=0) + 1
 
     # Get similarity
-    w_cos, _, _ = parcel_similarity(model, plot=False, sym=False)
+    w_cos, _, _ = parcel_similarity_group(model, plot=False, sym=False)
     indx1 = np.arange(model.K)
     v = np.arange(model.arrange.K)
     indx2 = np.concatenate([v + model.arrange.K, v])
