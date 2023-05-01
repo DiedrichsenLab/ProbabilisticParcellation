@@ -13,6 +13,15 @@ import pandas as pd
 import torch as pt
 
 
+def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
+    """Export Uhats for all subjects in a model"""
+
+    prob = ev.parcel_individual(
+        mname, subject='all', dataset=None, session=None)
+
+    pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+
+
 if __name__ == "__main__":
 
     lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
