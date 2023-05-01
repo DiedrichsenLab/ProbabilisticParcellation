@@ -741,14 +741,16 @@ def plot_comp_matrix(aris, labels, parcels):
             a += 1
 
 
-def average_comp_matrix(aris):
+def average_comp_matrix(aris, diag=True):
     n_parcellations = int(np.sqrt(len(aris)))
-    # Average off-diagonal elements of each matrix
+
     ARI_avg = np.zeros((n_parcellations, n_parcellations))
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
-            if i == j:
+
+            if not diag and i == j:
+                # Average off-diagonal elements of each matrix
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
                 ARI_avg[i, j] = np.mean(ari[mask == False])
@@ -757,17 +759,19 @@ def average_comp_matrix(aris):
     return ARI_avg
 
 
-def norm_comp_matrix(aris, ARI_avg):
+def norm_comp_matrix(aris, ARI_avg, diag=True):
+    """
+    diag: Indicates whether to take out the diagonal when calculating reliability (during normalization)
+    """
     n_parcellations = int(np.sqrt(len(aris)))
 
-    # Average off-diagonal elements of each matrix
     ARI_norm = np.zeros((n_parcellations, n_parcellations))
     aris_norm = []
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
 
-            if i == j:
+            if not diag and i == j:
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
                 ari_norm = ari[mask == False] / \
@@ -821,6 +825,38 @@ def save_ari(save=False, individual=False):
 
     if save:
         np.save(fname, aris)
+
+
+def save_corr():
+
+    model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+                  'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
+
+    atlas = 'MNISymC2'
+
+    # load Uhats
+    prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
+    prob_b = pt.load(f'{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt')
+
+    parcel_a = pt.argmax(prob_a, im=1) + 1
+    parcel_b = pt.argmax(prob_b, dim=1) + 1
+
+    # Save group-level correlation
+    corr, corr_group = ev.compare_probs(
+        prob_a, prob_b, method='corr')
+    np.save(f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr.npy', corr)
+
+    # Save individual-level correlation (based on each subject's Uhat)
+    comp, comp_group = ev.compare_voxelwise(model_pair[0],
+                                            model_pair[1], plot=False, method='corr', save_nifti=False, lim=(0, 1), individual=True)
+    np.save(
+        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_indiv.npy', comp)
+
+    comp = ev.compare_voxelwise(model_pair[0],
+                                model_pair[1], plot=False, method='corr', save_nifti=False, lim=(0, 1), individual=False)
+    np.save(
+        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
+    pass
 
 
 if __name__ == "__main__":
