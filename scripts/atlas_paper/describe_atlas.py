@@ -179,16 +179,6 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
     pass
 
 
-def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
-    # load models
-    # ppev.compare_voxelwise(mname_A, mname_B, individual=True)
-
-    prob = ppev.parcel_individual(
-        mname, subject='all', dataset=None, session=None)
-
-    pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
-
-
 if __name__ == "__main__":
 
     # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
