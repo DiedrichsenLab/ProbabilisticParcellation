@@ -107,11 +107,12 @@ def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
     return w_cos_sim, cos_sim, kappa
 
 
-def parcel_similarity_indiv(model, plot=False, sym=False, weighting=None):
+def parcel_similarity_indiv(U_hat, data, plot=False, sym=False, weighting=None):
     """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
 
     Args:
-        model (FullMultiModel): THe model 
+        U_hat (nd.array): (n_subj, K, P) individual probalistic parcellation
+        data (nd.array): (n_subj, n_cond,P)
         plot (bool, optional): Generate plot? Defaults to False.
         sym (bool, optional): Generate similarity in a symmetric fashion? Defaults to False.
         weighting (ndarray, optional): possible weighting of different dataset. Defaults to None.
@@ -122,7 +123,18 @@ def parcel_similarity_indiv(model, plot=False, sym=False, weighting=None):
         kappa: Kappa from each dataset(?)
 
     """
+    # for each subject, calculate the mean direction
+    #   a=sum over voxels data * U_hat ( N x K-long matrix)
+    # w=sum over voxel U_hat (K-long vector)
+    # mean = a / w
 
+    YU = pt.matmul(pt.nan_to_num(self.Y), pt.transpose(U_hat, 1, 2)), dim=0)
+        UU = pt.sum(JU_hat, dim=0)
+
+        # 1. Updating the V_k, which is || sum_i(Uhat(k)*Y_i) / sum_i(Uhat(k)) ||
+        r_norm = pt.sqrt(pt.sum(YU ** 2, dim=0))
+        self.V = YU / r_norm
+ 
     return w_cos_sim, cos_sim, kappa
 
 
