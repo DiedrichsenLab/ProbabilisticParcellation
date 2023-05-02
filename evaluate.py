@@ -758,7 +758,10 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
     # Loop through subjects
     for sub in range(U_1.shape[0]):
         # Extract parcellation for individual sub
-        print(f'Computing WTA parcellation for individual {sub}...')
+        if U_1.shape[0] == 1:
+            print(f'Computing ARI at group-level...')
+        else:
+            print(f'Computing ARI for individual {sub}...')
         U_1_individual = U_1[sub, :]
         U_2_individual = U_2[sub, :]
 
@@ -834,7 +837,11 @@ def compare_probs(prob_a, prob_b, method='corr'):
     # Loop through subjects
     for sub in range(prob_a.shape[0]):
         # Extract parcellation for individual sub
-        print(f'Comparing probabilistic parcellation for individual {sub}...')
+        if prob_a.shape[0] == 1:
+            print(f'Comparing probabilistic parcellation at group-level...')
+        else:
+            print(
+                f'Comparing probabilistic parcellation for individual {sub}...')
         prob_a_individual = prob_a[sub, :, :]
         prob_b_individual = prob_b[sub, :, :]
 
@@ -861,7 +868,7 @@ def compare_probs(prob_a, prob_b, method='corr'):
             comparison = np.vstack((comparison, c))
 
     # Return comparison and mean comparison across subjects
-    return comparison, np.nanmean(comparison, axis=0)
+    return comparison
 
 
 def parcel_individual(mname, subject='all', dataset=None, session=None):
@@ -903,13 +910,6 @@ def parcel_individual(mname, subject='all', dataset=None, session=None):
                                 fit_arrangement=False,
                                 first_evidence=False)
     Uhats = m.remap_evidence(U_indiv)
-    # # Get the individual parcellation
-    # Uhats = [m.emissions[d].Estep() for d in range(len(info.datasets))]
-    # Uhats = [Uhat.to(pt.float32) for Uhat in Uhats]
-    # # Collect Uhat into a single tensor
-    # # TODO: Implement it such that each subject is only counted once? (i.e. if subject is in multiple datasets) --> Talk to Joern
-    # Uhats = pt.cat(Uhats, dim=0)
-
     return Uhats
 
 
@@ -937,21 +937,23 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     # ------ Calculate comparison ------
     if method == 'ari' or method == 'ri' or method == 'match':
         if method == 'ari':
-            comparison, comparison_group = ARI_voxelwise(
+            comparison = ARI_voxelwise(
                 parcel_a, parcel_b)
         elif method == 'ri':
-            comparison, comparison_group = ARI_voxelwise(
+            comparison = ARI_voxelwise(
                 parcel_a, parcel_b, adjusted=False).numpy()
 
         elif method == 'match':
-            comparison, comparison_group = (parcel_a == parcel_b).int().numpy()
+            comparison = (parcel_a == parcel_b).int().numpy()
 
     elif method == 'corr' or method == 'cosang':
-        comparison, comparison_group = compare_probs(
+        comparison = compare_probs(
             prob_a, prob_b, method=method)
 
-    else:
-        raise ValueError(f"Invalid method: {method}")
+    comparison_group = comparison
+    # If dimensions of comparison are (n_subj, n_voxels), average across subjects
+    if comparison_group.ndim == 2:
+        comparison_group = np.nanmean(comparison, axis=0)
 
     # ------ Save comparison as nifti ------
     if save_nifti:

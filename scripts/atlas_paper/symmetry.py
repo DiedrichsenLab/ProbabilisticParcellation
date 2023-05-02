@@ -3,7 +3,7 @@ sys.path.append("..")
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
-import ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy as ph
+import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
 from Functional_Fusion.dataset import *
 import matplotlib
@@ -20,6 +20,26 @@ def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
         mname, subject='all', dataset=None, session=None)
 
     pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+    return prob  # return Uhats
+
+
+def individual_symmetry(mname):
+    # Check if Uhats have already been saved. If so, load them
+    try:
+        prob = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+    except:
+        prob = ev.parcel_individual(
+            mname, subject='all', dataset=None, session=None)
+
+    # Load the model
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info, model = ut.load_batch_best(mname)
+    atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
+
+    sym_score = cl.parcel_similarity_individual(model, prob, sym=False)
+
+    pass
 
 
 if __name__ == "__main__":
@@ -58,8 +78,27 @@ if __name__ == "__main__":
     # np.save(
     #     f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_indiv.npy', comp)
 
-    comp = ev.compare_voxelwise(model_pair[0],
-                                model_pair[1], plot=False, method='corr', save_nifti=False, lim=(0, 1), individual=False)
-    np.save(
-        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
-    pass
+    # comp = ev.compare_voxelwise(model_pair[0],
+    #                             model_pair[1], plot=False, method='corr', save_nifti=True, lim=(0, 1), individual=False)
+    # np.save(
+    #     f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
+
+    asym_sym_corr_group = np.load(
+        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy')
+    # Replace all values with nans
+    asym_sym_corr_group = np.ones(asym_sym_corr_group.shape)
+    # Test if there are any nans
+    print(np.isnan(asym_sym_corr_group).any())
+    plt.figure(figsize=(10, 10))
+    ax = ut.plot_data_flat(asym_sym_corr_group, atlas,
+                           dtype='func',
+                           render='matplotlib',
+                           cmap='hot',
+                           cscale=(0.8, 1))
+    plt.show()
+
+# Test if there are any zeros
+print((asym_sym_corr_group == 0).any())
+
+individual_symmetry(mname=model_pair[0])
+pass
