@@ -40,6 +40,70 @@ from copy import deepcopy
 import string
 
 
+def parcel_similarity_individual(model, prob, plot=False, sym=False, weighting=None):
+    """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models.
+    Similarity is calculated for each subject individually, based on the subject parcellation and data.
+
+    """
+    n_sets = len(model.emissions)
+    if sym:
+        K = int(model.emissions[0].K / 2)
+    else:
+        K = model.emissions[0].K
+    cos_sim = np.empty((n_sets, K, K))
+    if model.emissions[0].uniform_kappa:
+        kappa = np.empty((n_sets,))
+    else:
+        kappa = np.empty((n_sets, K))
+    n_subj = np.empty((n_sets,))
+
+    V = []
+    for i, em in enumerate(model.emissions):
+        if sym:
+            # Average the two sides for clustering
+            V.append(em.V[:, :K] + em.V[:, K:])
+            V[-1] = V[-1] / np.sqrt((V[-1]**2).sum(axis=0))
+            if model.emissions[0].uniform_kappa:
+                kappa[i] = em.kappa
+            else:
+                kappa[i] = (em.kappa[:K] + em.kappa[K:]) / 2
+        else:
+            V.append(em.V)
+            kappa[i] = em.kappa
+        cos_sim[i] = V[-1].T @ V[-1]
+
+        # V is weighted by Kappa and number of subjects
+        V[-1] = V[-1] * np.sqrt(kappa[i] * em.num_subj)
+        if weighting is not None:
+            V[-1] = V[-1] * np.sqrt(weighting[i])
+
+    # Combine all Vs and renormalize
+    Vall = np.vstack(V)
+    Vall = Vall / np.sqrt((Vall**2).sum(axis=0))
+
+    # Multiply subject probabilistic parcellations by Vall
+    Vall_indiv = Vall @ prob.numpy()
+
+    # Calculate similarity
+    w_cos_sim = Vall_indiv.T @ Vall_indiv
+
+    # Integrated parcel similarity with kappa
+    if plot is True:
+        plt.figure()
+        grid = int(np.ceil(np.sqrt(n_sets + 1)))
+        for i in range(n_sets):
+            plt.subplot(grid, grid, i + 1)
+            plt.imshow(cos_sim[i, :, :], vmin=-1, vmax=1)
+            plt.title(f"Dataset {i+1}")
+        plt.subplot(grid, grid, n_sets + 1)
+        plt.imshow(w_cos_sim, vmin=-1, vmax=1)
+        plt.title(f"Merged")
+
+    return w_cos_sim, cos_sim, kappa
+
+    pass
+
+
 def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
     """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
 
@@ -90,6 +154,7 @@ def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
     # Combine all Vs and renormalize
     Vall = np.vstack(V)
     Vall = Vall / np.sqrt((Vall**2).sum(axis=0))
+    # Calculate similarity
     w_cos_sim = Vall.T @ Vall
 
     # Integrated parcel similarity with kappa
