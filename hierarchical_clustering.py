@@ -129,15 +129,18 @@ def parcel_similarity_indiv(U_hat, data, plot=False, sym=False, weighting=None):
     # w=sum over voxel U_hat (K-long vector)
     # mean = a / w
 
-    # YU = pt.matmul(pt.nan_to_num(self.Y), pt.transpose(U_hat, 1, 2)), dim=0)
-    # UU = pt.sum(JU_hat, dim=0)
+    """
+    TO BE IMPLEMENTED; CARO?????
+    YU = pt.matmul(pt.nan_to_num(self.Y), pt.transpose(U_hat, 1, 2), dim=0)
+    UU = pt.sum(JU_hat, dim=0)
 
-    #     # 1. Updating the V_k, which is || sum_i(Uhat(k)*Y_i) / sum_i(Uhat(k)) ||
-    #     r_norm = pt.sqrt(pt.sum(YU ** 2, dim=0))
-    #     self.V = YU / r_norm
-    data
-    pass
+    # 1. Updating the V_k, which is || sum_i(Uhat(k)*Y_i) / sum_i(Uhat(k)) ||
+    r_norm = pt.sqrt(pt.sum(YU ** 2, dim=0))
+    V = YU / r_norm
+ 
     return w_cos_sim, cos_sim, kappa
+    """
+    pass
 
 
 def similarity_matrices(mname, sym=True):
