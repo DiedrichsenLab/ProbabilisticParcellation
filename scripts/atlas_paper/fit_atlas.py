@@ -126,7 +126,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
             else:
                 mname = f'Models_{t}/sym_{datanames}_space-{space}_K-{k}'
                 mname_asym = f'Models_{t}/asym_{datanames}_space-{space}_K-{k}_arrange-asym_sep-hem'
-                if not Path(wdir + f'{mname_asym.split("/")[1]}.tsv').exists():
+                if not Path(wdir + f'/{mname_asym.split("/")[1]}.tsv').exists():
                     fit_asym_from_sym_sep_hem(
                         mname=mname, mname_new=mname_asym)
                 else:
