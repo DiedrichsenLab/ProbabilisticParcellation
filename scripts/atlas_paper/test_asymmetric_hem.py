@@ -63,8 +63,8 @@ def test_asym_sym(mname_sym='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68', 
     M.arrange.map_to_full()
 
     plt.imshow(Umap[0, :, :].squeeze())
-    plt.imshow(ARI[:, (ARI.shape[1] // 2) -
-               50: (ARI.shape[1] // 2) + 50].squeeze())
+    plt.imshow(ARItest[:, (ARItest.shape[1] // 2) -
+               50: (ARItest.shape[1] // 2) + 50].squeeze())
     plt.imshow(Umap[0, :, :].squeeze())
 
     # model_sym.arrange.map_to_full()

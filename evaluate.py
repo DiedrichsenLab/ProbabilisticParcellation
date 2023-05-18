@@ -745,15 +745,23 @@ def concat_all_prederror(model_type, prefix, K, outfile):
 def ARI_voxelwise(U_1, U_2, adjusted=True):
     """Compute the adjusted rand index between two parcellations for all voxels.
     Args:
-        U_1: First parcellation (usually estimated Us from fitted model 1)
-        U_2: Second parcellation (usually estimated Us from fitted model 2)
+        U_1: First parcellation (usually estimated Us from fitted model 1) for all subjects (stacked in last dimension)
+        U_2: Second parcellation (usually estimated Us from fitted model 2) for all subjects (stacked in last dimension)
     Returns:
         Vector containing the adjusted rand index for all voxels
     """
-    # Loop through first dimension of U_1 and U_2
+    if adjusted:
+        print(f'Calculating Adjusted Rand Index...')
+    else:
+        print(f'Calculating Rand Index...')
+
+    # Loop through subjects
     for sub in range(U_1.shape[0]):
         # Extract parcellation for individual sub
-        print(f'Computing ARI for individual {sub}...')
+        if U_1.shape[0] == 1:
+            print(f'Computing ARI at group-level...')
+        else:
+            print(f'Computing ARI for individual {sub}...')
         U_1_individual = U_1[sub, :]
         U_2_individual = U_2[sub, :]
 
@@ -800,13 +808,16 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
                 ari_voxel = (n_11 + n_00) / (n_11 + n_10 + n_01 + n_00)
 
             ARI_voxelwise[i] = ari_voxel
-        # Save ARI for individual i
+        # Save ARI for individual subject
         if sub == 0:
-            ARI = ARI_voxelwise
+            ARI = [ARI_voxelwise]
         else:
-            ARI = pt.stack((ARI, ARI_voxelwise), dim=0)
+            ARI.append(ARI_voxelwise)
+    # Stack ARI across subjects
+    ARI = pt.stack(ARI, dim=0)
 
-    return ARI
+    # Return ARI and mean ARI across subjects
+    return ARI, np.nanmean(ARI, axis=0)
 
 
 def compare_probs(prob_a, prob_b, method='corr'):
@@ -818,27 +829,45 @@ def compare_probs(prob_a, prob_b, method='corr'):
     Returns:
         Comparison vector
     """
-
-    comparison = np.empty(prob_a.shape[1])
-
-    # Fold left hemisphere and right hemisphere parcels (first half and second half of rows)
-    prob_a_folded = prob_a[prob_a.shape[0] // 2:, :] + \
-        prob_a[:prob_a.shape[0] // 2, :]
-
-    prob_b_folded = prob_b[prob_b.shape[0] // 2:, :] + \
-        prob_b[:prob_b.shape[0] // 2, :]
-
     if method == 'corr':
-        # Subtract the mean
-        prob_a_norm = prob_a_folded - pt.nanmean(prob_a_folded, axis=0)
-        prob_b_norm = prob_b_folded - pt.nanmean(prob_b_folded, axis=0)
-        _, c = cev.calculate_R(prob_a_norm.numpy(), prob_b_norm.numpy())
-        comparison = c
-
+        print(f'Calculating correlation between probability maps...')
     elif method == 'cosang':
-        _, c = cev.calculate_R(prob_a_folded.numpy(), prob_b_folded.numpy())
-        comparison = c
+        print(f'Calculating cosine similarity between probability maps...')
 
+    # Loop through subjects
+    for sub in range(prob_a.shape[0]):
+        # Extract parcellation for individual sub
+        if prob_a.shape[0] == 1:
+            print(f'Comparing probabilistic parcellation at group-level...')
+        else:
+            print(
+                f'Comparing probabilistic parcellation for individual {sub}...')
+        prob_a_individual = prob_a[sub, :, :]
+        prob_b_individual = prob_b[sub, :, :]
+
+        # Fold left hemisphere and right hemisphere parcels (first half and second half of rows)
+        prob_a_folded = prob_a_individual[prob_a_individual.shape[0] // 2:, :] + \
+            prob_a_individual[:prob_a_individual.shape[0] // 2, :]
+
+        prob_b_folded = prob_b_individual[prob_b_individual.shape[0] // 2:, :] + \
+            prob_b_individual[:prob_b_individual.shape[0] // 2, :]
+
+        if method == 'corr':
+            # Subtract the mean
+            prob_a_norm = prob_a_folded - pt.nanmean(prob_a_folded, axis=0)
+            prob_b_norm = prob_b_folded - pt.nanmean(prob_b_folded, axis=0)
+            _, c = cev.calculate_R(prob_a_norm.numpy(), prob_b_norm.numpy())
+
+        elif method == 'cosang':
+            _, c = cev.calculate_R(prob_a_folded.numpy(),
+                                   prob_b_folded.numpy())
+        # Save comparison for individual subject
+        if sub == 0:
+            comparison = c
+        else:
+            comparison = np.vstack((comparison, c))
+
+    # Return comparison and mean comparison across subjects
     return comparison
 
 
@@ -875,25 +904,12 @@ def parcel_individual(mname, subject='all', dataset=None, session=None):
         m = deepcopy(model)
         m.initialize(data, subj_ind=subj_ind)
 
-    # elif type(subject) == list:
-    #     if session is None:
-    #         session = 'all'
-    #     idata, iinfo, ids = ds.get_dataset(ut.base_dir, dataset, atlas=info.atlas,
-    #                                        sess=session, type=info.type[info.datasets.index(dataset)], subjects=subject)
-
-    #     # Attach the individual data
-    #     m = deepcopy(model)
-    #     m.emissions = [m.emissions[0]]
-    #     m.emissions[0].initialize(idata)
-    #     m.initialize()
-
     # Get the individual parcellation
-    Uhats = [m.emissions[d].Estep() for d in range(len(info.datasets))]
-    Uhats = [Uhat.to(pt.float32) for Uhat in Uhats]
-    # Collect Uhat into a single tensor
-    # TODO: Implement it such that each subject is only counted once? (i.e. if subject is in multiple datasets) --> Talk to Joern
-    Uhats = pt.cat(Uhats, dim=0)
-
+    m, _, _, U_indiv = m.fit_em(iter=200, tol=0.1,
+                                fit_emission=True,
+                                fit_arrangement=False,
+                                first_evidence=False)
+    Uhats = m.remap_evidence(U_indiv)
     return Uhats
 
 
@@ -906,11 +922,8 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
         _, model_b = ut.load_batch_best(mname_B)
         atlas = info_a.atlas
         # Get group probability maps
-        prob_a = model_a.arrange.marginal_prob()
-        prob_b = model_b.arrange.marginal_prob()
-        # Add dimension to prob_a and prob_b for compatibility with individual parcellation
-        prob_a = prob_a.unsqueeze(0)
-        prob_b = prob_b.unsqueeze(0)
+        prob_a = model_a.arrange.marginal_prob().unsqueeze(0)
+        prob_b = model_b.arrange.marginal_prob().unsqueeze(0)
 
     elif individual:  # Calculate method-specific comparison for each individual subject, then average
         # Get individual parcellation
@@ -924,22 +937,28 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     # ------ Calculate comparison ------
     if method == 'ari' or method == 'ri' or method == 'match':
         if method == 'ari':
-            comparison = ARI_voxelwise(parcel_a, parcel_b).numpy()
+            comparison = ARI_voxelwise(
+                parcel_a, parcel_b)
         elif method == 'ri':
             comparison = ARI_voxelwise(
                 parcel_a, parcel_b, adjusted=False).numpy()
+
         elif method == 'match':
             comparison = (parcel_a == parcel_b).int().numpy()
+
     elif method == 'corr' or method == 'cosang':
         comparison = compare_probs(
-            prob_a, prob_b, atlas, method=method)
-    else:
-        raise ValueError(f"Invalid method: {method}")
+            prob_a, prob_b, method=method)
+
+    comparison_group = comparison
+    # If dimensions of comparison are (n_subj, n_voxels), average across subjects
+    if comparison_group.ndim == 2:
+        comparison_group = np.nanmean(comparison, axis=0)
 
     # ------ Save comparison as nifti ------
     if save_nifti:
         suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
-        comp_data = suit_atlas.data_to_nifti(comparison)
+        comp_data = suit_atlas.data_to_nifti(comparison_group)
 
         save_dir = f'{ut.model_dir}/Models/Evaluation/nettekoven_68/sym_vs_asym//'
         fname = f'comparison-{method}_{mname_A.split("/")[1]}_VS_{mname_B.split("/")[1]}.nii'
@@ -951,7 +970,7 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
     if plot:
         if method == 'ari' or method == 'ri' or method == 'corr' or method == 'cosang':
             if lim is None:
-                vmin, vmax = np.percentile(comparison, [5, 95])
+                vmin, vmax = np.percentile(comparison_group, [5, 95])
             else:
                 vmin, vmax = lim
             dtype = 'func'
@@ -968,7 +987,7 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
             raise ValueError(f"Invalid method: {method}")
 
         plt.figure()
-        ax = ut.plot_data_flat(comparison, atlas,
+        ax = ut.plot_data_flat(comparison_group, atlas,
                                dtype=dtype,
                                render='matplotlib',
                                cmap=cmap,
@@ -977,9 +996,9 @@ def compare_voxelwise(mname_A, mname_B, method='ari', save_nifti=False, plot=Fal
                                colorbar=colorbar)
         plt.show()
 
-        return comparison, ax
+        return comparison, comparison_group, ax
 
-    return comparison
+    return comparison, comparison_group
 
 
 if __name__ == "__main__":

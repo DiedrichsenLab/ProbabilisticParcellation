@@ -62,8 +62,7 @@ def inspect_model_regions_32():
     vol[idx]
     pass
 
-
-def individ_parcellation(mname, sn=0, regions=[29, 30], plot='hist'):
+def individ_parcellation(mname,sn=[0],regions = [29,30],plot='hist'): 
     # Individual training dataset:
     info, model = ut.load_batch_best(mname)
     idata, iinfo, ids = get_dataset(ut.base_dir, 'Mdtb', atlas='MNISymC3',
@@ -78,8 +77,8 @@ def individ_parcellation(mname, sn=0, regions=[29, 30], plot='hist'):
 
     # Build the individual training model on session 1:
     m1 = deepcopy(model)
-    m1.emissions = [m1.emissions[0]]
     m1.emissions[0].initialize(idata)
+    m1.emissions[1].initialize(tdata)
     m1.initialize()
 
     emloglik = m1.emissions[0].Estep()
@@ -93,8 +92,16 @@ def individ_parcellation(mname, sn=0, regions=[29, 30], plot='hist'):
     uni, countsG = np.unique(indx_group, return_counts=True)
     uni, countsI = np.unique(indx_indiv, return_counts=True)
     countsI = countsI / 24
+    D=pd.DataFrame()
+    dA=np.zeros((6,len(sn)),dtype=object)
+    ind=np.zeros((6,len(sn)),dtype=object)
 
-    avrgD = pt.linalg.pinv(m1.emissions[0].X) @ idata[sn]
+    for s in sn:
+        avrgD = [] 
+        avrgD.append(pt.linalg.pinv(m1.emissions[0].X) @ idata[s])
+        avrgD.append(pt.linalg.pinv(m1.emissions[1].X) @ tdata[s])
+    
+        dprime = np.zeros((6,))
     plt.figure(figsize=(17, 6))
     plt.subplot(1, 3, 1)
     calculate_alignment(m1.emissions[0].V, avrgD, indx_data[sn], regions, plot)
@@ -104,7 +111,31 @@ def individ_parcellation(mname, sn=0, regions=[29, 30], plot='hist'):
     plt.subplot(1, 3, 3)
     calculate_alignment(m1.emissions[0].V, avrgD, indx_group, regions, plot)
 
-    return
+        for ds in range(2):
+            i = ds*3
+            dprime[i],dA[i,s],ind[i,s],_ = \
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_data[s],regions)            
+            dprime[1+i],dA[1+i,s],ind[1+i,s],_= \
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_indiv[s],regions)
+            dprime[2+i],dA[2+i,s],ind[2+i,s],ca= \
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_group,regions)
+        d={'SN':[s]*6,
+               'region0':[regions[0]]*6,
+               'region1':[regions[1]]*6,
+               'evaldata':[1,1,1,2,2,2],
+               'parcel':['data','indiv','group','data','indiv','group'],
+               'dprime':dprime}
+        
+        D = pd.concat([D,pd.DataFrame(d)])
+    
+    if plot is not None: 
+        plt.figure(figsize=(17,12))    
+        for i in range(6):
+            dA_plot = np.concatenate(dA[i,:])
+            ind_plot = np.concatenate(ind[i,:])
+            plt.subplot(2,3,i+1)
+            sb.histplot(x=dA_plot,hue=ind_plot,bins=np.linspace(-0.5,0.5,29))
+    return D 
 
 
 def calculate_alignment(V, data, indx, regions, plot='scatter'):
@@ -114,10 +145,19 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
     i = (indx == regions[0]) | (indx == regions[1])
     D = data[:, i]
     normD = np.sqrt((D**2).sum(dim=0))
-    nD = D / normD
+    nD = D/normD
+    
+    angle = v.T @ nD 
+    dA =angle[0]-angle[1] # Difference in angle
+    
+    m = np.zeros((2,))
+    s = np.zeros((2,))
 
-    angle = v.T @ nD
-    dA = angle[0] - angle[1]  # Difference in angle
+    for r in range(2):
+        m[r] = np.nanmean(dA[indx[i]==regions[r]])
+        s[r] = np.nanstd(dA[indx[i]==regions[r]])
+
+    dp =(m[0]-m[1])/np.sqrt((s[0]**2+s[1]**2)/2)
 
     if plot == 'scatter':
         sb.scatterplot(dA, (angle[0] + angle[1]) / 2,
@@ -132,14 +172,14 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
         plt.axvline(-cos_ang / 2)
     pass
 
-    # for r in range(2):
-    #     indx=
+    return dp,dA,indx[i],cos_ang
 
 
 if __name__ == "__main__":
     inspect_model_regions_32()
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
-    individ_parcellation(mname, sn=1, regions=[28, 29])
+    # D=individ_parcellation(mname,sn=[21],regions=[28,29],plot='hist')
+    D=individ_parcellation(mname,sn=np.arange(24),regions=[28,29],plot='hist')
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',
@@ -172,4 +212,4 @@ if __name__ == "__main__":
     # export_orig_68()
 
     # --- Export merged models ---
-pass
+    pass
