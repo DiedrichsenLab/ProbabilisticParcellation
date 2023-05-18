@@ -35,9 +35,22 @@ def individual_symmetry(mname):
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
     atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
 
-    sym_score = cl.parcel_similarity_individual(model, prob, sym=False)
+    # Load the data
+    # for d, dname in enumerate(info.datasets):
+    d = 0
+    dname = 'MDTB'
+    data, dinfo, dataset = get_dataset(
+        ut.base_dir,
+        dname,
+        atlas=info.atlas,
+        sess=info.sess[d],
+        type=info.type[d],
+    )
+
+    sym_score = cl.parcel_similarity_indiv(prob, data, sym=False)
 
     pass
 
@@ -83,22 +96,22 @@ if __name__ == "__main__":
     # np.save(
     #     f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
 
-    asym_sym_corr_group = np.load(
-        f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy')
-    # Replace all values with nans
-    asym_sym_corr_group = np.ones(asym_sym_corr_group.shape)
-    # Test if there are any nans
-    print(np.isnan(asym_sym_corr_group).any())
-    plt.figure(figsize=(10, 10))
-    ax = ut.plot_data_flat(asym_sym_corr_group, atlas,
-                           dtype='func',
-                           render='matplotlib',
-                           cmap='hot',
-                           cscale=(0.8, 1))
-    plt.show()
+#     asym_sym_corr_group = np.load(
+#         f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy')
+#     # Replace all values with nans
+#     asym_sym_corr_group = np.ones(asym_sym_corr_group.shape)
+#     # Test if there are any nans
+#     print(np.isnan(asym_sym_corr_group).any())
+#     plt.figure(figsize=(10, 10))
+#     ax = ut.plot_data_flat(asym_sym_corr_group, atlas,
+#                            dtype='func',
+#                            render='matplotlib',
+#                            cmap='hot',
+#                            cscale=(0.8, 1))
+#     plt.show()
 
-# Test if there are any zeros
-print((asym_sym_corr_group == 0).any())
+# # Test if there are any zeros
+# print((asym_sym_corr_group == 0).any())
 
 individual_symmetry(mname=model_pair[0])
 pass
