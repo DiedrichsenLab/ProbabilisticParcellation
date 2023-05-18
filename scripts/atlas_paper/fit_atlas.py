@@ -28,37 +28,21 @@ import time
 
 
 def fit_asym_from_sym_sep_hem(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68', mname_new=None):
-    """
-    Fits an asymmetric model from a symmetric model by loading the model, freezing the emission model,
-    and fitting the arrangement model. The resulting asymmetric model and information are saved.
-
-    Args:
-        mname (str): The name of the symmetric model to load. Default is 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'.
-        mname_new (str): The name of the new asymmetric model to save. If None, a default name is generated.
-
-    Returns:
-        tuple: A tuple containing the asymmetric model and the corresponding information.
-
-    """
-
     # Load model
     inf, m = ut.load_batch_best(mname)
     inf = ut.recover_info(inf, m, mname)
-
     # Freeze emission model and fit arrangement model
     M, new_info = lf.refit_model(m, inf, fit='arrangement', sym_new='asym')
-
-    # Save new model
+    # save new model
     if mname_new is None:
         mname_new = f'{mname.split("/")[0]}asym_{mname.split("sym_")[1]}_arrange-asym'
     with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
         pickle.dump([M], file)
-
-    # Save new info
-    new_info.to_csv(f'{ut.model_dir}/Models/{mname_new}.tsv',
-                    sep='\t', index=False)
-    print(
-        f'Done. Saved asymmetric model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
+        # save new info
+        new_info.to_csv(f'{ut.model_dir}/Models/{mname_new}.tsv',
+                        sep='\t', index=False)
+        print(
+            f'Done. Saved asymmetric model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
     return M, new_info
 
 
@@ -138,10 +122,5 @@ if __name__ == "__main__":
 
     # fit_asym_from_sym(
     # mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
-    # fit_asym_from_sym_sep_hem(
-    #     mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
-
-    ks = [10, 20, 34, 40, 68, 14, 28, 32, 56, 60]
-    for k in ks:
-        fit_asym_from_sym_sep_hem(
-            mname=f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-{k}', mname_new=f'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-{k}_arrange-asym_sep-hem')
+    fit_asym_from_sym_sep_hem(
+        mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
