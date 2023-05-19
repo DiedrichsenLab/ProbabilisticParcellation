@@ -434,7 +434,10 @@ def _compute_var_cov(data, cond='all', mean_centering=True):
 
     k = data.shape[1]
     cov = pt.matmul(data, data.T) / (k - 1)
-    sd = pt.sqrt((data**2).sum(dim=1) / (k - 1))  # standard deviation
+
+    data_sqrd = data**2
+    data_sqrd[pt.isnan(data)] = 0  # Set NaN values to zero to ignore them
+    sd = pt.sqrt((data_sqrd**2).sum(dim=1) / (k - 1))  # standard deviation
     var = pt.matmul(sd, sd.T)
 
     return cov, var
