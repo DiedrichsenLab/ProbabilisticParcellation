@@ -512,6 +512,12 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         indx_hem = indx_hem[np.newaxis, :]
 
         # Make arrangement model asymmetric but with hemispheres fitted separately
+        # ar_model = ar.ArrangeIndependentSymmetric(K,
+        #                                           atlas.indx_full,
+        #                                           atlas.indx_reduced,
+        #                                           same_parcels=False,
+        #                                           spatial_specific=True,
+        #                                           remove_redundancy=False)
         new_arrange = ar.ArrangeIndependentSeparateHem(model.K,
                                                        indx_hem=indx_hem,
                                                        spatial_specific=model.arrange.spatial_specific,
