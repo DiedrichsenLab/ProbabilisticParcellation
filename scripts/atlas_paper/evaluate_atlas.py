@@ -149,12 +149,12 @@ def evaluate_timeseries(model_name, dset, atlas, CV_setting):
     return results
 
 
-def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], test_on='task'):
+def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', 'rest'], test_on='task', mname_suffix=''):
 
     model_datasets = get_model_datasets(model_on, model_types)
     ########## Settings ##########
     space = 'MNISymC3'  # Set atlas space
-    msym = 'sym'  # Set model symmetry
+    msym = 'asym'  # Set model symmetry
     t = '03'  # Set model type
 
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
@@ -162,8 +162,8 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
         for k in ks:
             datanames = ''.join(T.two_letter_code[datasets])
             wdir = ut.model_dir + f'/Models/Models_{t}'
-            mname = f'Models_03/{msym}_{datanames}_space-{space}_K-{k}'
-            fname = f'eval_on-{test_on}_' + mname.split('/')[-1] + '.tsv'
+            mname = f'Models_03/{msym}_{datanames}_space-{space}_K-{k}{mname_suffix}'
+            fname = f'eval_on-{test_on}_{mname.split("/")[-1]}{mname_suffix}.tsv'
 
             if Path(res_dir + fname).exists():
                 print(f'File {fname} already exists. Skipping.')
@@ -175,6 +175,7 @@ def evaluate_models(ks, model_types=['all', 'loo', 'indiv'], model_on=['task', '
                     test_datasets = get_test_datasets(
                         model_on, test_on='rest', model_datasets=datasets)
                 else:
+                    tseries = False
                     test_datasets = get_test_datasets(
                         model_on, test_on=test_on, model_datasets=datasets)
                 test_datasets = T.name.iloc[test_datasets].tolist()
@@ -909,7 +910,7 @@ if __name__ == "__main__":
     # compMat, labels = get_compMat(criterion='ari', ks=[10, 20, 34, 40, 68], model_types=[
     #     'all', 'indiv'], sym=['asym'])
 
-    save_ari()
+    # save_ari()
 
     # # ---- Load results ----
     # with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
@@ -959,4 +960,7 @@ if __name__ == "__main__":
     # print(stats.ttest_ind(task_values, hcp_values))
     # print(np.mean(task_values), np.mean(hcp_values))
 
-    # pass
+    #  --- Evaluate asymmetric fitted from symmetric ---
+    ks = [10, 20, 34, 40, 68]
+    evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
+                    'task'], test_on='task', mname_suffix='_arrange-asym_sep-hem')
