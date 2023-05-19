@@ -4,7 +4,6 @@ Script to analyze parcels using clustering and colormaps
 
 import pandas as pd
 import numpy as np
-from Functional_Fusion.dataset import *
 from scipy.linalg import block_diag
 import torch as pt
 import matplotlib.pyplot as plt
@@ -22,9 +21,13 @@ import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
+import Functional_Fusion.atlas_map as am
 import generativeMRF.evaluation as ev
 import logging
 import nitools as nt
+from cortico_cereb_connectivity.scripts.script_plot_weights import get_scale_map
+from pathlib import Path
+import nibabel as nib
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
@@ -86,8 +89,14 @@ def get_correlated_cortex(mname, weighting=False):
 
 
 def get_modelled_cortex(mname, mname_new=None, symmetry=None):
-    model, info = ft.refit_model_in_new_space(
-        mname, mname_new=mname_new, new_space='fs32k', symmetry=symmetry)
+    """ Get the cortex modelled from the parcel profiles"""
+    if Path(
+            f'{ut.model_dir}/Models/{mname.split("/")[0]}/{mname_new}.pickle').exists():
+        info, model = ut.load_batch_best(
+            f'{mname.split("/")[0]}/{mname_new}')
+    else:
+        model, info = ft.refit_model_in_new_space(
+            mname, mname_new=mname_new, new_space='fs32k', symmetry=symmetry)
     cortex = model.arrange.marginal_prob()
 
     return cortex, info
@@ -103,18 +112,61 @@ def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2
         cortex, info = get_modelled_cortex(
             mname, mname_new=mname_new, symmetry=symmetry)
 
+    # lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
+    # if Path(lut_file).exists():
+    #     index, cmap, labels = nt.read_lut(lut_file)
+    # if labels[0] == '0':
+    #     labels = labels[1:]
+
+    # # Get the fs32k atlas
+    # atlas, _ = am.get_atlas('fs32k', ut.atlas_dir)
+
+    # C = atlas.data_to_cifti(cortex, labels)
+    # nb.save(
+    #     C, f'{ut.model_dir}/Atlases/{mname_new}.dscalar.nii')
+
+    # prepping the parcel axis file
+    atlas_fs, _ = am.get_atlas("fs32k", ut.atlas_dir)
+
+    # load the label file for the cortex
+    cortex_roi = 'Icosahedron1002'
+    label_fs = [ut.atlas_dir +
+                f"/tpl-fs32k/{cortex_roi}.{hemi}.label.gii" for hemi in ["L", "R"]]
+
+    # get parcels for the neocortex
+    _, label_fs = atlas_fs.get_parcel(label_fs, unite_struct=False)
+
+    # get the average cortical weights for each cerebellar parcel
+    atlas_suit, _ = am.get_atlas(mname.split(
+        "space-")[1].split("_")[0], ut.atlas_dir)
+
+    weights_parcel, labels = ds.agg_parcels(
+        cortex.T, atlas_suit.label_vector, fcn=np.nanmean)
+
+    # preping the parcel axis
+    # load the lookup table for the cerebellar parcellation to get the names of the parcels
     lut_file = ut.model_dir + '/Atlases/' + mname.split('/')[-1] + '.lut'
-    if Path(lut_file).exists():
-        index, cmap, labels = nt.read_lut(lut_file)
-    if labels[0] == '0':
-        labels = labels[1:]
+    assert Path(lut_file).exists(), 'No lut file found'
+    index, cmap, labels = nt.read_lut(lut_file)
+    # If labels don't end in L and R, add L to the first half and R to the second half
+    if labels[0][-1] not in ['L', 'R']:
+        labels = [l + 'L' if i <
+                  len(labels) / 2 else l + 'R' for i, l in enumerate(labels)]
 
-    # Get the fs32k atlas
-    atlas, _ = am.get_atlas('fs32k', ut.atlas_dir)
+    # create parcel axis for the cortex (will be used as column axis in pscalar file)
+    p_axis = atlas_fs.get_parcel_axis()
 
-    C = atlas.data_to_cifti(cortex, labels)
-    nb.save(
-        C, f'{ut.model_dir}/Atlases/{mname_new}.dscalar.nii')
+    # generate row axis with the last rowi being the scale
+    row_axis = nb.cifti2.ScalarAxis(labels[1:])
+    # Make torch.float32 data into numpy array
+    data = cortex.detach().numpy().astype(np.float32)
+
+    # make header
+    # rows are maps corresponding to cerebellar parcels
+    # columns are cortical tessels
+    header = nb.Cifti2Header.from_axes((row_axis, p_axis))
+    cifti_img = nb.Cifti2Image(data, header=header)
+    return cifti_img
 
 
 def export_cortex(mname):
@@ -184,9 +236,10 @@ def export_cortex(mname):
 if __name__ == "__main__":
 
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # mname = 'Models_03/NettekovenSym68c32'
 
     # -- Get correlated cortex --
-    method = 'corr'
+    method = 'model'
     symmetry = 'sym'
     cortex = get_cortex(mname=mname, method=method)
     # # cortex = get_cortex(mname=mname, method=method, symmetry=symmetry)
