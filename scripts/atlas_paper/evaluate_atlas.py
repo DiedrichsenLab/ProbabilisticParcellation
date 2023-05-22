@@ -865,13 +865,18 @@ def save_corr():
 def compile_results():
     # Compile into one tsv file
     # Import all tsv files that end in _arrange-asym_sep-hem.tsv and concatenate them into one dataframe
-    mname_suffix = '_arrange-asym_sep-hem'
+    # mname_suffix = '_arrange-asym_sep-hem'
+    mname_suffix = ''
 
     file_names = sorted(
-        glob.glob(f'{res_dir}/eval_on-task_asym*{mname_suffix}.tsv'))
+        glob.glob(f'{res_dir}/eval_on-task_sym*{mname_suffix}28.tsv'))
+    file_names.extend(sorted(
+        glob.glob(f'{res_dir}/eval_on-task_sym*{mname_suffix}14.tsv')))
 
     df = pd.concat([pd.read_csv(f, sep='\t') for f in file_names])
-    df.to_csv(f'{ut.model_dir}/Models/Evaluation/eval_dataset7_asym-hem.tsv',
+    # df.to_csv(f'{ut.model_dir}/Models/Evaluation/eval_dataset7_asym-hem.tsv',
+    #           sep='\t', index=False)
+    df.to_csv(f'{ut.model_dir}/Models/Evaluation/eval_dataset7_sym_14-28.tsv',
               sep='\t', index=False)
 
 
