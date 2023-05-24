@@ -235,7 +235,7 @@ def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None, 
     parcel = Prob.argmax(axis=0) + 1
 
     # Make a colormap.
-    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False)
+    w_cos_sim, _, _ = cl.parcel_similarity_group(model, plot=False)
     W = sc.calc_mds(w_cos_sim, center=True)
 
     # Define color anchors
