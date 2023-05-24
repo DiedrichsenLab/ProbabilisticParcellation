@@ -3,8 +3,8 @@ from time import gmtime
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import generativeMRF.evaluation as ev
-import generativeMRF.emissions as em
+import HierarchBayesParcel.evaluation as ev
+import HierarchBayesParcel.emissions as em
 
 import ProbabilisticParcellation.evaluate as ppev
 import matplotlib.pyplot as plt

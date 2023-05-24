@@ -22,7 +22,7 @@ import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.evaluation as ev
 import ProbabilisticParcellation.evaluate as ppev
 # from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging

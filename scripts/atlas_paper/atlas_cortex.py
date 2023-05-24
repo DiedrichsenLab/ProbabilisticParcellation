@@ -22,7 +22,7 @@ import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
 import Functional_Fusion.atlas_map as am
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.evaluation as ev
 import logging
 import nitools as nt
 import cortico_cereb_connectivity.scripts.script_plot_weights as cc

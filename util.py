@@ -7,8 +7,8 @@ import pandas as pd
 import torch as pt
 import json
 import matplotlib.pyplot as plt
-import generativeMRF.evaluation as ev
-import generativeMRF.full_model as fm
+import HierarchBayesParcel.evaluation as ev
+import HierarchBayesParcel.full_model as fm
 from pathlib import Path
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.hierarchical_clustering as cl

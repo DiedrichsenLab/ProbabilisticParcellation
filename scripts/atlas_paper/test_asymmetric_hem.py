@@ -3,8 +3,8 @@ from time import gmtime
 from pathlib import Path
 import pandas as pd
 import numpy as np
-import generativeMRF.evaluation as ev
-import generativeMRF.emissions as em
+import HierarchBayesParcel.evaluation as ev
+import HierarchBayesParcel.emissions as em
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.evaluate as ppev
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ from util import *
 import torch as pt
 from ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas import ARI_voxelwise, compare_probs
 from sklearn.metrics import adjusted_rand_score
-import generativeMRF.arrangements as ar
+import HierarchBayesParcel.arrangements as ar
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 
 
