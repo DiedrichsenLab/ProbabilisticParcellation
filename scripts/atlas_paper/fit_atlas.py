@@ -81,7 +81,7 @@ def fit_models(ks, fit_datasets=['all', 'loo', 'indiv'], rest_included=False, ve
 
     ########## Settings ##########
     space = 'MNISymC3'  # Set atlas space
-    msym = 'asym'  # Set model symmetry
+    msym = 'sym'  # Set model symmetry
     t = '03'  # Set model type
 
     # -- Build dataset list --
@@ -138,17 +138,20 @@ if __name__ == "__main__":
     # ks = [10, 20, 34, 40, 68]
     # ks = [28, 30, 36, 38, 74]
     # ks = [68, 80]
+    ks = [14, 28]
     # fit_models(ks=[32], fit_datasets=['all'], rest_included=False)
-    # fit_models(ks=ks, fit_datasets=['indiv'],
-    #    rest_included=True, indiv_on_rest_only=True)
+    fit_models(ks=ks, fit_datasets=['indiv', 'loo', 'all'],
+               rest_included=False, indiv_on_rest_only=False, sym_from_asym=False)
+    fit_models(ks=ks, fit_datasets=['indiv', 'loo', 'all'],
+               rest_included=False, indiv_on_rest_only=False, sym_from_asym=True)
     # fit_models(ks=ks, fit_datasets=['loo'], rest_included=True)
 
     # fit_asym_from_sym_sep_hem(
     #     mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68', mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
 
-    atlas = 'MNISymC3'
-    ks = [10, 20, 34, 40, 68]
-    fit_models(ks=ks, fit_datasets=['indiv', 'loo', 'all'],
-               rest_included=False, indiv_on_rest_only=False, sym_from_asym=True)
+    # atlas = 'MNISymC3'
+    # ks = [10, 20, 34, 40, 68]
+    # fit_models(ks=ks, fit_datasets=['indiv', 'loo', 'all'],
+    #            rest_included=False, indiv_on_rest_only=False, sym_from_asym=True)
 
-    ks_additional = [14, 28, 32, 56, 60]
+    # ks_additional = [14, 28, 32, 56, 60]

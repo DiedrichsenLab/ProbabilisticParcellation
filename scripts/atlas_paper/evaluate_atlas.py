@@ -32,6 +32,8 @@ from cortico_cereb_connectivity import evaluation as cev
 from datetime import datetime
 import seaborn as sns
 import re
+import glob
+import pandas as pd
 
 res_dir = ut.model_dir + f'/Models/Evaluation/nettekoven_68/'
 
@@ -860,6 +862,24 @@ def save_corr():
     pass
 
 
+def compile_results():
+    # Compile into one tsv file
+    # Import all tsv files that end in _arrange-asym_sep-hem.tsv and concatenate them into one dataframe
+    # mname_suffix = '_arrange-asym_sep-hem'
+    mname_suffix = ''
+
+    file_names = sorted(
+        glob.glob(f'{res_dir}/eval_on-task_sym*{mname_suffix}28.tsv'))
+    file_names.extend(sorted(
+        glob.glob(f'{res_dir}/eval_on-task_sym*{mname_suffix}14.tsv')))
+
+    df = pd.concat([pd.read_csv(f, sep='\t') for f in file_names])
+    # df.to_csv(f'{ut.model_dir}/Models/Evaluation/eval_dataset7_asym-hem.tsv',
+    #           sep='\t', index=False)
+    df.to_csv(f'{ut.model_dir}/Models/Evaluation/eval_dataset7_sym_14-28.tsv',
+              sep='\t', index=False)
+
+
 if __name__ == "__main__":
     # evaluate_clustered()
     # evaluate_sym(K=[68], train_type=[
@@ -961,6 +981,9 @@ if __name__ == "__main__":
     # print(np.mean(task_values), np.mean(hcp_values))
 
     #  --- Evaluate asymmetric fitted from symmetric ---
-    ks = [10, 20, 34, 40, 68]
-    evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
-                    'task'], test_on='task', mname_suffix='_arrange-asym_sep-hem')
+    # ks = [10, 20, 34, 40, 68]
+    # mname_suffix = '_arrange-asym_sep-hem'
+    # evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
+    # 'task'], test_on='task', mname_suffix=mname_suffix)
+
+    compile_results()
