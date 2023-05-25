@@ -151,10 +151,13 @@ def update_color_map(mname,):
     atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
     _, cmap, labels = nt.read_lut(atlas_dir + mname + '.lut')
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname='Models_03/' + mname , labels=labels)
+        mname='Models_03/' + mname ,
+        sym=True, 
+        labels=labels)
     cmap_array = np.array(cmap(np.arange(len(labels))))
-    save_lut(base_name + '.lut',
-                np.arange(len(labels)), cmap[:, 0:4], labels)
+    nt.save_lut(atlas_dir + '/' + mname + '.lut',
+                np.arange(len(labels)), cmap_array[:,0:4], labels)
+    pass
 
 
 def export_model_merged(mname_new):
@@ -191,6 +194,7 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
 if __name__ == "__main__":
 
     mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     update_color_map(mname)
     # # --- Export merged model profile ---
     # fileparts = mname.split('/')
@@ -239,6 +243,6 @@ if __name__ == "__main__":
     # comparison = ppev.compare_probs(
     #     prob_a, prob_b, method='cosang')
 
-    export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
-    export_uhats(
-        mname='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
+    # export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
+    # export_uhats(
+    #     mname='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')

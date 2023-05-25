@@ -34,20 +34,31 @@ def get_target_cmap(cmap):
     tV = np.flip(tV,axis=1)
     return tm,tl,tV
 
-def get_target_points(atlas,parcel):
-
-    m = np.array([0.65,0.65,0.65])
-    colors = np.array([[0.8,0.8,0.2],[0.8,0.8,0.2],
-                  [0,0.7,0.7],[0,0.7,0.7],
+def get_target_points(atlas,parcel,sym=False):
+    """
+    Get target points for MDS  
+    We use S1, M3,M4,M1,D3
+    """    
+    m = np.array([0.68,0.68,0.68])
+    colors = np.array([[0.9,0.9,0],[0.9,0.9,0],
+                  [0,0.9,0.3],[0,0.9,0.3],
+                  [0.1,0.9,0.9],[0.1,0.9,0.9],
+                  [0.1,0.1,0.7],[0.1,0.1,0.7],
                   [0.9,0.2,0.9],[0.9,0.2,0.9]])
     points = np.array([[-29,-73,-38],[29,-73,-38],
                        [-18,-53,-19],[18,-53,-19],
+                        [-25,-34,-29],[25,-34,-29],
+                        [-1,-75,-25],[1,-75,-25],
                        [-36,-60,-30],[36,-60,-30]])
     # Get closest voxel in atlas
     region = np.zeros((points.shape[0],),dtype =int)
     for i,p in enumerate(points):
         d=np.sum((atlas.world-p.reshape(3,1))**2,axis=0)
         region[i]=parcel[np.argmin(d)]-1
+    if sym:
+        ind = points[:,0]<0
+        colors = colors[ind,:]
+        region = region[ind]
     return m,region,colors
 
 

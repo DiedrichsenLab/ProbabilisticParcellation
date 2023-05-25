@@ -203,7 +203,13 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
     return new_model
 
 
-def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None, gamma=0):
+def colour_parcel(mname, 
+                  sym = False,
+                  plot=True, 
+                  labels=None, 
+                  clusters=None, 
+                  weighting=None, 
+                  gamma=0):
     """
     Colours the parcellation of a model.
 
@@ -235,9 +241,12 @@ def colour_parcel(mname, plot=True, labels=None, clusters=None, weighting=None, 
     parcel = Prob.argmax(axis=0) + 1
 
     # Make a colormap.
-    w_cos_sim, _, _ = cl.parcel_similarity_group(model, plot=False)
+    w_cos_sim, _, _ = cl.parcel_similarity(model,
+                                           plot=True,
+                                           sym=sym)
     W = sc.calc_mds(w_cos_sim, center=True)
-
+    if sym:
+        W = np.concatenate([W, W])
     # Define color anchors
     m, regions, colors = sc.get_target_points(atlas, parcel)
     cmap = sc.colormap_mds(W, target=(m, regions, colors),
