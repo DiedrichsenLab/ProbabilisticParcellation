@@ -8,10 +8,10 @@ import numpy as np
 import Functional_Fusion.atlas_map as am
 import Functional_Fusion.matrix as matrix
 from Functional_Fusion.dataset import *
-import generativeMRF.emissions as em
-import generativeMRF.arrangements as ar
-import generativeMRF.full_model as fm
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.emissions as em
+import HierarchBayesParcel.arrangements as ar
+import HierarchBayesParcel.full_model as fm
+import HierarchBayesParcel.evaluation as ev
 import PcmPy as pcm
 from scipy.linalg import block_diag
 import nibabel as nb
@@ -40,7 +40,7 @@ from copy import deepcopy
 import string
 
 
-def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
+def parcel_similarity(model, plot=False, sym=False, weighting=None):
     """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
 
     Args:
@@ -108,41 +108,6 @@ def parcel_similarity_group(model, plot=False, sym=False, weighting=None):
     return w_cos_sim, cos_sim, kappa
 
 
-def parcel_similarity_indiv(U_hat, data, plot=False, sym=False, weighting=None):
-    """ Calculates a parcel similarity based on the V-vectors (functional profiles) of the emission models 
-
-    Args:
-        U_hat (nd.array): (n_subj, K, P) individual probalistic parcellation
-        data (nd.array): (n_subj, n_cond,P)
-        plot (bool, optional): Generate plot? Defaults to False.
-        sym (bool, optional): Generate similarity in a symmetric fashion? Defaults to False.
-        weighting (ndarray, optional): possible weighting of different dataset. Defaults to None.
-
-    Returns:
-        w_cos_sim: Weighted cosine similarity (integrated)
-        cos_sim: Cosine similarity for each data set
-        kappa: Kappa from each dataset(?)
-
-    """
-    # for each subject, calculate the mean direction
-    #   a=sum over voxels data * U_hat ( N x K-long matrix)
-    # w=sum over voxel U_hat (K-long vector)
-    # mean = a / w
-
-    """
-    TO BE IMPLEMENTED; CARO?????
-    YU = pt.matmul(pt.nan_to_num(self.Y), pt.transpose(U_hat, 1, 2), dim=0)
-    UU = pt.sum(JU_hat, dim=0)
-
-    # 1. Updating the V_k, which is || sum_i(Uhat(k)*Y_i) / sum_i(Uhat(k)) ||
-    r_norm = pt.sqrt(pt.sum(YU ** 2, dim=0))
-    V = YU / r_norm
- 
-    return w_cos_sim, cos_sim, kappa
-    """
-    pass
-
-
 def similarity_matrices(mname, sym=True):
     # Get model and atlas.
     fileparts = mname.split('/')
@@ -161,7 +126,7 @@ def similarity_matrices(mname, sym=True):
     labels = np.array(labels[1:K + 1])
 
     # Get parcel similarity:
-    w_cos_sim, cos_sim, _ = parcel_similarity_group(model, plot=False, sym=sym)
+    w_cos_sim, cos_sim, _ = parcel_similarity(model, plot=False, sym=sym)
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
 
     spatial_sim = P @ P.T
@@ -327,7 +292,7 @@ def make_symmetry_map(mname, cmap='hot', cscale=[0.3, 1]):
     parcel = Prob.argmax(axis=0) + 1
 
     # Get similarity
-    w_cos, _, _ = parcel_similarity_group(model, plot=False, sym=False)
+    w_cos, _, _ = parcel_similarity(model, plot=False, sym=False)
     indx1 = np.arange(model.K)
     v = np.arange(model.arrange.K)
     indx2 = np.concatenate([v + model.arrange.K, v])

@@ -15,11 +15,11 @@ import Functional_Fusion.atlas_map as am
 from Functional_Fusion.dataset import *
 import Functional_Fusion.matrix as matrix
 import nibabel as nb
-import generativeMRF.full_model as fm
-import generativeMRF.spatial as sp
-import generativeMRF.arrangements as ar
-import generativeMRF.emissions as em
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.full_model as fm
+import HierarchBayesParcel.spatial as sp
+import HierarchBayesParcel.arrangements as ar
+import HierarchBayesParcel.emissions as em
+import HierarchBayesParcel.evaluation as ev
 import torch as pt
 import matplotlib.pyplot as plt
 import pickle

@@ -22,7 +22,7 @@ import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.evaluation as ev
 import ProbabilisticParcellation.evaluate as ppev
 # from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
@@ -147,6 +147,18 @@ def profile_NettekovenSym68c32():
     fp.export_profile(mname_new, info, model, labels)
     features = fp.cognitive_features(mname_new)
 
+def update_color_map(mname,):
+    atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+    _, cmap, labels = nt.read_lut(atlas_dir + mname + '.lut')
+    Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
+        mname='Models_03/' + mname ,
+        sym=True, 
+        labels=labels)
+    cmap_array = np.array(cmap(np.arange(len(labels))))
+    nt.save_lut(atlas_dir + '/' + mname + '.lut',
+                np.arange(len(labels)), cmap_array[:,0:4], labels)
+    pass
+
 
 def export_model_merged(mname_new):
     space = mname_new.split('space-')[1].split('_')[0]
@@ -181,8 +193,9 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
 
 if __name__ == "__main__":
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-
+    mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    update_color_map(mname)
     # # --- Export merged model profile ---
     # fileparts = mname.split('/')
     # split_mn = fileparts[-1].split('_')
@@ -230,6 +243,6 @@ if __name__ == "__main__":
     # comparison = ppev.compare_probs(
     #     prob_a, prob_b, method='cosang')
 
-    export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
-    export_uhats(
-        mname='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
+    # export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
+    # export_uhats(
+    #     mname='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')

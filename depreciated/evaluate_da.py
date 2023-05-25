@@ -13,10 +13,10 @@ import numpy as np
 import Functional_Fusion.atlas_map as am
 import Functional_Fusion.matrix as matrix
 from Functional_Fusion.dataset import *
-import generativeMRF.emissions as em
-import generativeMRF.arrangements as ar
-import generativeMRF.full_model as fm
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.emissions as em
+import HierarchBayesParcel.arrangements as ar
+import HierarchBayesParcel.full_model as fm
+import HierarchBayesParcel.evaluation as ev
 
 from scipy.linalg import block_diag
 import nibabel as nb
@@ -836,7 +836,7 @@ if __name__ == "__main__":
     #     result_1_plot_flatmap(Us, sub=i, save=True)
 
     ############# Result 2: Simulation on session fusion #############
-    # from generativeMRF.notebooks.simulate_fusion import *
+    # from HierarchBayesParcel.notebooks.simulate_fusion import *
     # for k in [5, 10, 20, 30]:
     #     simulation_3(K_true=k, K=5, width=50, nsub_list=np.array([10, 10]),
     #                  M=np.array([40, 20], dtype=int), num_part=1, sigma2=0.5,

@@ -9,11 +9,11 @@ import Functional_Fusion.matrix as matrix
 from scipy.linalg import block_diag
 import nibabel as nb
 import SUITPy as suit
-import generativeMRF.full_model as fm
-import generativeMRF.spatial as sp
-import generativeMRF.arrangements as ar
-import generativeMRF.emissions as em
-import generativeMRF.evaluation as ev
+import HierarchBayesParcel.full_model as fm
+import HierarchBayesParcel.spatial as sp
+import HierarchBayesParcel.arrangements as ar
+import HierarchBayesParcel.emissions as em
+import HierarchBayesParcel.evaluation as ev
 from ProbabilisticParcellation.util import *
 import torch as pt
 from depreciated.learn_mdtb import get_mdtb_parcel

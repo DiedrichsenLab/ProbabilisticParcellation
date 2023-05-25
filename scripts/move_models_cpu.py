@@ -5,7 +5,7 @@ old symmetric -> new symmetric
 from time import gmtime
 from pathlib import Path
 from ProbabilisticParcellation.util import *
-import generativeMRF.full_model as fm
+import HierarchBayesParcel.full_model as fm
 import glob
 
 pt.set_default_tensor_type(pt.cuda.FloatTensor
