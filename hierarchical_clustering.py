@@ -345,7 +345,10 @@ def plot_parcel_size(Prob, cmap, labels, wta=True):
                       'cnum': np.arange(Prob.shape[0]) + 1})
     D = D.sort_values(by='region')
     pal = {d.region: cmap(d.cnum) for i, d in D.iterrows()}
-    sb.barplot(data=D, y='region', x='sumV', palette=pal)
+    if wta:
+        sb.barplot(data=D, y='region', x='sumV', palette=pal)
+    else:
+        sb.barplot(data=D, y='region', x='sumP', palette=pal)
     return D
 
 

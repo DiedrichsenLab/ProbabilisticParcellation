@@ -242,7 +242,7 @@ def colour_parcel(mname,
 
     # Make a colormap.
     w_cos_sim, _, _ = cl.parcel_similarity(model,
-                                           plot=True,
+                                           plot=False,
                                            sym=sym)
     W = sc.calc_mds(w_cos_sim, center=True)
     if sym:

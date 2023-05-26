@@ -194,7 +194,7 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
 if __name__ == "__main__":
 
     mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
-    mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     update_color_map(mname)
     # # --- Export merged model profile ---
     # fileparts = mname.split('/')
