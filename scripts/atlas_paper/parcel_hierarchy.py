@@ -21,7 +21,7 @@ import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import Functional_Fusion.dataset as ds
-import HierarchBayesParcel.evaluation as ev
+import generativeMRF.evaluation as ev
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
