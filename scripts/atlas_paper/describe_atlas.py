@@ -157,7 +157,6 @@ def update_color_map(mname,):
     cmap_array = np.array(cmap(np.arange(len(labels))))
     nt.save_lut(atlas_dir + '/' + mname + '.lut',
                 np.arange(len(labels)), cmap_array[:,0:4], labels)
-    pass
 
 
 def export_model_merged(mname_new):
