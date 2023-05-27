@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 import pickle
 from copy import deepcopy
 import time
+# TEMPORARY FIX BEFORE MODELS ARE UPDATED TO HBP - REMOVE!!! TODO XX
+import generativeMRF.arrangements as gar
 
 
 def build_data_list(datasets,
@@ -501,7 +503,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
 
     """
 
-    if sym_new is None and type(model.arrange) is ar.ArrangeIndependentSymmetric:
+    if sym_new is None and (type(model.arrange) is ar.ArrangeIndependentSymmetric or type(model.arrange) is gar.ArrangeIndependentSeparateHem):
         M = fm.FullMultiModel(model.arrange, model.emissions)
 
     elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
@@ -566,7 +568,8 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
                                first_evidence=True)
 
         # make info from a Series back to a dataframe
-        new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+        if type(new_info) is not pd.DataFrame:
+            new_info = pd.DataFrame(new_info.to_dict(), index=[0])
         new_info['loglik'] = ll[-1].item()
 
     elif fit == 'arrangement':

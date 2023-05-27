@@ -203,12 +203,12 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
     return new_model
 
 
-def colour_parcel(mname, 
-                  sym = False,
-                  plot=True, 
-                  labels=None, 
-                  clusters=None, 
-                  weighting=None, 
+def colour_parcel(mname,
+                  sym=False,
+                  plot=True,
+                  labels=None,
+                  clusters=None,
+                  weighting=None,
                   gamma=0):
     """
     Colours the parcellation of a model.

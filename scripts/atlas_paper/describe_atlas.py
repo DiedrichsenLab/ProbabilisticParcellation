@@ -54,7 +54,7 @@ def export_selected():
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered'
+        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
     ]
     for mname in mnames:
         export(mname)
@@ -147,36 +147,56 @@ def profile_NettekovenSym68c32():
     fp.export_profile(mname_new, info, model, labels)
     features = fp.cognitive_features(mname_new)
 
+
 def update_color_map(mname,):
     atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
     _, cmap, labels = nt.read_lut(atlas_dir + mname + '.lut')
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname='Models_03/' + mname ,
-        sym=True, 
+        mname='Models_03/' + mname,
+        sym=True,
         labels=labels)
     cmap_array = np.array(cmap(np.arange(len(labels))))
     nt.save_lut(atlas_dir + '/' + mname + '.lut',
-                np.arange(len(labels)), cmap_array[:,0:4], labels)
+                np.arange(len(labels)), cmap_array[:, 0:4], labels)
 
 
 def export_model_merged(mname_new):
     space = mname_new.split('space-')[1].split('_')[0]
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    mname_fine = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym_sep-hem'
     f_assignment = 'mixed_assignment_68_16'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment=f_assignment,
-                                     refit_model=False, save_model=False)
+    # _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
+    #                                  mname_new=mname_new,
+    #                                  f_assignment=f_assignment,
+    #                                  refit_model=True, save_model=True)
 
-    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
-    save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
-    save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
-    info, model = ut.load_batch_best(mname_new)
-    info = fp.recover_info(info, model, mname_new)
+    mname_clus = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-32_arrange-asym_sep-hem_meth-mixed'
+    info, model = ut.load_batch_best(mname_clus)
+    Prob = model.marginal_prob().numpy()
+    atlas, _ = am.get_atlas(space, ut.atlas_dir)
+    _, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                  'NettekovenSym32.lut')
+    Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
+        mname=mname_clus,
+        sym=False,
+        labels=labels)
+    cmap_array = np.array(cmap(np.arange(len(labels))))
 
-    ea.export_map(Prob, atlas.name, cmap, labels,
+    # Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
+    #     mname_new, sym=True, labels=labels)
+    # save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
+    # save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
+    # save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
+
+    # save_pmaps(Prob, labels, space, subset=[16, 17, 18, 19, 20])
+    # save_pmaps(Prob, labels, space, subset=[21, 22, 23, 24, 25 ])
+    # save_pmaps(Prob, labels, space, subset=[26, 27, 28, 29, 30, 31])
+    # save_pmaps(Prob, labels, space, subset=[32, 33])
+
+    # info, model = ut.load_batch_best(mname_new)
+    # info = fp.recover_info(info, model, mname_new)
+
+    ea.export_map(Prob, atlas.name, cmap_array[:, 0:4], labels,
                   f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
 
 
@@ -186,15 +206,20 @@ def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
                         labels=labels[1:],
                         subset=subset,
                         grid=(3, 2))
-    plt.savefig(f'pmaps_01.png', format='png')
+    subset_name = "-".join([str(s) for s in subset])
+    plt.savefig(f'pmaps_{subset_name}.png', format='png')
     pass
 
 
 if __name__ == "__main__":
 
-    mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    update_color_map(mname)
+    # update_color_map(mname)
+
+    export_model_merged(
+        mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed')
+
     # # --- Export merged model profile ---
     # fileparts = mname.split('/')
     # split_mn = fileparts[-1].split('_')
