@@ -22,6 +22,8 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
+# TEMPORARY FIX BEFORE MODELS ARE UPDATED TO HBP - REMOVE!!! TODO XX
+import generativeMRF.arrangements as gar
 
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.learn_fusion_gpu as lf
@@ -547,7 +549,7 @@ def merge_model(model, mapping):
     new_model.arrange.set_param_list(['logpi'])
     new_model.arrange.K = int(len(new_parcels))
 
-    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric:
+    if type(new_model.arrange) is ar.ArrangeIndependentSymmetric or type(new_model.arrange) is gar.ArrangeIndependentSeparateHem:
         all_parcels = [*new_parcels, *new_parcels + new_parcels.shape[0]]
         all_mappings = [*mapping, *mapping + new_parcels.shape[0]]
     else:
