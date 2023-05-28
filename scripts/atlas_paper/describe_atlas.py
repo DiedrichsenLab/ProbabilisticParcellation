@@ -217,17 +217,18 @@ if __name__ == "__main__":
     # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     # update_color_map(mname)
 
-    export_model_merged(
-        mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed')
+    # export_model_merged(
+    #     mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed')
 
     # # --- Export merged model profile ---
-    # fileparts = mname.split('/')
-    # split_mn = fileparts[-1].split('_')
-    # info, model = ut.load_batch_best(mname)
-    # index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-    #                                   fileparts[-1] + '.lut')
-    # info = fp.recover_info(info, model, mname)
-    # fp.export_profile(mname, info, model, labels)
+    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+    fileparts = mname.split('/')
+    split_mn = fileparts[-1].split('_')
+    info, model = ut.load_batch_best(mname)
+    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+                                      fileparts[-1] + '.lut')
+    info = ut.recover_info(info, model, mname)
+    fp.export_profile(mname, info, model, labels)
 
     # features = fp.cognitive_features(mname)
 
