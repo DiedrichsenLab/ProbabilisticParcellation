@@ -57,17 +57,22 @@ def individual_symmetry(mname):
 
 if __name__ == "__main__":
 
-    lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-    _, cmap, labels = nt.read_lut(lut_dir +
-                                  'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
-    models = [
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem']
+    # lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+    # _, cmap, labels = nt.read_lut(lut_dir +
+    #                               'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
+    # models = [
+    #     'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
+    #     'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem']
 
-    model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
-                  'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
+    # model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+    #               'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
 
-    atlas = 'MNISymC2'
+    # atlas = 'MNISymC2'
+
+    export_uhats(
+        mname='Models_03/NettekovenSym68_space-MNISymC2')
+    export_uhats(
+        mname='Models_03/NettekovenAsym68_space-MNISymC2')
 
     # load Uhats
     # prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
@@ -96,22 +101,22 @@ if __name__ == "__main__":
     # np.save(
     #     f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy', comp)
 
-#     asym_sym_corr_group = np.load(
-#         f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy')
-#     # Replace all values with nans
-#     asym_sym_corr_group = np.ones(asym_sym_corr_group.shape)
-#     # Test if there are any nans
-#     print(np.isnan(asym_sym_corr_group).any())
-#     plt.figure(figsize=(10, 10))
-#     ax = ut.plot_data_flat(asym_sym_corr_group, atlas,
-#                            dtype='func',
-#                            render='matplotlib',
-#                            cmap='hot',
-#                            cscale=(0.8, 1))
-#     plt.show()
+    #     asym_sym_corr_group = np.load(
+    #         f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_group.npy')
+    #     # Replace all values with nans
+    #     asym_sym_corr_group = np.ones(asym_sym_corr_group.shape)
+    #     # Test if there are any nans
+    #     print(np.isnan(asym_sym_corr_group).any())
+    #     plt.figure(figsize=(10, 10))
+    #     ax = ut.plot_data_flat(asym_sym_corr_group, atlas,
+    #                            dtype='func',
+    #                            render='matplotlib',
+    #                            cmap='hot',
+    #                            cscale=(0.8, 1))
+    #     plt.show()
 
-# # Test if there are any zeros
-# print((asym_sym_corr_group == 0).any())
+    # # Test if there are any zeros
+    # print((asym_sym_corr_group == 0).any())
 
-individual_symmetry(mname=model_pair[0])
-pass
+    # individual_symmetry(mname=model_pair[0])
+    pass
