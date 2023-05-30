@@ -400,6 +400,8 @@ def plot_model_parcel(model_names, grid, cmap='tab20b', align=False, device=None
                     cmap=cmap, dtype='prob',
                     titles=titles)
 
+    return Prob
+
 
 def _compute_var_cov(data, cond='all', mean_centering=True):
     """
