@@ -23,15 +23,17 @@ import time
 figure_path = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
 if not os.path.exists(figure_path):
     figure_path = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
-atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+atlas_dir_export = f'{ut.base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/'
 
 info_Sym68, model_Sym68 = ut.load_batch_best(
     'Models_03/NettekovenSym68_space-MNISymC2')
 
 # Settings
 figsize = (8, 8)
-_, cmap_68, labels_68 = nt.read_lut(atlas_dir + 'NettekovenSym68.lut')
-_, cmap_32, labels_32 = nt.read_lut(atlas_dir + 'NettekovenSym32.lut')
+_, cmap_68, labels_68 = nt.read_lut(atlas_dir_export + 'NettekovenSym68.lut')
+_, cmap_32, labels_32 = nt.read_lut(atlas_dir_export + 'NettekovenSym32.lut')
+_, cmap_domain, labels_domain = nt.read_lut(
+    atlas_dir_export + 'NettekovenSym68.lut')
 
 suit_atlas, _ = am.get_atlas(info_Sym68.atlas, ut.base_dir + '/Atlases')
 
@@ -212,6 +214,21 @@ def plot_dendrogram(Z, labels_leaves, cmap_leaves, save=False, filename='dendogr
     if save:
         plt.savefig(figure_path + f'{filename}.pdf', dpi=300)
 
+    # D_leaf_colors = {"attr_1": dflt_col,
+
+    #                  "attr_4": "#B061FF",  # Cluster 1 indigo
+    #                  "attr_5": "#B061FF",
+    #                  "attr_2": "#B061FF",
+    #                  "attr_8": "#B061FF",
+    #                  "attr_6": "#B061FF",
+    #                  "attr_7": "#B061FF",
+
+    #                  "attr_0": "#61ffff",  # Cluster 2 cyan
+    #                  "attr_3": "#61ffff",
+    #                  "attr_9": "#61ffff",
+    #                  }
+    pass
+
 
 def get_dedogram_custom(save=False, filename='dendrogram_reverse'):
     labels_hem_orig = labels_68[1:int(68 / 2) + 1]
@@ -228,8 +245,8 @@ def get_dedogram_custom(save=False, filename='dendrogram_reverse'):
 
 if __name__ == "__main__":
     Z, R, labels_leaves, cmap_leaves = get_dendrogram(reverse=True)
-    plot_dendrogram(Z, labels_leaves, cmap_leaves,
-                    save=True, filename='dendrogram_reverse')
+    # plot_dendrogram(Z, labels_leaves, cmap_leaves,
+    #                 save=True, filename='dendrogram_reverse')
 
     # ----- Reorder the dendogram ------
     labels_hem_orig = labels_68[1:int(68 / 2) + 1]
