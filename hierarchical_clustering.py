@@ -162,7 +162,8 @@ def agglomative_clustering(similarity,
                            method='ward',
                            plot=True,
                            groups=['0', 'A', 'B', 'C', 'D', 'E', 'F', 'G'],
-                           cmap=None):
+                           cmap=None,
+                           labels=None):
     # setting distance_threshold=0 ensures we compute the full tree.
     # plot the top three levels of the dendrogram
     K = similarity.shape[0]
@@ -178,39 +179,53 @@ def agglomative_clustering(similarity,
     # truncate_mode="level", p=3)
     R = dendrogram(Z, color_threshold=-1, no_plot=not plot)
     leaves = R['leaves']
-    # make the labels for the dendrogram
-    labels = np.empty((K,), dtype=object)
 
-    current = -1
-    for i, l in enumerate(leaves):
-        if cleaves[l] != current:
-            num = 1
-            current = cleaves[l]
-        labels[i] = f"{groups[cleaves[l]]}{num}"
-        num += 1
+    if labels is not None:
+        if len(labels) != K:
+            labels = labels[1:K + 1]
+        # Remove l and r from labels
+        labels = [label.strip('L').strip('R') for label in labels]
+        # Order labels by clustering
+        zipped_data = zip(labels, leaves)
+        # Sort the zipped data based on positions
+        sorted_data = sorted(zipped_data, key=lambda x: x[1])
+        # Extract the sorted strings
+        labels = [item[0] for item in sorted_data]
+    else:
+        # make the labels for the dendrogram
+        labels = np.empty((K,), dtype=object)
 
-    # Make labels for mapping
-    current = -1
-    if sym:
-        labels_map = np.empty((K * 2 + 1,), dtype=object)
-        clusters = np.zeros((K * 2,), dtype=int)
-        labels_map[0] = '0'
+        current = -1
         for i, l in enumerate(leaves):
             if cleaves[l] != current:
                 num = 1
                 current = cleaves[l]
-            labels_map[l + 1] = f"{groups[cleaves[l]]}{num}L"
-            labels_map[l + K + 1] = f"{groups[cleaves[l]]}{num}R"
-            clusters[l] = cleaves[l]
-            clusters[l + K] = cleaves[l]
+            labels[i] = f"{groups[cleaves[l]]}{num}"
             num += 1
-    else:
-        labels_map = np.empty((K + 1,), dtype=object)
-        clusters = np.zeros((K,), dtype=int)
-        labels_map[0] = '0'
-        for i, l in enumerate(leaves):
-            labels_map[l + 1] = labels[i]
-            clusters[l] = cleaves[l]
+
+        # Make labels for mapping
+        current = -1
+        if sym:
+            labels_map = np.empty((K * 2 + 1,), dtype=object)
+            clusters = np.zeros((K * 2,), dtype=int)
+            labels_map[0] = '0'
+            for i, l in enumerate(leaves):
+                if cleaves[l] != current:
+                    num = 1
+                    current = cleaves[l]
+                labels_map[l + 1] = f"{groups[cleaves[l]]}{num}L"
+                labels_map[l + K + 1] = f"{groups[cleaves[l]]}{num}R"
+                clusters[l] = cleaves[l]
+                clusters[l + K] = cleaves[l]
+                num += 1
+        else:
+            labels_map = np.empty((K + 1,), dtype=object)
+            clusters = np.zeros((K,), dtype=int)
+            labels_map[0] = '0'
+            for i, l in enumerate(leaves):
+                labels_map[l + 1] = labels[i]
+                clusters[l] = cleaves[l]
+
     if plot & (cmap is not None):
         ax.set_xticklabels(labels)
         ax.set_ylim((-0.2, 1.5))
