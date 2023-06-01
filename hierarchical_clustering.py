@@ -280,11 +280,11 @@ def mixed_clustering(mname_fine,
     return fine_coarse_mapping, labels
 
 
-def draw_cmap(ax, cmap, leaves, sym):
+def draw_cmap(ax, cmap, leaves, sym, height=0.05):
     """ Draws the color map on the dendrogram"""
     K = len(leaves)
     for k in range(K):
-        rect = Rectangle((k * 10, -0.05), 10, 0.05,
+        rect = Rectangle((k * 10, -height), 10, height,
                          facecolor=cmap(leaves[k] + 1),
                          fill=True,
                          edgecolor=(0, 0, 0, 1))

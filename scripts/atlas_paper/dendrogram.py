@@ -14,6 +14,7 @@ import seaborn as sb
 import pandas as pd
 import torch as pt
 from matplotlib.colors import ListedColormap
+import matplotlib.colors as mcolors
 from scipy.cluster.hierarchy import dendrogram, linkage, leaves_list, optimal_leaf_ordering
 from scipy.spatial.distance import squareform
 from scipy.spatial.distance import squareform
@@ -33,7 +34,7 @@ figsize = (8, 8)
 _, cmap_68, labels_68 = nt.read_lut(atlas_dir_export + 'NettekovenSym68.lut')
 _, cmap_32, labels_32 = nt.read_lut(atlas_dir_export + 'NettekovenSym32.lut')
 _, cmap_domain, labels_domain = nt.read_lut(
-    atlas_dir_export + 'NettekovenSym68.lut')
+    atlas_dir_export + 'NettekovenSym32_domain_caro.lut')
 
 suit_atlas, _ = am.get_atlas(info_Sym68.atlas, ut.base_dir + '/Atlases')
 
@@ -182,9 +183,11 @@ def get_dendrogram(reverse=True):
         labels_hem_orig, reverse=reverse)
 
     cmap_leaves = cmap_68[1:(len(cmap_68) - 1) // 2 + 1]
+    cmap_link = cmap_domain[1:(len(cmap_68) - 1) // 2 + 1]
     if reverse:
         # Reorder colours apart from first colour (no label colour) for one heimsphere
         cmap_leaves = cmap_leaves[::-1]
+        cmap_link = cmap_link[::-1]
 
     Z, R = linkage_matrix(indices_null, indices_concepts, indices_domain)
 
@@ -196,38 +199,39 @@ def get_dendrogram(reverse=True):
     cmap_leaves = np.concatenate(
         (np.array([cmap_68[0]]), cmap_leaves), axis=0)
 
-    return Z, R, labels_leaves, cmap_leaves
+    return Z, R, labels_leaves, cmap_leaves, cmap_link
 
 
-def plot_dendrogram(Z, labels_leaves, cmap_leaves, save=False, filename='dendogram'):
+def plot_dendrogram(Z, labels_leaves, cmap_leaves, cmap_link, save=False, filename='dendogram'):
     # Plot the dendrogram
-    plt.figure()
+    plt.figure(figsize=(15, 4))
     ax = plt.gca()
-    R = dendrogram(Z, color_threshold=-1, no_plot=False)
+    R = dendrogram(Z, color_threshold=-1, no_plot=False,
+                   above_threshold_color='k')
     leaves = R['leaves']
-    ax.set_xticklabels(labels_leaves)
-    ax.set_ylim((-0.2, 3))
+    ax.set_xticklabels(labels_leaves, fontsize=5, rotation=0)
+
+    height_rectangles = 0.5
+    ax.set_ylim((-height_rectangles, 2.5))
     # Draw the colour panels for the parcels
-    cl.draw_cmap(ax, ListedColormap(cmap_leaves), leaves, sym=False)
+    cl.draw_cmap(ax, ListedColormap(cmap_leaves),
+                 leaves, sym=False, height=height_rectangles)
+    plt.tight_layout()
+    # Remove box
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    # Remove background tiling
+    ax.set_facecolor('white')
+    # Remove yticks
+    ax.set_yticks([])
 
     # Save the figure
     if save:
-        plt.savefig(figure_path + f'{filename}.pdf', dpi=300)
+        plt.savefig(figure_path + f'{filename}_05.pdf', dpi=300)
 
-    # D_leaf_colors = {"attr_1": dflt_col,
-
-    #                  "attr_4": "#B061FF",  # Cluster 1 indigo
-    #                  "attr_5": "#B061FF",
-    #                  "attr_2": "#B061FF",
-    #                  "attr_8": "#B061FF",
-    #                  "attr_6": "#B061FF",
-    #                  "attr_7": "#B061FF",
-
-    #                  "attr_0": "#61ffff",  # Cluster 2 cyan
-    #                  "attr_3": "#61ffff",
-    #                  "attr_9": "#61ffff",
-    #                  }
-    pass
+    print('Done')
 
 
 def get_dedogram_custom(save=False, filename='dendrogram_reverse'):
@@ -244,9 +248,9 @@ def get_dedogram_custom(save=False, filename='dendrogram_reverse'):
 
 
 if __name__ == "__main__":
-    Z, R, labels_leaves, cmap_leaves = get_dendrogram(reverse=True)
-    # plot_dendrogram(Z, labels_leaves, cmap_leaves,
-    #                 save=True, filename='dendrogram_reverse')
+    Z, R, labels_leaves, cmap_leaves, cmap_link = get_dendrogram(reverse=True)
+    plot_dendrogram(Z, labels_leaves, cmap_leaves, cmap_link,
+                    save=True, filename='dendrogram_reverse')
 
     # ----- Reorder the dendogram ------
     labels_hem_orig = labels_68[1:int(68 / 2) + 1]
