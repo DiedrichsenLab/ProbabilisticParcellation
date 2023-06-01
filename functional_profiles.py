@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import Functional_Fusion.atlas_map as am
 import Functional_Fusion.matrix as matrix
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.full_model as fm
@@ -44,73 +44,47 @@ def get_profiles(model, info, norm=False):
         profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
     """
     # --- Get profile ---
-    # Get task profile for each emission model
-    profile = [em.V for em in model.emissions]
+    # Get task profile for each emission model and concatenate
+    profile = [em.V.numpy() for em in model.emissions]
     p_idx = [em.V.shape[0] for em in model.emissions]
-    parcel_profiles = profile[0]
-    for prof in profile[1:]:
-        parcel_profiles = pt.cat((parcel_profiles, prof), 0)
+    parcel_profiles = np.concatenate(profile,0)
 
-    # Normalize the parcel profiles to unit length
+    # Normalize the parcel profiles to unit length overall 
     if norm:
         Psq = parcel_profiles**2
         normp = parcel_profiles / \
-            np.sqrt(np.sum(Psq.numpy(), axis=1).reshape(-1, 1))
+            np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
 
     # --- Get conditions ---
     conditions = []
     sessions = []
     datasets = []
+    info_l = []
     for d, dname in enumerate(info.datasets):
-        _, dinfo, dataset = get_dataset(
+        dataset = ds.get_dataset_class(
             ut.base_dir,
-            dname,
-            atlas=info.atlas,
-            sess=info.sess[d],
-            type=info.type[d],
-            info_only=True,
-        )
-
-        if info.joint_sessions:
-            cs = dinfo.drop_duplicates(subset=[dataset.cond_ind])
+            dname)
+        T = dataset.get_participants()
+        for s in dataset.sessions:
+            inf = dataset.get_info(s, type=info.type[d], 
+                                   subj=T.participant_id,fields=None)
+            # get condition names: Use only one repetition of each condition
+            cs = inf.drop_duplicates(subset=[dataset.cond_ind])
             cs = cs[dataset.cond_name].to_list()
             # remove whitespace and replace underscore with dash
             cs = [c.replace(" ", "").replace("_", "-") for c in cs]
 
-        # if separate emission models for separate sessions, append conditions separated by session
-        else:
-            cs_sessionwise = []
-            for s, ses in enumerate(dataset.sessions):
-                # get conditions from selected session
-                _, dinfo, dataset = get_dataset(
-                    ut.base_dir,
-                    dname,
-                    atlas=info.atlas,
-                    sess=dataset.sessions[s],
-                    type=info.type[d],
-                    info_only=True,
-                )
+            # append conditions from this session
+            dsets = [dname] * len(cs)
+            sess = [s] * len(cs)
+            conditions.extend(cs)
 
-                cs = dinfo.drop_duplicates(subset=[dataset.cond_ind])
-                cs = cs[dataset.cond_name].to_list()
-                # remove whitespace and replace underscore with dash
-                cs = [c.replace(" ", "").replace("_", "-") for c in cs]
-
-                # append conditions from this session
-                sess = [ses] * len(cs)
-                dsets = [dname] * len(cs)
-
-                sessions.extend(sess)
-                datasets.extend(dsets)
-                cs_sessionwise.extend(cs)
-                pass
-
-            conditions.extend(cs_sessionwise)
+            sessions.extend(sess)
+            datasets.extend(dsets)
 
     profile_data = pd.DataFrame(
         {"dataset": datasets, "session": sessions, "condition": conditions}
     )
-
     return parcel_profiles, profile_data
 
 
@@ -279,15 +253,17 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
-    fileparts = mname.split('/')
-    index, cmap, labels = nt.read_lut(
-        ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+    data,inf=get_profiles(model, info)
 
-    export_profile(mname, info, model, labels)
-    features = cognitive_features(mname)
+    # fileparts = mname.split('/')
+    # index, cmap, labels = nt.read_lut(
+    #     ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+
+    # export_profile(mname, info, model, labels)
+    # features = cognitive_features(mname)
     # profile = pd.read_csv(
     #     f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
     # )
