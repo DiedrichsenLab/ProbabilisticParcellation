@@ -234,7 +234,7 @@ if __name__ == "__main__":
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info, model = ut.load_batch_best(mname)
-    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+    index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
                                       fileparts[-1] + '.lut')
     info = ut.recover_info(info, model, mname)
     fp.export_profile(mname, info, model, labels)
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     fileparts = mname.split('/')
     split_mn = fileparts[-1].split('_')
     info, model = ut.load_batch_best(mname)
-    index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
+    index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
                                       fileparts[-1] + '.lut')
     info = ut.recover_info(info, model, mname)
     fp.export_profile(mname, info, model, labels)
