@@ -10,6 +10,9 @@ import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.full_model as fm
 import HierarchBayesParcel.evaluation as ev
+import ProbabilisticParcellation.learn_fusion_gpu as lf
+import ProbabilisticParcellation.util as ut
+import nitools as nt
 from scipy.linalg import block_diag
 import PcmPy as pcm
 import nibabel as nb
@@ -20,7 +23,6 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 import sys
 import pickle
-import ProbabilisticParcellation.util as ut
 import torch as pt
 from matplotlib import pyplot as plt
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -35,37 +37,18 @@ import re
 import nitools as nt
 
 
-def get_profiles(model, info, norm=False):
-    """Returns the functional profile for each parcel
-    Args:
-        model: Loaded model
-        info: Model info
-    Returns:
-        parcel_profiles: list of task profiles. Each entry is the V for one emission model
-        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
-    """
-    # --- Get profile ---
-    # Get task profile for each emission model and concatenate
-    profile = [em.V.numpy() for em in model.emissions]
-    p_idx = [em.V.shape[0] for em in model.emissions]
-    parcel_profiles = np.concatenate(profile, 0)
-
-    # Normalize the parcel profiles to unit length overall
-    if norm:
-        Psq = parcel_profiles**2
-        normp = parcel_profiles / np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
-
+def get_profile_info(minfo):
     # --- Get conditions ---
     conditions = []
     sessions = []
     datasets = []
     info_l = []
-    for d, dname in enumerate(info.datasets):
+    for d, dname in enumerate(minfo.datasets):
         dataset = ds.get_dataset_class(ut.base_dir, dname)
         T = dataset.get_participants()
         for s in dataset.sessions:
             inf = dataset.get_info(
-                s, type=info.type[d], subj=T.participant_id, fields=None
+                s, type=minfo.type[d], subj=T.participant_id, fields=None
             )
             # get condition names: Use only one repetition of each condition
             cs = inf.drop_duplicates(subset=[dataset.cond_ind])
@@ -84,17 +67,99 @@ def get_profiles(model, info, norm=False):
     profile_data = pd.DataFrame(
         {"dataset": datasets, "session": sessions, "condition": conditions}
     )
+    return profile_data
+
+
+def get_profiles_model(model, info, norm=False):
+    """Returns the functional profile for each parcel from model V vectors
+    Args:
+        model: Loaded model
+        info: Model info
+    Returns:
+        parcel_profiles: list of task profiles. Each entry is the V for one emission model
+        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
+    """
+    # --- Get profile ---
+    # Get task profile for each emission model and concatenate
+    profile = [em.V.numpy() for em in model.emissions]
+    p_idx = [em.V.shape[0] for em in model.emissions]
+    parcel_profiles = np.concatenate(profile, 0)
+
+    # Normalize the parcel profiles to unit length overall
+    if norm:
+        Psq = parcel_profiles**2
+        normp = parcel_profiles / np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
+
+    profile_data = get_profile_info(info)
     return parcel_profiles, profile_data
 
 
-def export_profile(mname, info=None, model=None, labels=None):
+def get_profiles_individ(model, info, norm=False):
+    """Returns the functional profile for each parcel for each subject (unscaled) from data
+    Args:
+        model: Loaded model
+        info: Model info
+    Returns:
+        parcel_profiles: list of task profiles. Each entry is the V for one emission model
+        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
+    """
+    # --- Get profile ---
+    # Get task profile for each emission model and concatenate
+    parcel_profiles = []
+    profile_data = []
+    data, cond_vec, part_vec, subj_ind, info_ds = lf.build_data_list(
+        info.datasets, atlas=info.atlas, type=info.type, join_sess=False
+    )
+    # Attach the data
+    model.initialize(data, subj_ind=subj_ind)
+    Uhat, _ = model.Estep()
+    Uhat = Uhat.numpy()
+
+    prof_d = get_profile_info(info)
+
+    for d, D in enumerate(data):
+        # Average data across partitions within session
+        C = matrix.indicator(cond_vec[d])
+        avrgD = np.linalg.pinv(C) @ D
+        # Individual parcellations for this session
+        U = Uhat[subj_ind[d]]
+        T = info_ds[d]["dataset"].get_participants()
+        # Get the weighted avarage across the dividual ROIs
+        for s in range(subj_ind[d].shape[0]):
+            good = ~np.isnan(avrgD[s].sum(axis=0))
+            sumD = avrgD[s, :, good].T @ U[s, :, good]  # WEighted sum of the data
+            dat = sumD / np.sum(U[s, :, good], axis=0)  # Weighted average of the data
+            parcel_profiles.append(dat)
+            # add data to profile data
+            prof_dd = prof_d[
+                (prof_d.dataset == info_ds[d]["dname"])
+                & (prof_d.session == info_ds[d]["sess"])
+            ].copy()
+            prof_dd["participant_id"] = [T.participant_id.iloc[s]] * prof_dd.shape[0]
+            prof_dd["participant_num"] = [0] * prof_dd.shape[0]
+            profile_data.append(prof_dd)
+    return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
+
+
+def export_profile(mname, info=None, model=None, labels=None, source="model"):
+    """Exports the functional profile for each parcel from model V vectors
+    Args:
+        mname: Model name
+        info: Model info
+        model: Loaded model
+        labels: List of labels for each parcel
+        source: Whether to use the 'model' or the 'data' to get the profiles
+    """
     if info is None or model is None:
         # Get model
         info, model = ut.load_batch_best(mname)
         info = ut.recover_info(info, model, mname)
 
     # get functional profiles
-    parcel_profiles, profile_data = get_profiles(model=model, info=info)
+    if source == "model":
+        parcel_profiles, profile_data = get_profiles_model(model=model, info=info)
+    elif source == "data":
+        parcel_profiles, profile_data = get_profiles_individ(model=model, info=info)
 
     # make functional profile dataframe
     if isinstance(labels, np.ndarray):
@@ -104,11 +169,11 @@ def export_profile(mname, info=None, model=None, labels=None):
 
     # --- Save profile ---
     # save functional profile as tsv
-    Prof.to_csv(
-        f'{ut.model_dir}/Atlases/Profiles/{mname.split("/")[-1].split("_")[0]}_profile.tsv',
-        sep="\t",
-    )
-    pass
+    mname = mname.split("/")[-1]
+    mname = mname.split("_")[0]
+    fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
+    Prof.to_csv(fname, sep="\t", index=False)
+    return Prof
 
 
 def plot_wordcloud_dataset(df, dset, region):
@@ -236,17 +301,16 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    mname = "Models_03/NettekovenSym68_space-MNISymC2"
+    short_name = "NettekovenSym32"
+    mname = "Models_03/NettekovenSym32_space-MNISymC2"
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
-    # data, inf = get_profiles(model, info)
+    # data,inf=get_profiles_individ(model, info)
 
     fileparts = mname.split("/")
-    index, cmap, labels = nt.read_lut(
-        ut.model_dir + "/Atlases/" + fileparts[-1].split("_")[0] + ".lut"
-    )
+    index, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + short_name + ".lut")
+    export_profile(mname, info, model, labels, source="data")
 
-    export_profile(mname, info, model, labels)
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
     #     f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"

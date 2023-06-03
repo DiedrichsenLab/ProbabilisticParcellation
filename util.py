@@ -250,6 +250,7 @@ def plot_data_flat(data, atlas,
     elif dtype == 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
                                              space=ainf['normspace'])
+        surf_data=np.nan_to_num(surf_data)
         ax = suit.flatmap.plot(surf_data,
                                render=render,
                                cmap=cmap,

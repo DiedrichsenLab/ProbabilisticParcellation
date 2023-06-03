@@ -48,16 +48,18 @@ def build_data_list(datasets,
         subj (list, optional): _description_. Defaults to None.
         join_sess (bool, optional): Model the sessions with a single model . Defaults to True.
     Returns:
-        data,
-        cond_vec,
-        part_vec,
-        subj_ind
+        data (list): list of data sets
+        cond_vec (list): list of condition vectors
+        part_vec (list): list of partition vectors
+        subj_ind (list): list of subject indices
+        info_ds (list): list of dataset, session, datasetobject
     """
     n_sets = len(datasets)
     data = []
     cond_vec = []
     part_vec = []
     subj_ind = []
+    info_ds = []
 
     # Set defaults for data sets:
     if sess is None:
@@ -97,6 +99,9 @@ def build_data_list(datasets,
             else:
                 part_vec.append(info[part_ind[i]].values.reshape(-1, ))
             subj_ind.append(np.arange(sub, sub + n_subj))
+            info_ds.append({'dname':datasets[i],
+                            'sess':'all', 
+                            'dataset':ds})
         else:
             if sess[i] == 'all':
                 sessions = ds.sessions
@@ -109,8 +114,11 @@ def build_data_list(datasets,
                 cond_vec.append(info[cond_ind[i]].values[indx].reshape(-1, ))
                 part_vec.append(info[part_ind[i]].values[indx].reshape(-1, ))
                 subj_ind.append(np.arange(sub, sub + n_subj))
+                info_ds.append({'dname':datasets[i],
+                                'sess':s, 
+                                'dataset':ds})
         sub += n_subj
-    return data, cond_vec, part_vec, subj_ind
+    return data, cond_vec, part_vec, subj_ind, info_ds
 
 
 def build_model(K, arrange, sym_type, emission, atlas,
@@ -199,7 +207,7 @@ def batch_fit(datasets, sess,
     """
     print(f'Start loading data: {datasets} - {sess} - {type} ...')
     tic = time.perf_counter()
-    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
+    data, cond_vec, part_vec, subj_ind,_ = build_data_list(datasets,
                                                          atlas=atlas.name,
                                                          sess=sess,
                                                          cond_ind=cond_ind,
@@ -548,7 +556,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
     sessions = new_info.sess
     types = new_info.type
 
-    data, cond_vec, part_vec, subj_ind = build_data_list(datasets,
+    data, cond_vec, part_vec, subj_ind,_ = build_data_list(datasets,
                                                          atlas=new_info.atlas,
                                                          sess=sessions,
                                                          type=types,
