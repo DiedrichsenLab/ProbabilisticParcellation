@@ -32,6 +32,7 @@ from matplotlib.patches import Rectangle
 from copy import deepcopy
 from wordcloud import WordCloud
 import re
+import nitools as nt
 
 
 def get_profiles(model, info, norm=False):
@@ -47,13 +48,12 @@ def get_profiles(model, info, norm=False):
     # Get task profile for each emission model and concatenate
     profile = [em.V.numpy() for em in model.emissions]
     p_idx = [em.V.shape[0] for em in model.emissions]
-    parcel_profiles = np.concatenate(profile,0)
+    parcel_profiles = np.concatenate(profile, 0)
 
-    # Normalize the parcel profiles to unit length overall 
+    # Normalize the parcel profiles to unit length overall
     if norm:
         Psq = parcel_profiles**2
-        normp = parcel_profiles / \
-            np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
+        normp = parcel_profiles / np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
 
     # --- Get conditions ---
     conditions = []
@@ -61,13 +61,12 @@ def get_profiles(model, info, norm=False):
     datasets = []
     info_l = []
     for d, dname in enumerate(info.datasets):
-        dataset = ds.get_dataset_class(
-            ut.base_dir,
-            dname)
+        dataset = ds.get_dataset_class(ut.base_dir, dname)
         T = dataset.get_participants()
         for s in dataset.sessions:
-            inf = dataset.get_info(s, type=info.type[d], 
-                                   subj=T.participant_id,fields=None)
+            inf = dataset.get_info(
+                s, type=info.type[d], subj=T.participant_id, fields=None
+            )
             # get condition names: Use only one repetition of each condition
             cs = inf.drop_duplicates(subset=[dataset.cond_ind])
             cs = cs[dataset.cond_name].to_list()
@@ -100,33 +99,14 @@ def export_profile(mname, info=None, model=None, labels=None):
     # make functional profile dataframe
     if isinstance(labels, np.ndarray):
         labels = labels.tolist()
-    parcel_responses = pd.DataFrame(
-        parcel_profiles.numpy(), columns=labels[1:]
-    )
+    parcel_responses = pd.DataFrame(parcel_profiles, columns=labels[1:])
     Prof = pd.concat([profile_data, parcel_responses], axis=1)
-
-    # --- Assign a colour to each dataset (to aid profile visulisation) ---
-    datasets = Prof.dataset.unique()
-    # get all colours
-    all_colours = TABLEAU_COLORS
-    rgb = list(all_colours.values())
-    colour_names = list(all_colours.keys())
-
-    dataset_colours = dict(zip(datasets, rgb[: len(datasets)]))
-    dataset_colour_names = dict(zip(datasets, colour_names[: len(datasets)]))
-
-    Prof['dataset_colour'] = None
-    Prof['dataset_colour_name'] = None
-    for dataset in datasets:
-        Prof.loc[Prof.dataset == dataset,
-                 'dataset_colour'] = dataset_colours[dataset]
-        Prof.loc[Prof.dataset == dataset,
-                 'dataset_colour_name'] = dataset_colours[dataset]
 
     # --- Save profile ---
     # save functional profile as tsv
     Prof.to_csv(
-        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
+        f'{ut.model_dir}/Atlases/Profiles/{mname.split("/")[-1].split("_")[0]}_profile.tsv',
+        sep="\t",
     )
     pass
 
@@ -180,7 +160,7 @@ def get_wordcloud(profile, selected_region):
     return wc
 
 
-def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
+def parcel_profiles(profile, parcels="all", colour_by_dataset=False):
     """Plots wordclouds of functional profiles for each parcel
     Args:
         profile: dataframe with condition information and parcel scores for each condition in each dataset
@@ -191,9 +171,9 @@ def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
         wc: word cloud object
 
     """
-    if parcels == 'all':
-        idx_start = list(profile.columns).index('condition') + 1
-        idx_end = list(profile.columns).index('dataset_colour') - 1
+    if parcels == "all":
+        idx_start = list(profile.columns).index("condition") + 1
+        idx_end = list(profile.columns).index("dataset_colour") - 1
         parcels = sorted(profile.columns[idx_start:idx_end])
     else:
         parcels = sorted(parcels)
@@ -207,12 +187,14 @@ def parcel_profiles(profile, parcels='all', colour_by_dataset=False):
 
         ax.imshow(wc)
         ax.title.set_text(parcel)
-        ax.axis('off')
+        ax.axis("off")
 
     return fig
 
 
-def dataset_colours(word, font_size, position, orientation, random_state=None, **kwargs):
+def dataset_colours(
+    word, font_size, position, orientation, random_state=None, **kwargs
+):
     colour_file = "sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_task_profile_data.tsv"
     profile = pd.read_csv(f"{ut.model_dir}/Atlases/{colour_file}", sep="\t")
 
@@ -226,15 +208,14 @@ def cognitive_features(mname):
     profile = pd.read_csv(
         f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_profile.tsv', sep="\t"
     )
-    first_parcel = profile.columns.tolist().index('condition') + 1
-    last_parcel = profile.columns.tolist().index('dataset_colour')
+    first_parcel = profile.columns.tolist().index("condition") + 1
+    last_parcel = profile.columns.tolist().index("dataset_colour")
     parcel_columns = profile.columns[first_parcel:last_parcel]
     profile_matrix = profile[parcel_columns].to_numpy()
 
-    feature_dir = f'{ut.model_dir}/Atlases/Profiles/Cognitive_Features'
-    features = pd.read_csv(
-        f'{ut.model_dir}/Atlases/Profiles/tags/tags.tsv', sep="\t")
-    first_feature = features.columns.tolist().index('condition') + 1
+    feature_dir = f"{ut.model_dir}/Atlases/Profiles/Cognitive_Features"
+    features = pd.read_csv(f"{ut.model_dir}/Atlases/Profiles/tags/tags.tsv", sep="\t")
+    first_feature = features.columns.tolist().index("condition") + 1
     feature_columns = features.columns[first_feature:]
     feature_matrix = features[feature_columns].to_numpy()
 
@@ -243,26 +224,29 @@ def cognitive_features(mname):
 
     # make dataframe
     feature_profile = pd.DataFrame(
-        feature_profile, columns=parcel_columns, index=feature_columns)
+        feature_profile, columns=parcel_columns, index=feature_columns
+    )
 
     # save dataframe
     feature_profile.to_csv(
-        f'{feature_dir}/{mname.split("/")[-1]}_cognitive_features.tsv', sep="\t")
+        f'{feature_dir}/{mname.split("/")[-1]}_cognitive_features.tsv', sep="\t"
+    )
 
     return feature_profile
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    mname = "Models_03/NettekovenSym68_space-MNISymC2"
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
-    data,inf=get_profiles(model, info)
+    # data, inf = get_profiles(model, info)
 
-    # fileparts = mname.split('/')
-    # index, cmap, labels = nt.read_lut(
-    #     ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+    fileparts = mname.split("/")
+    index, cmap, labels = nt.read_lut(
+        ut.model_dir + "/Atlases/" + fileparts[-1].split("_")[0] + ".lut"
+    )
 
-    # export_profile(mname, info, model, labels)
+    export_profile(mname, info, model, labels)
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
     #     f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
