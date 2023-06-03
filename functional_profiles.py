@@ -10,6 +10,7 @@ import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.full_model as fm
 import HierarchBayesParcel.evaluation as ev
+import nitools as nt
 from scipy.linalg import block_diag
 import PcmPy as pcm
 import nibabel as nb
@@ -106,6 +107,7 @@ def export_profile(mname, info=None, model=None, labels=None):
     Prof = pd.concat([profile_data, parcel_responses], axis=1)
 
     # --- Assign a colour to each dataset (to aid profile visulisation) ---
+    # TODO CARO: Factorize this out into a function 
     datasets = Prof.dataset.unique()
     # get all colours
     all_colours = TABLEAU_COLORS
@@ -253,16 +255,16 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    info, model = ut.load_batch_best(mname)
-    info = ut.recover_info(info, model, mname)
-    data,inf=get_profiles(model, info)
+    mname = 'NettekovenSym32_space-MNISymC2'
+    # info, model = ut.load_batch_best(mname)
+    # info = ut.recover_info(info, model, mname)
+    # data,inf=get_profiles(model, info)
 
-    # fileparts = mname.split('/')
-    # index, cmap, labels = nt.read_lut(
-    #     ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+    fileparts = mname.split('/')
+    index, cmap, labels = nt.read_lut(
+         ut.model_dir + '/Atlases/' + fileparts[-1] + '.lut')
+    export_profile(mname, info, model, labels)
 
-    # export_profile(mname, info, model, labels)
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
     #     f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
