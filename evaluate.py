@@ -894,12 +894,12 @@ def parcel_individual(mname, subject='all', dataset=None, session=None):
         join_sess_part = model_settings[info.model_type][2]
 
         # Get all data
-        data, _, _, subj_ind = lf.build_data_list(info.datasets,
-                                                  atlas=info.atlas,
-                                                  sess=info.sess,
-                                                  type=info.type,
-                                                  join_sess=join_sess,
-                                                  join_sess_part=join_sess_part)
+        data, _, _, subj_ind, _ = lf.build_data_list(info.datasets,
+                                                     atlas=info.atlas,
+                                                     sess=info.sess,
+                                                     type=info.type,
+                                                     join_sess=join_sess,
+                                                     join_sess_part=join_sess_part)
         # Attach the individual data
         m = deepcopy(model)
         m.initialize(data, subj_ind=subj_ind)
