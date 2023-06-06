@@ -31,58 +31,51 @@ if not os.path.exists(figure_path):
     figure_path = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
 atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import nilearn.plotting as nip
 
-def correlate_parcellations(probs_indiv, dataset='MDTB', sym=None, norm=True):
-    """Correlate individual parcellations 
 
-    """
-    # If dataset is given, use only dataset subjects
+def subset_probs(probs_indiv, dataset):
+    """Subset individual parcellations to a specific dataset"""
+
     T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
     didx = np.where(T['name'] == dataset)[0][0]
     n_subj = T['return_nsubj'].iloc[didx]
-    # Get subject indices for the dataset
-    if dataset is not None:
-        # Get dataset indices by adding the cumulative sum of subjects
-        dataset_subjects = n_subj
-        if didx > 1:
-            dataset_subjects += np.sum(T['return_nsubj'].iloc[:didx])
-        # Select only dataset subjects
-        probs_indiv = probs_indiv[dataset_subjects -
-                                  n_subj:dataset_subjects, :, :]
 
-    # Get correlation for each voxel between subject's individual parcellations
+    dataset_subjects = n_subj
+    if didx > 1:
+        dataset_subjects += np.sum(T['return_nsubj'].iloc[:didx])
+
+    return probs_indiv[dataset_subjects - n_subj:dataset_subjects, :, :]
+
+
+def inter_individual_variability(probs_indiv):
+    """Get inter-individual variability between individual parcellations by correlating probablistic parcellations voxelwise"""
     corr_mean = []
     for vox in np.arange(probs_indiv.shape[2]):
         corr = np.corrcoef(probs_indiv[:, :, vox])
-        # Get upper triangular part indices
         corr = corr[np.triu_indices(corr.shape[0], k=1)]
-        # Store mean
         corr_mean.append(np.nanmean(corr))
 
-    # Make corr_mean list into numpy array
-    corr_mean = np.array(corr_mean)
+    return np.array(corr_mean)
 
-    if norm:
-        filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}_norm'
-        reliability_voxelwise, _ = reliability_maps(ut.base_dir, dataset, atlas='MNISymC2',
-                                                    subtract_mean=True, voxel_wise=True)
-        # Get mean across sessions
-        reliability_voxelwise = np.squeeze(
-            np.nanmean(reliability_voxelwise, axis=0))
-        # Set the negative reliability values to nan
-        reliability_voxelwise[reliability_voxelwise < 0] = np.nan
-        # Normalize correlation by reliability
-        corr_mean = corr_mean / \
-            np.sqrt(reliability_voxelwise)
 
-        # corr_mean[~np.isnan(corr_mean)].min()
-        # corr_mean[~np.isnan(corr_mean)].max()
-        # print 95th percentile
-        # print(np.percentile(corr_mean[~np.isnan(corr_mean)], 99))
-    else:
-        filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}'
+def reliability_norm(corr_mean, dataset, probs_indiv):
+    """Normalize inter-individual variability by intra-individual reliability"""
+    reliability_voxelwise, _ = reliability_maps(ut.base_dir, dataset, atlas='MNISymC2',
+                                                subtract_mean=True, voxel_wise=True)
+    reliability_voxelwise = np.squeeze(
+        np.nanmean(reliability_voxelwise, axis=0))
+    reliability_voxelwise[reliability_voxelwise < 0] = np.nan
+    corr_mean = corr_mean / np.sqrt(reliability_voxelwise)
+    return corr_mean
 
-    # Plot corr_mean
+
+def plot_variability(corr_mean, filename, save=True):
+    """Plot inter-individual variability and save to file"""
     figsize = (8, 8)
     plt.figure(figsize=figsize)
     suit_atlas, _ = am.get_atlas('MNISymC2', ut.base_dir + '/Atlases')
@@ -98,43 +91,56 @@ def correlate_parcellations(probs_indiv, dataset='MDTB', sym=None, norm=True):
                       overlay_type='func',
                       colorbar=True,
                       bordersize=4)
+    if save:
+        plt.savefig(f'{figure_path}/{filename}.png')
 
-    plt.savefig(
-        f'{figure_path}/{filename}.png')
-    pass
+
+def describe_variability():
+
+    norm = True
+    sym = 'Asym'
+    K = 68
+    space = 'MNISymC2'
+
+    mname = f'Models_03/Nettekoven{sym}{K}_space-{space}'
+
+    # Get individual parcellations
+    try:
+        probs_indiv = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+    except FileNotFoundError:
+        probs_indiv = sm.export_uhats(
+            mname=mname)
+    probs_indiv = probs_indiv.numpy()
+
+    # Describe inter-individual variability for all datasets
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    datasets = T['name'].unique()
+    Corr = []
+    for dataset in datasets:
+
+        probs_indiv = subset_probs(probs_indiv, dataset)
+
+        corr_mean = inter_individual_variability(probs_indiv)
+        Corr.append(corr_mean)
+
+        if norm:
+            corr_mean = reliability_norm(corr_mean, dataset, probs_indiv)
+            filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}_norm'
+        else:
+            filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}'
+
+        plot_variability(corr_mean, filename, save=True)
+
+    # Plot all variabilities as grid
+    Corr = np.array(Corr)
+    plt.figure(figsize=(14, 8))
+    ut.plot_multi_flat(Corr, space,
+                       grid=(1, 2),
+                       dtype='func',
+                       colorbar=True,
+                       titles=datasets)
 
 
 if __name__ == "__main__":
-    norm = True
-    sym = 'Asym'
-    mname68 = f'Models_03/Nettekoven{sym}68_space-MNISymC2'
-    # Get individual parcellations
-    try:
-        probs_indiv68 = pt.load(f'{ut.model_dir}/Models/{mname68}_Uhat.pt')
-    except FileNotFoundError:
-        probs_indiv68 = sm.export_uhats(
-            mname=mname68)
-    probs_indiv68 = probs_indiv68.numpy()
 
-    mname32 = f'Models_03/Nettekoven{sym}32_space-MNISymC2'
-    try:
-        probs_indiv32 = pt.load(f'{ut.model_dir}/Models/{mname32}_Uhat.pt')
-    except FileNotFoundError:
-        probs_indiv32 = sm.export_uhats(
-            mname=mname32)
-
-    # Correlate individual probabilistic parcellations
-    correlate_parcellations(probs_indiv68, dataset='MDTB', sym=sym, norm=norm)
-    correlate_parcellations(probs_indiv32, dataset='MDTB', sym=sym, norm=norm)
-    correlate_parcellations(
-        probs_indiv32, dataset='Demand', sym=sym, norm=norm)
-    correlate_parcellations(
-        probs_indiv68, dataset='Demand', sym=sym, norm=norm)
-    correlate_parcellations(
-        probs_indiv32, dataset='Somatotopic', sym=sym, norm=norm)
-    correlate_parcellations(
-        probs_indiv68, dataset='Somatotopic', sym=sym, norm=norm)
-    correlate_parcellations(probs_indiv32, dataset='WMFS', sym=sym, norm=norm)
-    correlate_parcellations(probs_indiv68, dataset='WMFS', sym=sym, norm=norm)
-    correlate_parcellations(probs_indiv32, dataset='IBC', sym=sym, norm=norm)
-    correlate_parcellations(probs_indiv68, dataset='IBC', sym=sym, norm=norm)
+    describe_variability()
