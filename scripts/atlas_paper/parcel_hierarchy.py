@@ -221,8 +221,8 @@ if __name__ == "__main__":
     #                   atlas='MNISymC2',
     #                   target_space='MNI152NLin6AsymC')
     # Save 3 highest and 2 lowest task maps
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # D = query_similarity(mname, 'E3L')
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    D = query_similarity(mname, 'I1L')
     # save_taskmaps(mname)
 
     # Merge functionally and spatially clustered scree parcels
