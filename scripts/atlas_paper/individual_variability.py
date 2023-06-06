@@ -32,7 +32,7 @@ if not os.path.exists(figure_path):
 atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
 
 
-def correlate_parcellations(probs_indiv, dataset='MDTB', norm=True):
+def correlate_parcellations(probs_indiv, dataset='MDTB', sym=None, norm=True):
     """Correlate individual parcellations 
 
     """
@@ -50,18 +50,38 @@ def correlate_parcellations(probs_indiv, dataset='MDTB', norm=True):
         probs_indiv = probs_indiv[dataset_subjects -
                                   n_subj:dataset_subjects, :, :]
 
-    # Get correlation between each parcellation
-
+    # Get correlation for each voxel between subject's individual parcellations
     corr_mean = []
     for vox in np.arange(probs_indiv.shape[2]):
         corr = np.corrcoef(probs_indiv[:, :, vox])
         # Get upper triangular part indices
         corr = corr[np.triu_indices(corr.shape[0], k=1)]
         # Store mean
-        corr_mean.append(np.mean(corr))
+        corr_mean.append(np.nanmean(corr))
 
     # Make corr_mean list into numpy array
     corr_mean = np.array(corr_mean)
+
+    if norm:
+        filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}_norm'
+        reliability_voxelwise, _ = reliability_maps(ut.base_dir, dataset, atlas='MNISymC2',
+                                                    subtract_mean=True, voxel_wise=True)
+        # Get mean across sessions
+        reliability_voxelwise = np.squeeze(
+            np.nanmean(reliability_voxelwise, axis=0))
+        # Set the negative reliability values to nan
+        reliability_voxelwise[reliability_voxelwise < 0] = np.nan
+        # Normalize correlation by reliability
+        corr_mean = corr_mean / \
+            np.sqrt(reliability_voxelwise)
+
+        # corr_mean[~np.isnan(corr_mean)].min()
+        # corr_mean[~np.isnan(corr_mean)].max()
+        # print 95th percentile
+        # print(np.percentile(corr_mean[~np.isnan(corr_mean)], 99))
+    else:
+        filename = f'{sym}_indiv_var_{dataset}_{probs_indiv.shape[1]}'
+
     # Plot corr_mean
     figsize = (8, 8)
     plt.figure(figsize=figsize)
@@ -74,15 +94,10 @@ def correlate_parcellations(probs_indiv, dataset='MDTB', norm=True):
                       render='matplotlib',
                       new_figure=False,
                       cmap='hot',
+                      cscale=(0, 1),
                       overlay_type='func',
                       colorbar=True,
                       bordersize=4)
-    if norm:
-        filename = f'Indiv_var_{dataset}_{probs_indiv.shape[1]}_norm'
-        reliability_voxelwise, _ = reliability_maps(ut.base_dir, dataset, atlas='MNISymC2',
-                                                    subtract_mean=True, voxel_wise=True)
-    else:
-        filename = f'Indiv_var_{dataset}_{probs_indiv.shape[1]}'
 
     plt.savefig(
         f'{figure_path}/{filename}.png')
@@ -90,8 +105,9 @@ def correlate_parcellations(probs_indiv, dataset='MDTB', norm=True):
 
 
 if __name__ == "__main__":
-
-    mname = 'Models_03/NettekovenSym68_space-MNISymC2'
+    norm = True
+    sym = 'Asym'
+    mname = f'Models_03/Nettekoven{sym}68_space-MNISymC2'
     # Get individual parcellations
     try:
         probs_indiv68 = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
@@ -99,25 +115,26 @@ if __name__ == "__main__":
         probs_indiv68 = sm.export_uhats(
             mname=mname)
     probs_indiv68 = probs_indiv68.numpy()
-    correlate_parcellations(probs_indiv68, dataset='MDTB')
 
-    # Correlate subject probabilistic parcellations (for MDTB only)
-
-    mname32 = 'Models_03/NettekovenSym32_space-MNISymC2'
+    mname32 = f'Models_03/Nettekoven{sym}32_space-MNISymC2'
     try:
         probs_indiv32 = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
     except FileNotFoundError:
         probs_indiv32 = sm.export_uhats(
             mname=mname)
-    correlate_parcellations(probs_indiv32, dataset='MDTB')
 
-    correlate_parcellations(probs_indiv32, dataset='Demand')
-    correlate_parcellations(probs_indiv68, dataset='Demand')
-    correlate_parcellations(probs_indiv32, dataset='Somatotopic')
-    correlate_parcellations(probs_indiv68, dataset='Somatotopic')
-    correlate_parcellations(probs_indiv32, dataset='WMFS')
-    correlate_parcellations(probs_indiv68, dataset='WMFS')
-    correlate_parcellations(probs_indiv32, dataset='IBC')
-    correlate_parcellations(probs_indiv68, dataset='IBC')
-
-    pass
+    # Correlate individual probabilistic parcellations
+    correlate_parcellations(probs_indiv68, dataset='MDTB', sym=sym, norm=norm)
+    correlate_parcellations(probs_indiv32, dataset='MDTB', sym=sym, norm=norm)
+    correlate_parcellations(
+        probs_indiv32, dataset='Demand', sym=sym, norm=norm)
+    correlate_parcellations(
+        probs_indiv68, dataset='Demand', sym=sym, norm=norm)
+    correlate_parcellations(
+        probs_indiv32, dataset='Somatotopic', sym=sym, norm=norm)
+    correlate_parcellations(
+        probs_indiv68, dataset='Somatotopic', sym=sym, norm=norm)
+    correlate_parcellations(probs_indiv32, dataset='WMFS', sym=sym, norm=norm)
+    correlate_parcellations(probs_indiv68, dataset='WMFS', sym=sym, norm=norm)
+    correlate_parcellations(probs_indiv32, dataset='IBC', sym=sym, norm=norm)
+    correlate_parcellations(probs_indiv68, dataset='IBC', sym=sym, norm=norm)
