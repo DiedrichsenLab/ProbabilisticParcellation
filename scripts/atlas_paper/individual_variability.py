@@ -107,21 +107,21 @@ def correlate_parcellations(probs_indiv, dataset='MDTB', sym=None, norm=True):
 if __name__ == "__main__":
     norm = True
     sym = 'Asym'
-    mname = f'Models_03/Nettekoven{sym}68_space-MNISymC2'
+    mname68 = f'Models_03/Nettekoven{sym}68_space-MNISymC2'
     # Get individual parcellations
     try:
-        probs_indiv68 = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+        probs_indiv68 = pt.load(f'{ut.model_dir}/Models/{mname68}_Uhat.pt')
     except FileNotFoundError:
         probs_indiv68 = sm.export_uhats(
-            mname=mname)
+            mname=mname68)
     probs_indiv68 = probs_indiv68.numpy()
 
     mname32 = f'Models_03/Nettekoven{sym}32_space-MNISymC2'
     try:
-        probs_indiv32 = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+        probs_indiv32 = pt.load(f'{ut.model_dir}/Models/{mname32}_Uhat.pt')
     except FileNotFoundError:
         probs_indiv32 = sm.export_uhats(
-            mname=mname)
+            mname=mname32)
 
     # Correlate individual probabilistic parcellations
     correlate_parcellations(probs_indiv68, dataset='MDTB', sym=sym, norm=norm)
