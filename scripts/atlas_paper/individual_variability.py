@@ -92,7 +92,7 @@ def plot_variability(corr_mean, filename, save=True):
                       colorbar=True,
                       bordersize=4)
     if save:
-        plt.savefig(f'{figure_path}/{filename}.png')
+        plt.savefig(f'{figure_path}/individual_variability/{filename}.png')
 
 
 def describe_variability():
