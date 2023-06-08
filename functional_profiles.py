@@ -70,7 +70,7 @@ def get_profile_info(minfo):
     return profile_data
 
 
-def get_profiles_model(model, info, norm=False):
+def get_profiles_model(model, info):
     """Returns the functional profile for each parcel from model V vectors
     Args:
         model: Loaded model
@@ -85,20 +85,16 @@ def get_profiles_model(model, info, norm=False):
     p_idx = [em.V.shape[0] for em in model.emissions]
     parcel_profiles = np.concatenate(profile, 0)
 
-    # Normalize the parcel profiles to unit length overall
-    if norm:
-        Psq = parcel_profiles**2
-        normp = parcel_profiles / np.sqrt(np.sum(Psq, axis=1).reshape(-1, 1))
-
     profile_data = get_profile_info(info)
     return parcel_profiles, profile_data
 
 
-def get_profiles_individ(model, info, norm=False):
+def get_profiles_individ(model, info, dseg=False):
     """Returns the functional profile for each parcel for each subject (unscaled) from data
     Args:
         model: Loaded model
         info: Model info
+        desg (bool): Using a hard segmentation? Default False
     Returns:
         parcel_profiles: list of task profiles. Each entry is the V for one emission model
         profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
@@ -113,6 +109,9 @@ def get_profiles_individ(model, info, norm=False):
     # Attach the data
     model.initialize(data, subj_ind=subj_ind)
     Uhat, _ = model.Estep()
+
+    if dseg:
+        Uhat = ar.expand_mn(Uhat.argmax(dim=1),Uhat.shape[1])
     Uhat = Uhat.numpy()
 
     prof_d = get_profile_info(info)
@@ -140,15 +139,71 @@ def get_profiles_individ(model, info, norm=False):
             profile_data.append(prof_dd)
     return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
 
+def get_profiles_group(model, info, dseg=False):
+    """Returns the functional profile for each parcel from model V vectors
+    Args:
+        model: Loaded model
+        info: Model info
+        desg (bool): Using a hard segmentation? Default False
+    Returns:
+        parcel_profiles: list of task profiles. Each entry is the V for one emission model
+        profile_data: Dataframe of dataset, session and condition info for parcel profiles. Each entry is the dataset name, session name and condition name for the corresponding parcel profile value.
+    """
+    parcel_profiles = []
+    profile_data = []
+    data, cond_vec, part_vec, subj_ind, info_ds = lf.build_data_list(
+        info.datasets, atlas=info.atlas, type=info.type, join_sess=False
+    )
+    # Attach the data
+    Uhat = model.marginal_prob()
 
-def export_profile(mname, info=None, model=None, labels=None, source="model"):
-    """Exports the functional profile for each parcel from model V vectors
+    if dseg:
+        Uhat = ar.expand_mn_1d(Uhat.argmax(dim=0),Uhat.shape[0])
+    U = Uhat.numpy()
+
+    prof_d = get_profile_info(info)
+
+    for d, D in enumerate(data):
+        # Average data across partitions within session
+        C = matrix.indicator(cond_vec[d])
+        avrgD = np.linalg.pinv(C) @ D
+        # Individual parcellations for this session
+        T = info_ds[d]["dataset"].get_participants()
+
+        # Get the weighted avarage across the dividual ROIs
+        for s in range(subj_ind[d].shape[0]):
+            good = ~np.isnan(avrgD[s].sum(axis=0))
+            sumD = avrgD[s, :, good].T @ U[:, good].T  # WEighted sum of the data
+            dat = sumD / np.sum(U[:, good], axis=1)  # Weighted average of the data
+            parcel_profiles.append(dat)
+            # add data to profile data
+            prof_dd = prof_d[
+                (prof_d.dataset == info_ds[d]["dname"])
+                & (prof_d.session == info_ds[d]["sess"])
+            ].copy()
+            prof_dd["participant_id"] = [T.participant_id.iloc[s]] * prof_dd.shape[0]
+            prof_dd["participant_num"] = [0] * prof_dd.shape[0]
+            profile_data.append(prof_dd)
+    return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
+
+
+
+
+
+
+def export_profile(mname, info=None, 
+                   model=None, 
+                   labels=None, 
+                   source="model",
+                   dseg=False):
+    """Exports the functional profile for each parcel from model V vectors or data (individ/group)
     Args:
         mname: Model name
         info: Model info
         model: Loaded model
         labels: List of labels for each parcel
-        source: Whether to use the 'model' or the 'data' to get the profiles
+        source: Whether to use the 'model','individ','group' to get the profiles
+        dseg (bool): Using a hard segmentation? Default False
     """
     if info is None or model is None:
         # Get model
@@ -158,8 +213,10 @@ def export_profile(mname, info=None, model=None, labels=None, source="model"):
     # get functional profiles
     if source == "model":
         parcel_profiles, profile_data = get_profiles_model(model=model, info=info)
-    elif source == "data":
-        parcel_profiles, profile_data = get_profiles_individ(model=model, info=info)
+    elif source == "individ":
+        parcel_profiles, profile_data = get_profiles_individ(model=model, info=info,dseg=dseg)
+    elif  source == "group":
+        parcel_profiles, profile_data = get_profiles_group(model=model, info=info,dseg=dseg)
 
     # make functional profile dataframe
     if isinstance(labels, np.ndarray):
@@ -171,7 +228,11 @@ def export_profile(mname, info=None, model=None, labels=None, source="model"):
     # save functional profile as tsv
     mname = mname.split("/")[-1]
     mname = mname.split("_")[0]
-    fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
+
+    if dseg==True:
+        fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_dseg.tsv"
+    else:
+        fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
     Prof.to_csv(fname, sep="\t", index=False)
     return Prof
 
@@ -309,7 +370,7 @@ if __name__ == "__main__":
 
     fileparts = mname.split("/")
     index, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + short_name + ".lut")
-    export_profile(mname, info, model, labels, source="data")
+    export_profile(mname, info, model, labels, source="group",dseg=False)
 
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
