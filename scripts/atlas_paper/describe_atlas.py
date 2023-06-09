@@ -53,9 +53,9 @@ def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
     participant_info = pd.concat(participant_info)
 
     participant_info.to_csv(
-        f'{ut.model_dir}/Models/{mname}_Uhat_info.csv')
+        f'{ut.model_dir}/Models/{mname}_Uhat_info.tsv', sep='\t', index=False)
 
-    # return prob  # return Uhats
+    # return prob, participant_info  # return Uhats
 
 
 def reorder_selected():
