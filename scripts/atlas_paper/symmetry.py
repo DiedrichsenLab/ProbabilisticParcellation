@@ -5,22 +5,13 @@ import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
+from ProbabilisticParcellation.scripts.atlas_paper.describe_atlas import export_uhats
 from Functional_Fusion.dataset import *
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sb
 import pandas as pd
 import torch as pt
-
-
-def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
-    """Export Uhats for all subjects in a model"""
-
-    prob = ev.parcel_individual(
-        mname, subject='all', dataset=None, session=None)
-
-    pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
-    return prob  # return Uhats
 
 
 def individual_symmetry(mname):
