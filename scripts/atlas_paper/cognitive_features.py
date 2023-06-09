@@ -10,6 +10,7 @@ import string
 from itertools import combinations
 import PcmPy as pcm
 from copy import deepcopy
+import ProbabilisticParcellation.util as ut
 
 base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
@@ -398,6 +399,35 @@ def compile_tags_all_datasets():
     pass
 
 
+def divide_mdtb_by_duration():
+    # Get mdtb tags
+    tags = pd.read_csv(
+        f'{ut.model_dir}/Atlases/Profiles/tags/tags.csv', sep=',')
+    tags_mdtb = tags[tags.dataset == 'MDTB']
+
+    # Get mdtb durations
+    duration_mdtb = pd.read_csv(
+        f'{ut.model_dir}/Atlases/Profiles/tags/mdtb_featureTable.txt', sep='\t')
+    # Remove trailing whitespace from condName column
+    duration_mdtb['conditionName'] = duration_mdtb['conditionName'].str.strip()
+
+    # For each condition in tags_mdtb, find the corresponding entry in condName column and divide by duration
+    for c, cond in enumerate(tags_mdtb.condition):
+        # take first entry if there are more than one
+        duration = duration_mdtb[duration_mdtb.conditionName ==
+                                 cond].duration.iloc[0]
+        tags_mdtb.iloc[c, 3:6] = tags_mdtb.iloc[c, 3:6] / duration
+
+    # Replace new tags in tags dataframe
+    tags.iloc[tags_mdtb.index, 3:6] = tags_mdtb.iloc[:, 3:6]
+
+    # Save tags
+    tags.to_csv(
+        f'{ut.model_dir}/Atlases/Profiles/tags/tags_duration.csv', sep=',', index=False)
+
+    pass
+
+
 if __name__ == "__main__":
 
     # inspect_cognitive_tags()
@@ -410,4 +440,6 @@ if __name__ == "__main__":
     # get_unique_tags()
 
     # compile_tags_selftagged_datasets()
-    compile_tags_all_datasets()
+    # compile_tags_all_datasets()
+
+    divide_mdtb_by_duration()
