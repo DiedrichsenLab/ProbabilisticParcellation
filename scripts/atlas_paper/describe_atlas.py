@@ -4,7 +4,7 @@ Script to analyze parcels using clustering and colormaps
 
 import pandas as pd
 import numpy as np
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 from scipy.linalg import block_diag
 import torch as pt
 import matplotlib.pyplot as plt
@@ -34,11 +34,28 @@ pt.set_default_tensor_type(pt.FloatTensor)
 def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
     """Export Uhats for all subjects in a model"""
 
-    prob = ev.parcel_individual(
-        mname, subject='all', dataset=None, session=None)
+    # -- Save individual parcellations --
+    # prob = ppev.parcel_individual(
+    #     mname, subject='all', dataset=None, session=None)
 
-    pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
-    return prob  # return Uhats
+    # pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+
+    # -- Save info --
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
+    participant_info = []
+    for dataset in info.datasets:
+        dclass = ds.get_dataset_class(ut.base_dir, dataset)
+        dataset_participants = dclass.get_participants()
+        dataset_participants.loc[:, 'dataset'] = dataset
+        participant_info.append(
+            dataset_participants[['dataset', 'participant_id']])
+    participant_info = pd.concat(participant_info)
+
+    participant_info.to_csv(
+        f'{ut.model_dir}/Models/{mname}_Uhat_info.tsv', sep='\t', index=False)
+
+    # return prob, participant_info  # return Uhats
 
 
 def reorder_selected():
@@ -244,24 +261,24 @@ if __name__ == "__main__":
     #     mname_new='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed')
 
     # # --- Export merged model profile ---
-    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
-    info, model = ut.load_batch_best(mname)
-    index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
-                                      fileparts[-1].split('_')[0] + '.lut')
-    info = ut.recover_info(info, model, mname)
-    fp.export_profile(mname, info, model, labels)
+    # mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    # fileparts = mname.split('/')
+    # split_mn = fileparts[-1].split('_')
+    # info, model = ut.load_batch_best(mname)
+    # index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
+    #                                   fileparts[-1].split('_')[0] + '.lut')
+    # info = ut.recover_info(info, model, mname)
+    # fp.export_profile(mname, info, model, labels)
 
     # # --- Export full 68 profile ---
-    mname = 'Models_03/NettekovenSym68_space-MNISymC2'
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
-    info, model = ut.load_batch_best(mname)
-    index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
-                                      fileparts[-1].split('_')[0] + '.lut')
-    info = ut.recover_info(info, model, mname)
-    fp.export_profile(mname, info, model, labels)
+    # mname = 'Models_03/NettekovenSym68_space-MNISymC2'
+    # fileparts = mname.split('/')
+    # split_mn = fileparts[-1].split('_')
+    # info, model = ut.load_batch_best(mname)
+    # index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
+    #                                   fileparts[-1].split('_')[0] + '.lut')
+    # info = ut.recover_info(info, model, mname)
+    # fp.export_profile(mname, info, model, labels)
     # features = fp.cognitive_features(mname)
 
     # # --- Reorder selected models according to our assignment ---
@@ -269,7 +286,11 @@ if __name__ == "__main__":
     # # --- Export asymmetric model fitted from symmetric model ---
     # export_selected()
     # # --- Export individual parcellations ---
-    # export_uhats()
+    for sym in ['Sym', 'Asym']:
+        for K in [32, 68]:
+            mname = f'Models_03/Nettekoven{sym}{K}_space-MNISymC2'
+            export_uhats(mname)
+
     # --- Export ARIs ---
     # load Uhats
     # model_pair = ['Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',

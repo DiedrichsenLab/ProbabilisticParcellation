@@ -108,18 +108,19 @@ def describe_variability():
     # Get individual parcellations
     try:
         probs_indiv = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+        probs_info = pd.read_csv(
+            f'{ut.model_dir}/Models/{mname}_Uhat_info.tsv', sep='\t')
     except FileNotFoundError:
-        probs_indiv = sm.export_uhats(
+        probs_indiv, probs_info = sm.export_uhats(
             mname=mname)
     probs_indiv = probs_indiv.numpy()
 
     # Describe inter-individual variability for all datasets
-    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
-    datasets = T['name'].unique()
+    datasets = probs_info['dataset'].unique()
     Corr = []
     for dataset in datasets:
-
         probs_indiv = subset_probs(probs_indiv, dataset)
+        probs_indiv[probs_info[probs_info == probs_info], :, :]
 
         corr_mean = inter_individual_variability(probs_indiv)
         Corr.append(corr_mean)
