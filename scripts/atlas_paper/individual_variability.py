@@ -178,5 +178,5 @@ def plot_dataset_pmaps(plot_parcels=['M1', 'M3', 'D1', 'D2', 'D3', 'D4']):
 
 if __name__ == "__main__":
 
-    # describe_variability()
-    plot_dataset_pmaps(['M1', 'M3', 'D1', 'D2', 'D3', 'D4'])
+    describe_variability()
+    # plot_dataset_pmaps(['M1', 'M3', 'D1', 'D2', 'D3', 'D4'])

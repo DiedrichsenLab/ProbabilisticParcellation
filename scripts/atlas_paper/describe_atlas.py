@@ -31,6 +31,16 @@ import nitools as nt
 pt.set_default_tensor_type(pt.FloatTensor)
 
 
+def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
+    """Export Uhats for all subjects in a model"""
+
+    prob = ev.parcel_individual(
+        mname, subject='all', dataset=None, session=None)
+
+    pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+    return prob  # return Uhats
+
+
 def reorder_selected():
     mnames = [
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
