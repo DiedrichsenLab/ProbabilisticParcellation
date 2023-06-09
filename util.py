@@ -250,7 +250,7 @@ def plot_data_flat(data, atlas,
     elif dtype == 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
                                              space=ainf['normspace'])
-        surf_data=np.nan_to_num(surf_data)
+        surf_data = np.nan_to_num(surf_data)
         ax = suit.flatmap.plot(surf_data,
                                render=render,
                                cmap=cmap,
@@ -354,6 +354,7 @@ def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None)
         grid = (a, a)
     plot_multi_flat(Prob[subset, :], atlas, grid,
                     dtype='func',
+                    cmap='Reds',
                     cscale=[0, 0.2],
                     titles=labels[subset],
                     colorbar=False,

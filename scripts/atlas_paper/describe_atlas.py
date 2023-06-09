@@ -209,15 +209,19 @@ def export_model_merged(mname_new):
                   f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
 
 
-def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5]):
+def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5], filename=None):
     plt.figure(figsize=(7, 10))
-    ut.plot_model_pmaps(Prob, atlas,
-                        labels=labels[1:],
-                        subset=subset,
-                        grid=(3, 2))
+    fig = ut.plot_model_pmaps(Prob, atlas,
+                              labels=labels,
+                              subset=subset,
+                              grid=(3, 2))
     subset_name = "-".join([str(s) for s in subset])
-    plt.savefig(f'pmaps_{subset_name}.png', format='png')
-    pass
+    if filename is None:
+        filename = f'pmaps_{subset_name}.png'
+
+    plt.savefig(filename, format='png')
+
+    return fig
 
 
 if __name__ == "__main__":

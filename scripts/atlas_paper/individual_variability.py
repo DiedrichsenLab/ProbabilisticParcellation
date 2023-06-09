@@ -16,6 +16,7 @@ import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.symmetry as sm
+import ProbabilisticParcellation.scripts.atlas_paper.describe_atlas as da
 import Functional_Fusion.dataset as ds
 import HierarchBayesParcel.evaluation as ev
 
@@ -99,7 +100,7 @@ def describe_variability():
 
     norm = True
     sym = 'Asym'
-    K = 68
+    K = 32
     space = 'MNISymC2'
 
     mname = f'Models_03/Nettekoven{sym}{K}_space-{space}'
@@ -141,6 +142,41 @@ def describe_variability():
                        titles=datasets)
 
 
+def plot_dataset_pmaps(plot_parcels=['M1', 'M3', 'D1', 'D2', 'D3', 'D4']):
+    """Get individual Uhats, average across the Uhats and plot as pmaps"""
+    K = 32
+    space = 'MNISymC2'
+    mname = f'Models_03/NettekovenSym{K}_space-{space}'
+
+    # Get individual parcellations
+    try:
+        probs_indiv = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+    except FileNotFoundError:
+        probs_indiv = sm.export_uhats(
+            mname=mname)
+    probs_indiv = probs_indiv.numpy()
+
+    fileparts = mname.split('/')
+    index, cmap, labels = nt.read_lut(ut.base_dir + '/..//Cerebellum/ProbabilisticParcellationModel/Atlases/' +
+                                      fileparts[-1].split('_')[0] + '.lut')
+
+    labels = labels[1:]
+    # Make pmaps for each dataset
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    datasets = T['name'].unique()
+    for dataset in datasets:
+        probs_dataset = subset_probs(probs_indiv, dataset)
+        # Mean prob across subjects for this dataset
+        Prob = np.mean(probs_dataset, axis=0)
+        subset = [labels.index(p + 'L') for p in plot_parcels]
+        parc_names = "-".join([str(p) for p in plot_parcels])
+        fig = da.save_pmaps(Prob, labels,
+                            space, subset=subset, filename=f'{figure_path}/pmaps_{dataset}_{parc_names}.png')
+
+    pass
+
+
 if __name__ == "__main__":
 
-    describe_variability()
+    # describe_variability()
+    plot_dataset_pmaps(['M1', 'M3', 'D1', 'D2', 'D3', 'D4'])
