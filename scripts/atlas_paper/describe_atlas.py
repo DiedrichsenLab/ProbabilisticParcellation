@@ -24,14 +24,25 @@ import ProbabilisticParcellation.scripts.atlas_paper.fit_C2_from_C3 as ft
 import Functional_Fusion.dataset as ds
 import HierarchBayesParcel.evaluation as ev
 import ProbabilisticParcellation.evaluate as ppev
+
 # from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
 import nitools as nt
+import os
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
+figure_path = (
+    "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
+)
+if not os.path.exists(figure_path):
+    figure_path = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
+atlas_dir = (
+    "/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/"
+)
 
-def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'):
+
+def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered"):
     """Export Uhats for all subjects in a model"""
 
     # -- Save individual parcellations --
@@ -47,13 +58,13 @@ def export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
     for dataset in info.datasets:
         dclass = ds.get_dataset_class(ut.base_dir, dataset)
         dataset_participants = dclass.get_participants()
-        dataset_participants.loc[:, 'dataset'] = dataset
-        participant_info.append(
-            dataset_participants[['dataset', 'participant_id']])
+        dataset_participants.loc[:, "dataset"] = dataset
+        participant_info.append(dataset_participants[["dataset", "participant_id"]])
     participant_info = pd.concat(participant_info)
 
     participant_info.to_csv(
-        f'{ut.model_dir}/Models/{mname}_Uhat_info.tsv', sep='\t', index=False)
+        f"{ut.model_dir}/Models/{mname}_Uhat_info.tsv", sep="\t", index=False
+    )
 
     # return prob, participant_info  # return Uhats
 
@@ -71,110 +82,163 @@ def reorder_selected():
         # 'Models_03/sym_De_space-MNISymC3_K-68',
         # 'Models_03/sym_So_space-MNISymC3_K-68',
         # 'Models_03/sym_Hc_space-MNISymC3_K-68',
-        'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
+        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
     ]
 
-    f_assignment = 'mixed_assignment_68_16.csv'
+    f_assignment = "mixed_assignment_68_16.csv"
     for mname in mnames:
-        symmetry = mname.split('/')[1].split('_')[0]
-        if symmetry == 'sym':
+        symmetry = mname.split("/")[1].split("_")[0]
+        if symmetry == "sym":
             sym = True
         else:
             sym = False
         model_reordered = ea.reorder_model(
-            mname, sym=sym, assignment=f_assignment, save_model=True)
+            mname, sym=sym, assignment=f_assignment, save_model=True
+        )
 
 
 def export_selected():
     mnames = [
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
-        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68',
-        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
-        'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
+        "Models_03/NettekovenSym68_space-MNISymC2_reordered",
+        "Models_03/NettekovenAsym68_space-MNISymC2_reordered",
+        "Models_03/NettekovenSym32_space-MNISymC2_reordered",
+        "Models_03/NettekovenAsym32_space-MNISymC2_reordered",
     ]
     for mname in mnames:
         export(mname)
 
 
 def export(mname, sym=False):
-
-    space = mname.split('space-')[1].split('_')[0]
-    symmetry = mname.split('/')[1].split('_')[0]
-    if symmetry == 'sym':
+    space = mname.split("space-")[1].split("_")[0]
+    symmetry = mname.split("/")[1].split("_")[0]
+    if symmetry == "sym":
         sym = True
-    f_assignment = 'mixed_assignment_68_16.csv'
+    f_assignment = "mixed_assignment_68_16.csv"
 
     # Get assigned labels & clusters
-    assignment = pd.read_csv(
-        f'{ut.model_dir}/Atlases/{f_assignment}')
+    assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{f_assignment}")
 
-    labels = assignment['parcel_fine']
-    cluster_names, clusters = np.unique(
-        assignment['domain'], return_inverse=True)
+    labels = assignment["parcel_fine"]
+    cluster_names, clusters = np.unique(assignment["domain"], return_inverse=True)
     clusters = clusters + 1
     clusters = np.concatenate([clusters, clusters])
 
     # Extend symmetric labels to both hemispheres
-    labels_left = labels + 'L'
-    labels_right = labels + 'R'
-    labels = ['0'] + labels_left.tolist() + labels_right.tolist()
+    labels_left = labels + "L"
+    labels_right = labels + "R"
+    labels = ["0"] + labels_left.tolist() + labels_right.tolist()
 
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname, labels=labels, clusters=clusters)
+        mname, labels=labels, clusters=clusters
+    )
 
     # Get colour map from symmetric 68 model
-    _, cmap_sym, _ = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                 f'sym_MdPoNiIbWmDeSo_space-{space}_K-68' + '.lut')
+    _, cmap_sym, _ = nt.read_lut(
+        ut.model_dir + "/Atlases/" + f"sym_MdPoNiIbWmDeSo_space-{space}_K-68" + ".lut"
+    )
     cmap_sym = ListedColormap(cmap_sym)
 
-    ea.export_map(Prob, atlas.name, cmap_sym, labels,
-                  f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
-    print('Exported atlas to ' +
-          f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
+    ea.export_map(
+        Prob,
+        atlas.name,
+        cmap_sym,
+        labels,
+        f'{ut.model_dir}/Atlases/{mname.split("/")[1]}',
+    )
+    print("Exported atlas to " + f'{ut.model_dir}/Atlases/{mname.split("/")[1]}')
     pass
 
 
 def export_orig_68():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
+    space = "MNISymC2"
+    mname_fine = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68"
 
-    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
-        mname_fine, sym=True)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}')
+    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(mname_fine, sym=True)
+    ea.export_map(
+        Prob,
+        atlas.name,
+        cmap,
+        labels,
+        f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}',
+    )
 
 
 def make_NettekovenSym68c32():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new = 'Models_03/NettekovenSym68c32'
-    f_assignment = 'mixed_assignment_68_16.csv'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment='mixed_assignment_68_16.csv',
-                                     refit_model=True, save_model=True)
+    space = "MNISymC2"
+    mname_fine = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68"
+    mname_new = "Models_03/NettekovenSym68c32"
+    f_assignment = "mixed_assignment_68_16.csv"
+    _, _, labels = cl.cluster_parcel(
+        mname_fine,
+        method="mixed",
+        mname_new=mname_new,
+        f_assignment="mixed_assignment_68_16.csv",
+        refit_model=True,
+        save_model=True,
+    )
 
     Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
-        mname_new, sym=True, labels=labels)
-    ea.export_map(Prob, atlas.name, cmap, labels,
-                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
-    ea.resample_atlas('NettekovenSym68c32',
-                      atlas='MNISymC2',
-                      target_space='SUIT')
+        mname_new, sym=True, labels=labels
+    )
+    ea.export_map(
+        Prob,
+        atlas.name,
+        cmap,
+        labels,
+        f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}',
+    )
+    ea.resample_atlas("NettekovenSym68c32", atlas="MNISymC2", target_space="SUIT")
+
+
+def probability_maps(plot_parcels=["M1", "M2", "A1", "A2", "A3", "A4"]):
+    subset = [labels.index(p + "L") for p in plot_parcels]
+    parc_names = "-".join([str(p) for p in plot_parcels])
+
+    model_names = [
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
+        "Models_03/NettekovenSym32_space-MNISymC2",
+        "Models_03/NettekovenAsym32_space-MNISymC2",
+    ]
+
+    for mname in model_names:
+        fileparts = mname.split("/")
+        index, cmap, labels = nt.read_lut(
+            ut.base_dir
+            + "/..//Cerebellum/ProbabilisticParcellationModel/Atlases/"
+            + fileparts[-1].split("_")[0]
+            + ".lut"
+        )
+
+        info, model = ut.load_batch_best(mname)
+        Prob = model.marginal_prob()
+        labels = labels[1:]
+        fig = save_pmaps(
+            Prob,
+            labels,
+            space="MNISymC2",
+            subset=subset,
+            filename=f"{figure_path}/pmaps_{fileparts[-1].split('_')[0]}_{parc_names}.png",
+        )
 
 
 def profile_NettekovenSym68c32():
-    space = 'MNISymC2'
-    mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_new = 'Models_03/NettekovenSym68c32'
-    f_assignment = 'mixed_assignment_68_16'
-    _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
-                                     mname_new=mname_new,
-                                     f_assignment=f_assignment,
-                                     refit_model=False, save_model=False)
+    space = "MNISymC2"
+    mname_fine = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68"
+    mname_new = "Models_03/NettekovenSym68c32"
+    f_assignment = "mixed_assignment_68_16"
+    _, _, labels = cl.cluster_parcel(
+        mname_fine,
+        method="mixed",
+        mname_new=mname_new,
+        f_assignment=f_assignment,
+        refit_model=False,
+        save_model=False,
+    )
 
     Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
-        mname_new, sym=True, labels=labels)
+        mname_new, sym=True, labels=labels
+    )
     save_pmaps(Prob, labels, space, subset=[0, 1, 2, 3, 4, 5])
     save_pmaps(Prob, labels, space, subset=[6, 7, 8, 9, 10, 11])
     save_pmaps(Prob, labels, space, subset=[12, 13, 14, 15])
@@ -184,38 +248,43 @@ def profile_NettekovenSym68c32():
     features = fp.cognitive_features(mname_new)
 
 
-def update_color_map(mname,):
-    atlas_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-    _, cmap, labels = nt.read_lut(atlas_dir + mname + '.lut')
+def update_color_map(
+    mname,
+):
+    atlas_dir = "/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/"
+    _, cmap, labels = nt.read_lut(atlas_dir + mname + ".lut")
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname='Models_03/' + mname,
-        sym=True,
-        labels=labels)
+        mname="Models_03/" + mname, sym=True, labels=labels
+    )
     cmap_array = np.array(cmap(np.arange(len(labels))))
-    nt.save_lut(atlas_dir + '/' + mname + '.lut',
-                np.arange(len(labels)), cmap_array[:, 0:4], labels)
+    nt.save_lut(
+        atlas_dir + "/" + mname + ".lut",
+        np.arange(len(labels)),
+        cmap_array[:, 0:4],
+        labels,
+    )
 
 
 def export_model_merged(mname_new):
-    space = mname_new.split('space-')[1].split('_')[0]
+    space = mname_new.split("space-")[1].split("_")[0]
     # mname_fine = f'Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68'
-    mname_fine = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym_sep-hem'
-    f_assignment = 'mixed_assignment_68_16'
+    mname_fine = (
+        f"Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-68_arrange-asym_sep-hem"
+    )
+    f_assignment = "mixed_assignment_68_16"
     # _, _, labels = cl.cluster_parcel(mname_fine, method='mixed',
     #                                  mname_new=mname_new,
     #                                  f_assignment=f_assignment,
     #                                  refit_model=True, save_model=True)
 
-    mname_clus = f'Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-32_arrange-asym_sep-hem_meth-mixed'
+    mname_clus = f"Models_03/asym_MdPoNiIbWmDeSo_space-{space}_K-32_arrange-asym_sep-hem_meth-mixed"
     info, model = ut.load_batch_best(mname_clus)
     Prob = model.marginal_prob().numpy()
     atlas, _ = am.get_atlas(space, ut.atlas_dir)
-    _, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-                                  'NettekovenSym32.lut')
+    _, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + "NettekovenSym32.lut")
     Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname=mname_clus,
-        sym=False,
-        labels=labels)
+        mname=mname_clus, sym=False, labels=labels
+    )
     cmap_array = np.array(cmap(np.arange(len(labels))))
 
     # Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(
@@ -232,27 +301,28 @@ def export_model_merged(mname_new):
     # info, model = ut.load_batch_best(mname_new)
     # info = fp.recover_info(info, model, mname_new)
 
-    ea.export_map(Prob, atlas.name, cmap_array[:, 0:4], labels,
-                  f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}')
+    ea.export_map(
+        Prob,
+        atlas.name,
+        cmap_array[:, 0:4],
+        labels,
+        f'{ut.model_dir}/Atlases/{mname_new.split("/")[1]}',
+    )
 
 
 def save_pmaps(Prob, labels, atlas, subset=[0, 1, 2, 3, 4, 5], filename=None):
     plt.figure(figsize=(7, 10))
-    fig = ut.plot_model_pmaps(Prob, atlas,
-                              labels=labels,
-                              subset=subset,
-                              grid=(3, 2))
+    fig = ut.plot_model_pmaps(Prob, atlas, labels=labels, subset=subset, grid=(3, 2))
     subset_name = "-".join([str(s) for s in subset])
     if filename is None:
-        filename = f'pmaps_{subset_name}.png'
+        filename = f"pmaps_{subset_name}.png"
 
-    plt.savefig(filename, format='png')
+    plt.savefig(filename, format="png")
 
     return fig
 
 
 if __name__ == "__main__":
-
     # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered'
     # mname = 'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     # update_color_map(mname)
@@ -284,12 +354,12 @@ if __name__ == "__main__":
     # # --- Reorder selected models according to our assignment ---
     # reorder_selected()
     # # --- Export asymmetric model fitted from symmetric model ---
-    # export_selected()
+    export_selected()
     # # --- Export individual parcellations ---
-    for sym in ['Sym', 'Asym']:
-        for K in [32, 68]:
-            mname = f'Models_03/Nettekoven{sym}{K}_space-MNISymC2'
-            export_uhats(mname)
+    # for sym in ["Sym", "Asym"]:
+    #     for K in [32, 68]:
+    #         mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
+    #         export_uhats(mname)
 
     # --- Export ARIs ---
     # load Uhats
