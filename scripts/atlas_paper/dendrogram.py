@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("..")
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
@@ -15,28 +16,37 @@ import pandas as pd
 import torch as pt
 from matplotlib.colors import ListedColormap
 import matplotlib.colors as mcolors
-from scipy.cluster.hierarchy import dendrogram, linkage, leaves_list, optimal_leaf_ordering
+from scipy.cluster.hierarchy import (
+    dendrogram,
+    linkage,
+    leaves_list,
+    optimal_leaf_ordering,
+)
 from scipy.spatial.distance import squareform
 from scipy.spatial.distance import squareform
 import time
 
 
-figure_path = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
+figure_path = (
+    "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
+)
 if not os.path.exists(figure_path):
     figure_path = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
-atlas_dir_export = f'{ut.base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/'
+atlas_dir_export = (
+    f"{ut.base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/"
+)
 
-info_Sym68, model_Sym68 = ut.load_batch_best(
-    'Models_03/NettekovenSym68_space-MNISymC2')
+info_Sym68, model_Sym68 = ut.load_batch_best("Models_03/NettekovenSym68_space-MNISymC2")
 
 # Settings
 figsize = (8, 8)
-_, cmap_68, labels_68 = nt.read_lut(atlas_dir_export + 'NettekovenSym68.lut')
-_, cmap_32, labels_32 = nt.read_lut(atlas_dir_export + 'NettekovenSym32.lut')
+_, cmap_68, labels_68 = nt.read_lut(atlas_dir_export + "NettekovenSym68.lut")
+_, cmap_32, labels_32 = nt.read_lut(atlas_dir_export + "NettekovenSym32.lut")
 _, cmap_domain, labels_domain = nt.read_lut(
-    atlas_dir_export + 'NettekovenSym32_domain_caro.lut')
+    atlas_dir_export + "NettekovenSym32_domain_caro.lut"
+)
 
-suit_atlas, _ = am.get_atlas(info_Sym68.atlas, ut.base_dir + '/Atlases')
+suit_atlas, _ = am.get_atlas(info_Sym68.atlas, ut.base_dir + "/Atlases")
 
 
 def reorder_leaves(Z, leaves_order):
@@ -64,20 +74,20 @@ def reorder_leaves(Z, leaves_order):
     ch = np.zeros((n - 1, 2))
     for i in range(n - 1):
         ch[i] = (Z[i][0], Z[i][1])  # ch[i] = children of node n+i
-    Z = Z.astype('int32')
+    Z = Z.astype("int32")
     new_Z = np.zeros((n - 1, 4), dtype=float)
-    p = np.zeros(2 * n - 1, dtype='int32')  # array of parents
+    p = np.zeros(2 * n - 1, dtype="int32")  # array of parents
     for i in range(n - 1):
         p[Z[i, 0]] = i + n
         p[Z[i, 1]] = i + n
 
     cnt = 0
     used = [False for i in range(2 * n - 1)]
-    top_level = np.array(leaves_order, dtype='int')
-    new_top_level = np.array([], dtype='int')
+    top_level = np.array(leaves_order, dtype="int")
+    new_top_level = np.array([], dtype="int")
     sizes = np.ones(2 * n - 1)
     # correspondence between new and old inner node numbering
-    old_inner_node_number = np.zeros(n - 1, dtype='int')
+    old_inner_node_number = np.zeros(n - 1, dtype="int")
 
     height = np.zeros(n - 1, dtype=float)
     for i in range(n - 1):
@@ -86,7 +96,6 @@ def reorder_leaves(Z, leaves_order):
     # Measure execution time for building the initial tree
     start_time = time.time()
     while top_level.shape[0] != 1:
-
         for j in range(top_level.shape[0] - 1):  # top level of builded tree
             node1 = top_level[j]
             node2 = top_level[j + 1]
@@ -101,8 +110,7 @@ def reorder_leaves(Z, leaves_order):
 
             if p[node1_old] == p[node2_old]:  # same parent in the old tree
                 sizes[n + cnt] = sizes[node1] + sizes[node2]
-                new_Z[cnt] = [node1, node2,
-                              height[p[node1_old] - n], sizes[n + cnt]]
+                new_Z[cnt] = [node1, node2, height[p[node1_old] - n], sizes[n + cnt]]
                 new_top_level = np.append(new_top_level, n + cnt)
                 used[node1] = True
                 used[node2] = True
@@ -112,24 +120,25 @@ def reorder_leaves(Z, leaves_order):
                 # Print time
                 end_time = time.time()
                 execution_time = end_time - start_time
-                print("Updated z: {:.6f} seconds; {}".format(
-                    execution_time, top_level.shape[0]))
+                print(
+                    "Updated z: {:.6f} seconds; {}".format(
+                        execution_time, top_level.shape[0]
+                    )
+                )
                 start_time = time.time()
             if not used[node1]:
                 new_top_level = np.append(new_top_level, node1)
 
         if not used[top_level[top_level.shape[0] - 1]]:
-            new_top_level = np.append(
-                new_top_level, top_level[top_level.shape[0] - 1])
+            new_top_level = np.append(new_top_level, top_level[top_level.shape[0] - 1])
 
         top_level = new_top_level
-        new_top_level = np.array([], dtype='int')
+        new_top_level = np.array([], dtype="int")
 
     return new_Z
 
 
 def get_cluster_indices(labels_hem, reverse=False):
-
     # ----- Custom linkage ------
     if reverse:
         # Invert the order of labels_hem elements
@@ -142,12 +151,16 @@ def get_cluster_indices(labels_hem, reverse=False):
     indices_null = np.unique(labels_hem, return_inverse=True)[1]
     # Concept level
     string_to_index = {}
-    indices_concepts = [string_to_index.setdefault(
-        string, len(string_to_index)) for string in labels_concept]
+    indices_concepts = [
+        string_to_index.setdefault(string, len(string_to_index))
+        for string in labels_concept
+    ]
     # Domain level
     string_to_index = {}
-    indices_domain = [string_to_index.setdefault(
-        string, len(string_to_index)) for string in labels_domain]
+    indices_domain = [
+        string_to_index.setdefault(string, len(string_to_index))
+        for string in labels_domain
+    ]
 
     return indices_null, indices_concepts, indices_domain, labels_hem
 
@@ -176,14 +189,16 @@ def linkage_matrix(indices_null, indices_concepts, indices_domain):
 
 
 def get_dendrogram(reverse=True):
-    labels_hem_orig = labels_68[1:int(68 / 2) + 1]
-    labels_hem_orig = [label.replace('L', '').replace('R', '')
-                       for label in labels_hem_orig]
+    labels_hem_orig = labels_68[1 : int(68 / 2) + 1]
+    labels_hem_orig = [
+        label.replace("L", "").replace("R", "") for label in labels_hem_orig
+    ]
     indices_null, indices_concepts, indices_domain, labels_hem = get_cluster_indices(
-        labels_hem_orig, reverse=reverse)
+        labels_hem_orig, reverse=reverse
+    )
 
-    cmap_leaves = cmap_68[1:(len(cmap_68) - 1) // 2 + 1]
-    cmap_link = cmap_domain[1:(len(cmap_68) - 1) // 2 + 1]
+    cmap_leaves = cmap_68[1 : (len(cmap_68) - 1) // 2 + 1]
+    cmap_link = cmap_domain[1 : (len(cmap_68) - 1) // 2 + 1]
     if reverse:
         # Reorder colours apart from first colour (no label colour) for one heimsphere
         cmap_leaves = cmap_leaves[::-1]
@@ -191,71 +206,80 @@ def get_dendrogram(reverse=True):
 
     Z, R = linkage_matrix(indices_null, indices_concepts, indices_domain)
 
-    leaves = R['leaves']
+    leaves = R["leaves"]
     # Order labels by clustering
     labels_leaves = [labels_hem[i] for i in leaves]
 
     # Draw the colour panels for the parcels
-    cmap_leaves = np.concatenate(
-        (np.array([cmap_68[0]]), cmap_leaves), axis=0)
+    cmap_leaves = np.concatenate((np.array([cmap_68[0]]), cmap_leaves), axis=0)
 
     return Z, R, labels_leaves, cmap_leaves, cmap_link
 
 
-def plot_dendrogram(Z, labels_leaves, cmap_leaves, cmap_link, save=False, filename='dendogram'):
+def plot_dendrogram(
+    Z, labels_leaves, cmap_leaves, cmap_link, save=False, filename="dendogram"
+):
     # Plot the dendrogram
     plt.figure(figsize=(15, 4))
     ax = plt.gca()
-    R = dendrogram(Z, color_threshold=-1, no_plot=False,
-                   above_threshold_color='k')
-    leaves = R['leaves']
+    R = dendrogram(Z, color_threshold=-1, no_plot=False, above_threshold_color="k")
+    leaves = R["leaves"]
     ax.set_xticklabels(labels_leaves, fontsize=5, rotation=0)
 
     height_rectangles = 0.5
     ax.set_ylim((-height_rectangles, 2.5))
     # Draw the colour panels for the parcels
-    cl.draw_cmap(ax, ListedColormap(cmap_leaves),
-                 leaves, sym=False, height=height_rectangles)
+    cl.draw_cmap(
+        ax, ListedColormap(cmap_leaves), leaves, sym=False, height=height_rectangles
+    )
     plt.tight_layout()
     # Remove box
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
     # Remove background tiling
-    ax.set_facecolor('white')
+    ax.set_facecolor("white")
     # Remove yticks
     ax.set_yticks([])
 
     # Save the figure
     if save:
-        plt.savefig(figure_path + f'{filename}_05.pdf', dpi=300)
+        plt.savefig(figure_path + f"{filename}.pdf", dpi=300)
 
-    print('Done')
+    print("Done")
 
 
-def get_dedogram_custom(save=False, filename='dendrogram_reverse'):
-    labels_hem_orig = labels_68[1:int(68 / 2) + 1]
+def get_dedogram_custom(save=False, filename="dendrogram_reverse"):
+    labels_hem_orig = labels_68[1 : int(68 / 2) + 1]
     indices_null, indices_concepts, indices_domain, labels_hem = get_cluster_indices(
-        labels_hem_orig, reverse=False)
+        labels_hem_orig, reverse=False
+    )
 
-    cmap_leaves = cmap_68[1:(len(cmap_68) - 1) // 2 + 1]
+    cmap_leaves = cmap_68[1 : (len(cmap_68) - 1) // 2 + 1]
     Z, R = linkage_matrix(indices_null, indices_concepts, indices_domain)
 
-    leaves = R['leaves']
+    leaves = R["leaves"]
     # Order labels by clustering
     labels_leaves = [labels_hem[i] for i in leaves]
 
 
 if __name__ == "__main__":
     Z, R, labels_leaves, cmap_leaves, cmap_link = get_dendrogram(reverse=True)
-    plot_dendrogram(Z, labels_leaves, cmap_leaves, cmap_link,
-                    save=True, filename='dendrogram_reverse')
+    plot_dendrogram(
+        Z,
+        labels_leaves,
+        cmap_leaves,
+        cmap_link,
+        save=True,
+        filename="dendrogram_reverse",
+    )
 
     # ----- Reorder the dendogram ------
-    labels_hem_orig = labels_68[1:int(68 / 2) + 1]
-    labels_hem_orig = [label.replace('L', '').replace('R', '')
-                       for label in labels_hem_orig]
+    labels_hem_orig = labels_68[1 : int(68 / 2) + 1]
+    labels_hem_orig = [
+        label.replace("L", "").replace("R", "") for label in labels_hem_orig
+    ]
     reorder_index = [labels_leaves.index(x) for x in labels_hem_orig]
     # reorder color map
     cmap_reordered = np.array([cmap_leaves[i] for i in reorder_index])

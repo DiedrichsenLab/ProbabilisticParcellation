@@ -28,9 +28,9 @@ def save_cortex_cifti(fname):
     info, model = ut.load_batch_best(fname)
     Prop = model.marginal_prob()
     par = pt.argmax(Prop, dim=0) + 1
-    atlas, _ = am.get_atlas('fs32k', ut.atlas_dir)
+    atlas, _ = am.get_atlas("fs32k", ut.atlas_dir)
     img = nt.make_label_cifti(par.numpy(), atlas.get_brain_model_axis())
-    nb.save(img, ut.model_dir + f'/Models/{fname}.dlabel.nii')
+    nb.save(img, ut.model_dir + f"/Models/{fname}.dlabel.nii")
 
 
 def export_map(data, atlas, cmap, labels, base_name):
@@ -47,39 +47,39 @@ def export_map(data, atlas, cmap, labels, base_name):
     if not isinstance(cmap, np.ndarray):
         cmap = cmap(np.arange(cmap.N))
 
-    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + '/Atlases')
+    suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + "/Atlases")
     probseg = suit_atlas.data_to_nifti(data)
     parcel = np.argmax(data, axis=0) + 1
     dseg = suit_atlas.data_to_nifti(parcel)
 
     # Figure out correct mapping space
-    if atlas[0:4] == 'SUIT':
-        map_space = 'SUIT'
-    elif atlas[0:7] == 'MNISymC':
-        map_space = 'MNISymC'
+    if atlas[0:4] == "SUIT":
+        map_space = "SUIT"
+    elif atlas[0:7] == "MNISymC":
+        map_space = "MNISymC"
     else:
-        raise (NameError('Unknown atlas space'))
+        raise (NameError("Unknown atlas space"))
 
     # Plotting label
-    surf_data = suit.flatmap.vol_to_surf(probseg, stats='nanmean',
-                                         space=map_space)
+    surf_data = suit.flatmap.vol_to_surf(probseg, stats="nanmean", space=map_space)
     surf_parcel = np.argmax(surf_data, axis=1) + 1
-    Gifti = nt.make_label_gifti(surf_parcel.reshape(-1, 1),
-                                anatomical_struct='Cerebellum',
-                                labels=np.arange(surf_parcel.max() + 1),
-                                label_names=labels,
-                                label_RGBA=cmap)
+    Gifti = nt.make_label_gifti(
+        surf_parcel.reshape(-1, 1),
+        anatomical_struct="Cerebellum",
+        labels=np.arange(surf_parcel.max() + 1),
+        label_names=labels,
+        label_RGBA=cmap,
+    )
 
-    nb.save(dseg, base_name + f'_dseg.nii')
-    nb.save(probseg, base_name + f'_probseg.nii')
-    nb.save(Gifti, base_name + '_dseg.label.gii')
-    nt.save_lut(base_name + '.lut',
-                np.arange(len(labels)), cmap[:, 0:4], labels)
-    print(f'Exported {base_name}.')
+    nb.save(dseg, base_name + f"_dseg.nii")
+    nb.save(probseg, base_name + f"_probseg.nii")
+    nb.save(Gifti, base_name + "_dseg.label.gii")
+    nt.save_lut(base_name + ".lut", np.arange(len(labels)), cmap[:, 0:4], labels)
+    print(f"Exported {base_name}.")
 
 
 def renormalize_probseg(probseg):
-    """ Renormalizes a probsegmentation file
+    """Renormalizes a probsegmentation file
     after resampling, so that the probabilies add up to 1
 
     Args:
@@ -98,44 +98,49 @@ def renormalize_probseg(probseg):
     parcel = np.argmax(X, axis=3) + 1
     parcel[np.isnan(xs)] = 0
     dseg_img = nb.Nifti1Image(parcel.astype(np.int8), probseg.affine)
-    dseg_img.set_data_dtype('int8')
+    dseg_img.set_data_dtype("int8")
     # dseg_img.header.set_intent(1002,(),"")
-    probseg_img.set_data_dtype('float32')
+    probseg_img.set_data_dtype("float32")
     # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
     return probseg_img, dseg_img
 
 
-def resample_atlas(fname,
-                   atlas='MNISymC2',
-                   target_space='MNI152NLin2009cSymC'):
-    """ Resamples probabilistic atlas from MNISymC2 to a new atlas space 1mm resolution
-    """
+def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
+    """Resamples probabilistic atlas from MNISymC2 to a new atlas space 1mm resolution"""
     a, ainf = am.get_atlas(atlas, ut.atlas_dir)
-    src_dir = ut.model_dir + '/Atlases/'
-    targ_dir = ut.base_dir + f'/Atlases/tpl-{target_space}'
-    srcs_dir = ut.base_dir + '/Atlases/' + ainf['dir']
-    nii_atlas = nb.load(src_dir + f'/{fname}_probseg.nii')
+    src_dir = ut.model_dir + "/Atlases/"
+    targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
+    srcs_dir = ut.base_dir + "/Atlases/" + ainf["dir"]
+    nii_atlas = nb.load(src_dir + f"/{fname}_probseg.nii")
     # Reslice to 1mm MNI
-    if ainf['space'] != target_space:
+    if ainf["space"] != target_space:
         print(f"deforming from {ainf['space']} to {target_space}")
         deform = nb.load(
-            srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii")
+            srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii"
+        )
         nii_res = nt.deform_image(nii_atlas, deform, 1)
     else:
-        mname = ainf['mask']
-        mname = mname.replace('res-2', 'res-1')
-        nii_mask = nb.load(targ_dir + '/' + mname)
+        mname = ainf["mask"]
+        mname = mname.replace("res-2", "res-1")
+        nii_mask = nb.load(targ_dir + "/" + mname)
         # Make new shape
         shap = nii_mask.shape + nii_atlas.shape[3:]
         nii_res = ns.resample_from_to(nii_atlas, (shap, nii_mask.affine), 1)
-    print('normalizing')
+    print("normalizing")
     nii, dnii = renormalize_probseg(nii_res)
-    print('saving')
-    nb.save(nii, targ_dir + f'/atl-{fname}_space-{target_space}_probseg.nii')
-    nb.save(dnii, targ_dir + f'/atl-{fname}_space-{target_space}_dseg.nii')
+    print("saving")
+    nb.save(nii, targ_dir + f"/atl-{fname}_space-{target_space}_probseg.nii")
+    nb.save(dnii, targ_dir + f"/atl-{fname}_space-{target_space}_dseg.nii")
 
 
-def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_68_16.csv', save_model=False):
+def reorder_model(
+    mname,
+    sym=True,
+    mname_new=None,
+    assignment="mixed_assignment_68_16.csv",
+    original_idx="parcel_orig_idx",
+    save_model=False,
+):
     """
     Reorders a saved parcellation model according to fixed order assignment.
 
@@ -144,6 +149,7 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
         sym (bool): If True, reorders the model assuming symmetrical model.
         mname_new (str): The name of the reordered model. If None, the name will be the same as the original model with '_reordered' appended.
         assignment (str): The name of the CSV file containing the order assignment.
+        original_idx (str): The name of the column in the assignment CSV file containing the original parcel indices.
         save_model (bool): If True, saves the reordered model.
 
     Returns:
@@ -151,65 +157,68 @@ def reorder_model(mname, sym=True, mname_new=None, assignment='mixed_assignment_
 
     """
     # Get model and atlas.
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
+    fileparts = mname.split("/")
+    split_mn = fileparts[-1].split("_")
     info, model = ut.load_batch_best(mname)
     atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
 
     # Get assignment
-    assignment = pd.read_csv(
-        f'{ut.model_dir}/Atlases/{assignment}')
+    assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{assignment}")
 
-    order_arrange = assignment['parcel_orig_idx'].values
-    order_emission = np.concatenate(
-        [order_arrange, order_arrange + len(order_arrange)])
-    if not sym:
-        order_arrange = order_emission
+    order_arrange = assignment[original_idx].values
 
     # Reorder the model
     new_model = deepcopy(model)
     if new_model.arrange.logpi.shape[0] == order_arrange.shape[0]:
         new_model.arrange.logpi = model.arrange.logpi[order_arrange]
     elif new_model.arrange.logpi.shape[0] * 2 == order_arrange.shape[0]:
-        new_model.arrange.logpi = model.arrange.logpi[order_arrange[:len(
-            order_arrange) // 2]]
+        new_model.arrange.logpi = model.arrange.logpi[
+            order_arrange[: len(order_arrange) // 2]
+        ]
+    elif new_model.arrange.logpi.shape[0] == np.unique(order_arrange).shape[0]:
+        # Make order_arrange unique list of indices in the same order (necessary for re-ordering already merged models)
+        order_arrange = order_arrange[
+            np.sort(np.unique(order_arrange, return_index=True)[1])
+        ]
+        new_model.arrange.logpi = model.arrange.logpi[order_arrange]
     else:
         raise ValueError(
-            'The number of parcels in the model does not match the number of parcels in the assignment.')
+            "The number of parcels in the model does not match the number of parcels in the assignment."
+        )
+
+    order_emission = np.concatenate([order_arrange, order_arrange + len(order_arrange)])
+    if not sym:
+        order_arrange = order_emission
 
     for e, em in enumerate(new_model.emissions):
         new_model.emissions[e].V = em.V[:, order_emission]
 
     # Info
     new_info = deepcopy(info)
-    new_info['ordered_by'] = assignment
+    new_info["ordered_by"] = assignment
     new_info = new_info.to_frame().T
 
     # Save the model
     if save_model:
         if mname_new is None:
-            mname_new = mname + '_reordered'
+            mname_new = mname + "_reordered"
         # save new model
-        with open(f'{ut.model_dir}/Models/{mname_new}.pickle', 'wb') as file:
+        with open(f"{ut.model_dir}/Models/{mname_new}.pickle", "wb") as file:
             pickle.dump([new_model], file)
 
         # save new info
-        new_info.to_csv(f'{ut.model_dir}/Models/{mname_new}.tsv',
-                        sep='\t', index=False)
+        new_info.to_csv(f"{ut.model_dir}/Models/{mname_new}.tsv", sep="\t", index=False)
 
         print(
-            f'Done. Saved reordered model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n')
+            f"Done. Saved reordered model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n"
+        )
 
     return new_model
 
 
-def colour_parcel(mname,
-                  sym=False,
-                  plot=True,
-                  labels=None,
-                  clusters=None,
-                  weighting=None,
-                  gamma=0):
+def colour_parcel(
+    mname, sym=False, plot=True, labels=None, clusters=None, weighting=None, gamma=0
+):
     """
     Colours the parcellation of a model.
 
@@ -231,8 +240,8 @@ def colour_parcel(mname,
     """
 
     # Get model and atlas.
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
+    fileparts = mname.split("/")
+    split_mn = fileparts[-1].split("_")
     info, model = ut.load_batch_best(mname)
     atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
 
@@ -241,16 +250,15 @@ def colour_parcel(mname,
     parcel = Prob.argmax(axis=0) + 1
 
     # Make a colormap.
-    w_cos_sim, _, _ = cl.parcel_similarity(model,
-                                           plot=False,
-                                           sym=sym)
+    w_cos_sim, _, _ = cl.parcel_similarity(model, plot=False, sym=sym)
     W = sc.calc_mds(w_cos_sim, center=True)
     if sym:
         W = np.concatenate([W, W])
     # Define color anchors
     m, regions, colors = sc.get_target_points(atlas, parcel)
-    cmap = sc.colormap_mds(W, target=(m, regions, colors),
-                           clusters=clusters, gamma=gamma)
+    cmap = sc.colormap_mds(
+        W, target=(m, regions, colors), clusters=clusters, gamma=gamma
+    )
     sc.plot_colorspace(cmap(np.arange(model.K)))
 
     plt.figure(figsize=(5, 10))
@@ -258,10 +266,9 @@ def colour_parcel(mname,
 
     # Plot the parcellation
     if plot:
-        ax = ut.plot_data_flat(Prob, atlas.name, cmap=cmap,
-                               dtype='prob',
-                               labels=labels,
-                               render='plotly')
+        ax = ut.plot_data_flat(
+            Prob, atlas.name, cmap=cmap, dtype="prob", labels=labels, render="plotly"
+        )
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
