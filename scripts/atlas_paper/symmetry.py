@@ -1,11 +1,14 @@
 import sys
+
 sys.path.append("..")
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
-from ProbabilisticParcellation.scripts.atlas_paper.describe_atlas import export_uhats
+from ProbabilisticParcellation.scripts.atlas_paper.individual_variability import (
+    export_uhats,
+)
 from Functional_Fusion.dataset import *
 import matplotlib
 import matplotlib.pyplot as plt
@@ -17,14 +20,13 @@ import torch as pt
 def individual_symmetry(mname):
     # Check if Uhats have already been saved. If so, load them
     try:
-        prob = pt.load(f'{ut.model_dir}/Models/{mname}_Uhat.pt')
+        prob = pt.load(f"{ut.model_dir}/Models/{mname}_Uhat.pt")
     except:
-        prob = ev.parcel_individual(
-            mname, subject='all', dataset=None, session=None)
+        prob = ev.parcel_individual(mname, subject="all", dataset=None, session=None)
 
     # Load the model
-    fileparts = mname.split('/')
-    split_mn = fileparts[-1].split('_')
+    fileparts = mname.split("/")
+    split_mn = fileparts[-1].split("_")
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
     atlas, ainf = am.get_atlas(info.atlas, ut.atlas_dir)
@@ -32,7 +34,7 @@ def individual_symmetry(mname):
     # Load the data
     # for d, dname in enumerate(info.datasets):
     d = 0
-    dname = 'MDTB'
+    dname = "MDTB"
     data, dinfo, dataset = get_dataset(
         ut.base_dir,
         dname,
@@ -47,7 +49,6 @@ def individual_symmetry(mname):
 
 
 if __name__ == "__main__":
-
     # lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
     # _, cmap, labels = nt.read_lut(lut_dir +
     #                               'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68.lut')
@@ -60,10 +61,8 @@ if __name__ == "__main__":
 
     # atlas = 'MNISymC2'
 
-    export_uhats(
-        mname='Models_03/NettekovenSym68_space-MNISymC2')
-    export_uhats(
-        mname='Models_03/NettekovenAsym68_space-MNISymC2')
+    export_uhats(mname="Models_03/NettekovenSym68_space-MNISymC2")
+    export_uhats(mname="Models_03/NettekovenAsym68_space-MNISymC2")
 
     # load Uhats
     # prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')

@@ -42,33 +42,6 @@ atlas_dir = (
 )
 
 
-def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered"):
-    """Export Uhats for all subjects in a model"""
-
-    # -- Save individual parcellations --
-    # prob = ppev.parcel_individual(
-    #     mname, subject='all', dataset=None, session=None)
-
-    # pt.save(prob, f'{ut.model_dir}/Models/{mname}_Uhat.pt')
-
-    # -- Save info --
-    info, model = ut.load_batch_best(mname)
-    info = ut.recover_info(info, model, mname)
-    participant_info = []
-    for dataset in info.datasets:
-        dclass = ds.get_dataset_class(ut.base_dir, dataset)
-        dataset_participants = dclass.get_participants()
-        dataset_participants.loc[:, "dataset"] = dataset
-        participant_info.append(dataset_participants[["dataset", "participant_id"]])
-    participant_info = pd.concat(participant_info)
-
-    participant_info.to_csv(
-        f"{ut.model_dir}/Models/{mname}_Uhat_info.tsv", sep="\t", index=False
-    )
-
-    # return prob, participant_info  # return Uhats
-
-
 def reorder_selected():
     mnames = [
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',
@@ -355,11 +328,6 @@ if __name__ == "__main__":
     # reorder_selected()
     # # --- Export asymmetric model fitted from symmetric model ---
     export_selected()
-    # # --- Export individual parcellations ---
-    # for sym in ["Sym", "Asym"]:
-    #     for K in [32, 68]:
-    #         mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
-    #         export_uhats(mname)
 
     # --- Export ARIs ---
     # load Uhats
@@ -390,7 +358,3 @@ if __name__ == "__main__":
     #                         colorbar=True)
     # comparison = ppev.compare_probs(
     #     prob_a, prob_b, method='cosang')
-
-    # export_uhats(mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68')
-    # export_uhats(
-    #     mname='Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem')
