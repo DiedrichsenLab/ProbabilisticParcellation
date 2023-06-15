@@ -371,7 +371,7 @@ if __name__ == "__main__":
     index, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + short_name + ".lut")
     export_profile(mname, info, model, labels, source="group")
     export_profile(mname, info, model, labels, source="group", dseg=True)
-    export_profile(mname, info, model, labels, source="indiv")
+    export_profile(mname, info, model, labels, source="individ")
     export_profile(mname, info, model, labels, source="model")
 
     # features = cognitive_features(mname)
