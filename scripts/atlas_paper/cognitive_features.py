@@ -493,7 +493,7 @@ def divide_mdtb_by_duration():
 
     # Save tags
     tags.to_csv(
-        f"{ut.model_dir}/Atlases/Profiles/tags/tags_duration.csv", sep=",", index=False
+        f"{ut.model_dir}/Atlases/Profiles/tags/tags_duration.tsv", sep="\t", index=False
     )
 
     pass
