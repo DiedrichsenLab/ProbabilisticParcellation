@@ -111,7 +111,7 @@ def get_profiles_individ(model, info, dseg=False):
     Uhat, _ = model.Estep()
 
     if dseg:
-        Uhat = ar.expand_mn(Uhat.argmax(dim=1),Uhat.shape[1])
+        Uhat = ar.expand_mn(Uhat.argmax(dim=1), Uhat.shape[1])
     Uhat = Uhat.numpy()
 
     prof_d = get_profile_info(info)
@@ -139,6 +139,7 @@ def get_profiles_individ(model, info, dseg=False):
             profile_data.append(prof_dd)
     return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
 
+
 def get_profiles_group(model, info, dseg=False):
     """Returns the functional profile for each parcel from model V vectors
     Args:
@@ -158,7 +159,7 @@ def get_profiles_group(model, info, dseg=False):
     Uhat = model.marginal_prob()
 
     if dseg:
-        Uhat = ar.expand_mn_1d(Uhat.argmax(dim=0),Uhat.shape[0])
+        Uhat = ar.expand_mn_1d(Uhat.argmax(dim=0), Uhat.shape[0])
     U = Uhat.numpy()
 
     prof_d = get_profile_info(info)
@@ -187,15 +188,9 @@ def get_profiles_group(model, info, dseg=False):
     return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
 
 
-
-
-
-
-def export_profile(mname, info=None, 
-                   model=None, 
-                   labels=None, 
-                   source="model",
-                   dseg=False):
+def export_profile(
+    mname, info=None, model=None, labels=None, source="model", dseg=False
+):
     """Exports the functional profile for each parcel from model V vectors or data (individ/group)
     Args:
         mname: Model name
@@ -214,9 +209,13 @@ def export_profile(mname, info=None,
     if source == "model":
         parcel_profiles, profile_data = get_profiles_model(model=model, info=info)
     elif source == "individ":
-        parcel_profiles, profile_data = get_profiles_individ(model=model, info=info,dseg=dseg)
-    elif  source == "group":
-        parcel_profiles, profile_data = get_profiles_group(model=model, info=info,dseg=dseg)
+        parcel_profiles, profile_data = get_profiles_individ(
+            model=model, info=info, dseg=dseg
+        )
+    elif source == "group":
+        parcel_profiles, profile_data = get_profiles_group(
+            model=model, info=info, dseg=dseg
+        )
 
     # make functional profile dataframe
     if isinstance(labels, np.ndarray):
@@ -229,7 +228,7 @@ def export_profile(mname, info=None,
     mname = mname.split("/")[-1]
     mname = mname.split("_")[0]
 
-    if dseg==True:
+    if dseg == True:
         fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_dseg.tsv"
     else:
         fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
@@ -370,7 +369,10 @@ if __name__ == "__main__":
 
     fileparts = mname.split("/")
     index, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + short_name + ".lut")
-    export_profile(mname, info, model, labels, source="group",dseg=False)
+    export_profile(mname, info, model, labels, source="group")
+    export_profile(mname, info, model, labels, source="group", dseg=True)
+    export_profile(mname, info, model, labels, source="indiv")
+    export_profile(mname, info, model, labels, source="model")
 
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
