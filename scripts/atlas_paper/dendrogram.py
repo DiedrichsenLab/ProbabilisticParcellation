@@ -43,7 +43,7 @@ figsize = (8, 8)
 _, cmap_68, labels_68 = nt.read_lut(atlas_dir_export + "NettekovenSym68.lut")
 _, cmap_32, labels_32 = nt.read_lut(atlas_dir_export + "NettekovenSym32.lut")
 _, cmap_domain, labels_domain = nt.read_lut(
-    atlas_dir_export + "NettekovenSym32_domain_caro.lut"
+    atlas_dir_export + "NettekovenSym32_domain.lut"
 )
 
 suit_atlas, _ = am.get_atlas(info_Sym68.atlas, ut.base_dir + "/Atlases")
@@ -244,6 +244,7 @@ def plot_dendrogram(
     ax.set_yticks([])
 
     # Save the figure
+
     if save:
         plt.savefig(figure_path + f"{filename}.pdf", dpi=300)
 
@@ -265,26 +266,51 @@ def get_dedogram_custom(save=False, filename="dendrogram_reverse"):
 
 
 if __name__ == "__main__":
-    Z, R, labels_leaves, cmap_leaves, cmap_link = get_dendrogram(reverse=True)
+    reverse = True
+    filename = "dendrogram_reverse"
+    Z, R, labels_leaves, cmap_leaves, cmap_link = get_dendrogram(reverse=reverse)
     plot_dendrogram(
         Z,
         labels_leaves,
         cmap_leaves,
         cmap_link,
         save=True,
-        filename="dendrogram_reverse",
+        filename=filename,
     )
 
     # ----- Reorder the dendogram ------
-    labels_hem_orig = labels_68[1 : int(68 / 2) + 1]
-    labels_hem_orig = [
-        label.replace("L", "").replace("R", "") for label in labels_hem_orig
-    ]
-    reorder_index = [labels_leaves.index(x) for x in labels_hem_orig]
-    # reorder color map
-    cmap_reordered = np.array([cmap_leaves[i] for i in reorder_index])
+    # labels_hem_orig = labels_68[1 : int(68 / 2) + 1]
+    # labels_hem_orig = [
+    #     label.replace("L", "").replace("R", "") for label in labels_hem_orig
+    # ]
+    # reorder_index = [labels_leaves.index(x) for x in labels_hem_orig]
+    # # reorder color map
+    # cmap_reordered = np.array([cmap_leaves[i] for i in reorder_index])
 
-    # Reorder the dendogram
-    Z_reordered = reorder_leaves(Z, reorder_index)
-    Z_reordered = Z[reorder_index, :]
+    # # Reorder the dendogram
+    # Z_reordered = reorder_leaves(Z, reorder_index)
+    # Z_reordered = Z[reorder_index, :]
+
+    # Switch M3 & M4 (colours and labels)
+    labels_reordered = labels_leaves.copy()
+    cmap_reordered = cmap_leaves.copy()
+    # Where the first two letters of the labels are M3, switch them to M4 and put M3 at the original position and do the same in the colour map
+    for i, label in enumerate(labels_reordered):
+        if label[:2] == "M3":
+            labels_reordered[i] = "M4" + label[2:]
+            cmap_reordered[i] = cmap_leaves[labels_leaves.index(label)]
+        elif label[:2] == "M4":
+            labels_reordered[i] = "M3" + label[2:]
+            cmap_reordered[i] = cmap_leaves[labels_leaves.index(label)]
+
+    filename = "dendrogram_reordered"
+    plot_dendrogram(
+        Z,
+        labels_reordered,
+        cmap_reordered,
+        cmap_link,
+        save=True,
+        filename=filename,
+    )
+
     pass
