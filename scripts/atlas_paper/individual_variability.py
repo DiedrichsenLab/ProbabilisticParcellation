@@ -17,6 +17,7 @@ import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.scripts.atlas_paper.symmetry as sm
 import ProbabilisticParcellation.scripts.atlas_paper.describe_atlas as da
+import ProbabilisticParcellation.evaluate as ppev
 import Functional_Fusion.dataset as ds
 import HierarchBayesParcel.evaluation as ev
 import Functional_Fusion.atlas_map as am
@@ -163,6 +164,32 @@ def describe_variability():
     pass
 
 
+def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered"):
+    """Export Uhats for all subjects in a model"""
+
+    # -- Save individual parcellations --
+    prob = ppev.parcel_individual(mname, subject="all", dataset=None, session=None)
+
+    pt.save(prob, f"{ut.model_dir}/Models/{mname}_Uhat.pt")
+
+    # -- Save info --
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
+    participant_info = []
+    for dataset in info.datasets:
+        dclass = ds.get_dataset_class(ut.base_dir, dataset)
+        dataset_participants = dclass.get_participants()
+        dataset_participants.loc[:, "dataset"] = dataset
+        participant_info.append(dataset_participants[["dataset", "participant_id"]])
+    participant_info = pd.concat(participant_info)
+
+    participant_info.to_csv(
+        f"{ut.model_dir}/Models/{mname}_Uhat_info.tsv", sep="\t", index=False
+    )
+
+    # return prob, participant_info  # return Uhats
+
+
 def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
     """Get individual Uhats, average across the Uhats and plot as pmaps"""
     K = 32
@@ -206,5 +233,10 @@ def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
 
 
 if __name__ == "__main__":
-    describe_variability()
+    # describe_variability()
     # plot_dataset_pmaps(['M1', 'M3', 'D1', 'D2', 'D3', 'D4'])
+    # # --- Export individual parcellations ---
+    for sym in ["Sym", "Asym"]:
+        for K in [32, 68]:
+            mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
+            export_uhats(mname)
