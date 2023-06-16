@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import numpy as np
 import Functional_Fusion.atlas_map as am
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 from scipy.linalg import block_diag
 import nibabel as nb
 import nibabel.processing as ns
@@ -18,7 +18,7 @@ import ProbabilisticParcellation.similarity_colormap as sc
 from copy import deepcopy
 import logging
 import pickle
-
+import nitools as nt
 
 def save_cortex_cifti(fname):
     """Exports a cortical model as a surface-based CIFTI label file.
