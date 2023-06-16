@@ -359,6 +359,15 @@ def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None)
                     titles=labels[subset],
                     colorbar=False,
                     save_fig=False)
+    
+def plot_connectivity_map(pscalar, surf,border,indx=0):
+    if isinstance(pscalar,str):
+        pscalar = np.load(pscalar)
+    if isinstance(surf,str):
+        pscalar = np.load(surf)
+     
+    pscalar = pscalar[indx,:]
+    surf.plot.plotmap(DR,'fs32k_R',underlay = s02sulc[1],cscale = [-3,3],threshold= [-1,1])
 
 
 def plot_model_parcel(model_names, grid, cmap='tab20b', align=False, device=None):
