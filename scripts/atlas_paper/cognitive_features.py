@@ -499,6 +499,37 @@ def divide_mdtb_by_duration():
     pass
 
 
+def add_movements():
+    tags = pd.read_csv(
+        f"{ut.model_dir}/Atlases/Profiles/tags/tags_duration.tsv", sep="\t"
+    )
+
+    movements = pd.read_csv(
+        f"{ut.model_dir}/Atlases/Profiles/tags/movements_per_second.tsv", sep="\t"
+    )
+    # loop through lines of tags and add the movement tags
+    movement_tags = [
+        "left_hand_response_execution",
+        "right_hand_response_execution",
+        "saccadic_eye_movement",
+    ]
+    for c, cond in enumerate(tags.condition):
+        if cond in movements.condition.tolist():
+            for tag in movement_tags:
+                tags.at[c, tag] = movements[movements.condition == cond][tag].item()
+
+    # Remove column named 'xxx'
+    tags = tags.drop(columns=["xxx"])
+
+    tags.to_csv(
+        f"{ut.model_dir}/Atlases/Profiles/tags/tags_final.tsv",
+        sep="\t",
+        index=False,
+    )
+
+    pass
+
+
 if __name__ == "__main__":
     # inspect_cognitive_tags()
 
@@ -512,4 +543,5 @@ if __name__ == "__main__":
     # compile_tags_selftagged_datasets()
     # compile_tags_all_datasets()
 
-    divide_mdtb_by_duration()
+    # divide_mdtb_by_duration()
+    add_movements()
