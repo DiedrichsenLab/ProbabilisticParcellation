@@ -50,7 +50,8 @@ def plot_parcel_summary(parcel='D1',
         cidx[c]=np.where(sc==labels[iidx[c]])[0][0]
 
     flat=[]
-    flat.append(nb.load(surf_dir+'/fs_L/fs_LR.32k.L.flat.surf.gii'))
+    # Use the mirrored flatmap for the left hemisphere
+    flat.append(nb.load(surf_dir+'/fs_L/fs_LR.32k.Lm.flat.surf.gii'))
     flat.append(nb.load(surf_dir+'/fs_R/fs_LR.32k.R.flat.surf.gii'))
     border=[]
     border.append(surf_dir + '/fs_L/fs_LR.32k.L.border')
@@ -64,7 +65,7 @@ def plot_parcel_summary(parcel='D1',
 
     for h in range(2):
         for c in range(2):
-            plt.axes(axH[c,h])
+            plt.axes(axH[h,c])
             surf.plot.plotmap(weights[h][cidx[c],:],
                               flat[h],
                               underlay=None,

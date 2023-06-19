@@ -78,7 +78,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     print(f"Exported {base_name}.")
 
 
-def renormalize_probseg(probseg):
+def renormalize_probseg(probseg,mask):
     """Renormalizes a probsegmentation file
     after resampling, so that the probabilies add up to 1
 
@@ -91,12 +91,12 @@ def renormalize_probseg(probseg):
     """
     X = probseg.get_fdata()
     xs = np.sum(X, axis=3)
-    xs[xs < 0.3] = np.nan
     X = X / np.expand_dims(xs, 3)
-    X[np.isnan(X)] = 0
+    maskX = mask.get_fdata()
+    X[maskX==0] = np.nan
     probseg_img = nb.Nifti1Image(X, probseg.affine)
     parcel = np.argmax(X, axis=3) + 1
-    parcel[np.isnan(xs)] = 0
+    parcel[maskX==0] = 0
     dseg_img = nb.Nifti1Image(parcel.astype(np.int8), probseg.affine)
     dseg_img.set_data_dtype("int8")
     # dseg_img.header.set_intent(1002,(),"")
@@ -106,28 +106,34 @@ def renormalize_probseg(probseg):
 
 
 def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
-    """Resamples probabilistic atlas from MNISymC2 to a new atlas space 1mm resolution"""
+    """Resamples probabilistic atlas from MNISymC2 to a new atlas space in 1mm resolution"""
     a, ainf = am.get_atlas(atlas, ut.atlas_dir)
     src_dir = ut.model_dir + "/Atlases/"
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
     srcs_dir = ut.base_dir + "/Atlases/" + ainf["dir"]
-    nii_atlas = nb.load(src_dir + f"/{fname}_probseg.nii")
+    # Load and set NaNs to 0 
+    nii_atlas = nb.load(src_dir + f"/{fname}_space-{atlas}_probseg.nii")
+    X=np.nan_to_num(nii_atlas.get_fdata())
+    nii_atlasf = nb.Nifti1Image(X, nii_atlas.affine, nii_atlas.header)
     # Reslice to 1mm MNI
+    print("normalizing")
     if ainf["space"] != target_space:
         print(f"deforming from {ainf['space']} to {target_space}")
         deform = nb.load(
             srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii"
         )
-        nii_res = nt.deform_image(nii_atlas, deform, 1)
+        nii_res = nt.deform_image(nii_atlasf, deform, 1)
+        # Get target space mask: 
+        mname = f'tpl-{target_space}_res-1_gmcmask.nii' 
+        nii_mask = nb.load(targ_dir + "/" + mname)
     else:
+        # Make new shape
         mname = ainf["mask"]
         mname = mname.replace("res-2", "res-1")
         nii_mask = nb.load(targ_dir + "/" + mname)
-        # Make new shape
         shap = nii_mask.shape + nii_atlas.shape[3:]
-        nii_res = ns.resample_from_to(nii_atlas, (shap, nii_mask.affine), 1)
-    print("normalizing")
-    nii, dnii = renormalize_probseg(nii_res)
+        nii_res = ns.resample_from_to(nii_atlasf, (shap, nii_mask.affine), 1)
+    nii, dnii = renormalize_probseg(nii_res,nii_mask)
     print("saving")
     nb.save(nii, targ_dir + f"/atl-{fname}_space-{target_space}_probseg.nii")
     nb.save(dnii, targ_dir + f"/atl-{fname}_space-{target_space}_dseg.nii")
