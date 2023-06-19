@@ -1,5 +1,5 @@
 """
-Script to analyze parcels using clustering and colormaps
+Script to test 2 overlapping regions to show that these can be separated using individual parcellations
 """
 
 import pandas as pd
@@ -7,7 +7,7 @@ import numpy as np
 import torch as pt
 import matplotlib.pyplot as plt
 import seaborn as sb
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 import ProbabilisticParcellation.util as ut
 from copy import deepcopy
 import ProbabilisticParcellation.learn_fusion_gpu as lf
@@ -22,6 +22,8 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 def inspect_model_regions_68():
+    """ Check for overlapping regions in 68 atlas
+    """
     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     info, model = ut.load_batch_best(mname)
     w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
@@ -43,6 +45,8 @@ def inspect_model_regions_68():
 
 
 def inspect_model_regions_32():
+    """ Check for overlapping regions in 32 atlas
+    """
     mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
     info, model = ut.load_batch_best(mname)
     w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
@@ -177,7 +181,7 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
 
 if __name__ == "__main__":
     inspect_model_regions_32()
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-32_meth-mixed'
+    mname = 'Models_03/NettekovenAsym32_space-MNISymC2'
     # D=individ_parcellation(mname,sn=[21],regions=[28,29],plot='hist')
     D=individ_parcellation(mname,sn=np.arange(24),regions=[28,29],plot='hist')
     # make_NettekovenSym68c32()
