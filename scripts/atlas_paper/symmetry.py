@@ -6,9 +6,7 @@ import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
-from ProbabilisticParcellation.scripts.atlas_paper.individual_variability import (
-    export_uhats,
-)
+import ProbabilisticParcellation.scripts.atlas_paper.individual_variability as var
 from Functional_Fusion.dataset import *
 import matplotlib
 import matplotlib.pyplot as plt
@@ -61,8 +59,8 @@ if __name__ == "__main__":
 
     # atlas = 'MNISymC2'
 
-    export_uhats(mname="Models_03/NettekovenSym68_space-MNISymC2")
-    export_uhats(mname="Models_03/NettekovenAsym68_space-MNISymC2")
+    var.export_uhats(mname="Models_03/NettekovenSym68_space-MNISymC2")
+    var.export_uhats(mname="Models_03/NettekovenAsym68_space-MNISymC2")
 
     # load Uhats
     # prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
