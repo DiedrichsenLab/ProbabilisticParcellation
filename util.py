@@ -216,7 +216,10 @@ def plot_data_flat(data, atlas,
                    cscale=None,
                    labels=None,
                    render='matplotlib',
-                   colorbar=False):
+                   colorbar=False,
+                   bordersize=4,
+                   bordercolor='k',
+                   backgroundcolor='w'):
     """ Maps data from an atlas space to a full volume and
     from there onto the surface - then plots it.
 
@@ -245,7 +248,11 @@ def plot_data_flat(data, atlas,
                                new_figure=False,
                                label_names=labels,
                                overlay_type='label',
-                               colorbar=colorbar)
+                               colorbar=colorbar,
+                               bordersize=bordersize,
+                               bordercolor=bordercolor,
+                               backgroundcolor=backgroundcolor
+                               )
     # Plotting one series of functional data
     elif dtype == 'func':
         surf_data = suit.flatmap.vol_to_surf(Nifti, stats='nanmean',
@@ -257,7 +264,11 @@ def plot_data_flat(data, atlas,
                                cscale=cscale,
                                new_figure=False,
                                overlay_type='func',
-                               colorbar=colorbar)
+                               colorbar=colorbar,
+                               bordersize=bordersize,
+                               bordercolor=bordercolor,
+                               backgroundcolor=backgroundcolor
+                            )
     # Mapping probabilities on the flatmap and then
     # determining a winner from this (slightly better than label)
     elif dtype == 'prob':
@@ -270,7 +281,11 @@ def plot_data_flat(data, atlas,
                                new_figure=False,
                                label_names=labels,
                                overlay_type='label',
-                               colorbar=colorbar)
+                               colorbar=colorbar,
+                               bordersize=bordersize,
+                               bordercolor=bordercolor,
+                               backgroundcolor=backgroundcolor
+                            )
     else:
         raise (NameError('Unknown data type'))
     return ax
