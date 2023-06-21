@@ -163,6 +163,7 @@ def calc_variability(Data, Info, subject_wise=False):
 
             # Normalize by geometric mean of reliabilities
             if subject_wise:
+                correlation[np.diag_indices(correlation.shape[0])] = np.nan
                 noise_ceiling = np.sqrt(np.outer(reliabilites, reliabilites))
                 corr_normalised = correlation / noise_ceiling
                 # Append to list
