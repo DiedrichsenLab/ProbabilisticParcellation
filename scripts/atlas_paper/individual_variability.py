@@ -38,48 +38,6 @@ atlas_dir = (
 )
 
 
-def inter_individual_variability(probs_indiv, subject_wise=False):
-    """Get inter-individual variability between individual parcellations by correlating probablistic parcellations voxelwise"""
-    Corr = []
-    for vox in np.arange(probs_indiv.shape[2]):
-        corr = np.corrcoef(probs_indiv[:, :, vox])
-        if subject_wise:
-            # Set diagonal to nan
-            np.fill_diagonal(corr, np.nan)
-            # Retun average per row
-            corr = np.nanmean(corr, axis=1)
-            # Append to list
-            Corr.append(corr)
-        else:
-            corr = corr[np.triu_indices(corr.shape[0], k=1)]
-            Corr.append(np.nanmean(corr))
-
-    return np.array(Corr)
-
-
-def reliability_norm(corr, dataset, subject_wise=False):
-    """Normalize inter-individual variability by intra-individual reliability"""
-    reliability_voxelwise, _ = ds.reliability_maps(
-        ut.base_dir,
-        dataset,
-        atlas="MNISymC2",
-        subtract_mean=True,
-        voxel_wise=True,
-        subject_wise=subject_wise,
-    )
-    # Average across session
-    reliability_voxelwise = np.squeeze(np.nanmean(reliability_voxelwise, axis=0))
-
-    # Set negative reliability values to nan
-    reliability_voxelwise[reliability_voxelwise <= 0] = np.nan
-
-    if subject_wise:
-        # Make voxels first axis
-        reliability_voxelwise = reliability_voxelwise.T
-    corr = corr / np.sqrt(reliability_voxelwise)
-    return corr
-
-
 def plot_variability(corr_mean, filename=None, save=True, cscale=None):
     """Plot inter-individual variability and save to file"""
     # Average across subjects
@@ -176,6 +134,66 @@ def get_var(Data, Reliability):
     return Corr, Corr_norm, Rel
 
 
+def calc_variability(Data, Info, subject_wise=False):
+    T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
+
+    # Get inter-individual variability, normalize by geometric mean of reliabilities
+    Corr, Corr_norm, Rel = [], [], []
+    for d, dname in enumerate(T.name[:-1]):
+        # Loop over voxels
+        corr = []
+        corr_norm = []
+        rel = []
+        for vox in np.arange(Data[0].shape[2]):
+            data = Data[d][:, :, vox]
+            correlation = np.corrcoef(data)
+
+            # Get the reliability of each subject by correlating the first and second half
+            half1 = data[:, Info[d].half == 1]
+            half2 = data[:, Info[d].half == 2]
+            reliabilites = []
+            for sub in np.arange(half1.shape[0]):
+                reliability = np.corrcoef(half1[sub, :], half2[sub, :])[0, 1]
+                reliabilites.append(reliability)
+
+            # Set negative reliability values to nan
+            reliabilites = np.array(reliabilites)
+            reliabilites[reliabilites <= 0] = np.nan
+            rel.append(reliabilites)
+
+            # Normalize by geometric mean of reliabilities
+            if subject_wise:
+                correlation[np.diag_indices(correlation.shape[0])] = np.nan
+                noise_ceiling = np.sqrt(np.outer(reliabilites, reliabilites))
+                corr_normalised = correlation / noise_ceiling
+                # Append to list
+                corr.append(np.nanmean(correlation, axis=0))
+                corr_norm.append(np.nanmean(corr_normalised, axis=0))
+
+            else:
+                correlation = np.nanmean(
+                    correlation[np.triu_indices(correlation.shape[0], k=1)]
+                )
+                noise_ceiling = np.nanmean(
+                    np.sqrt(
+                        np.outer(reliabilites, reliabilites)[
+                            np.triu_indices(reliabilites.shape[0], k=1)
+                        ]
+                    )
+                )
+                corr_normalised = correlation / noise_ceiling
+                # Append to list
+                corr.append(correlation)
+                corr_norm.append(corr_normalised)
+
+        # Collect voxels for this dataset
+        Corr.append(np.array(corr))
+        Corr_norm.append(np.array(corr_norm))
+        Rel.append(np.array(rel))
+
+    return Corr, Corr_norm, Rel
+
+
 def variability_maps():
     T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
     # Get all task data and reliabilities
@@ -214,62 +232,6 @@ def variability_maps():
     # Don't get the upper triangle, instead set the diagonal to nan and get the average per row
     # Divide each entry by the square root of reliability of subject 1 times reliability of subject 2
     # --> That's the noise ceiling: geometric mean, the square-root of the product of their reliabilities
-    pass
-
-
-def model_variability():
-    norm = True
-    subject_wise = True
-    sym = "Asym"
-    K = 32
-    space = "MNISymC2"
-    mname = f"Models_03/Nettekoven{sym}{K}_space-{space}"
-
-    # Get individual parcellations
-    try:
-        probs_indiv = pt.load(f"{ut.model_dir}/Models/{mname}_Uhat.pt")
-        probs_info = pd.read_csv(
-            f"{ut.model_dir}/Models/{mname}_Uhat_info.tsv", sep="\t"
-        )
-    except FileNotFoundError:
-        probs_indiv, probs_info = sm.export_uhats(mname=mname)
-    probs_indiv = probs_indiv.numpy()
-
-    # Get inter-individual variability for all datasets (optional: normalize by reliability)
-    datasets = probs_info["dataset"].unique()
-    Corr = []
-    for dataset in datasets:
-        probs_dataset = probs_indiv[probs_info.dataset == dataset, :, :]
-        corr_dataset = inter_individual_variability(
-            probs_dataset, subject_wise=subject_wise
-        )
-        Corr.append(corr_dataset)
-        if norm:
-            corr_dataset = reliability_norm(
-                corr_dataset, dataset, subject_wise=subject_wise
-            )
-            filename = f"{sym}_indiv_var_{dataset}_{K}_norm_subject-{subject_wise}"
-        else:
-            filename = f"{sym}_indiv_var_{dataset}_{K}_subject-{subject_wise}"
-
-        plot_variability(corr_dataset, filename, save=True)
-
-    # Plot all variabilities as grid
-    mean_corr = np.array([np.nanmean(corr, axis=1) for corr in Corr])
-    plt.figure(figsize=(14, 8))
-    ut.plot_multi_flat(
-        mean_corr,
-        space,
-        grid=(2, 4),
-        dtype="func",
-        colorbar=True,
-        titles=probs_info["dataset"].unique(),
-        cmap="hot",
-    )
-    plt.savefig(
-        f"{figure_path}/individual_variability/{sym}_indiv_var_{K}_subject-{subject_wise}.png"
-    )
-
     pass
 
 
@@ -349,4 +311,11 @@ if __name__ == "__main__":
     #     for K in [32, 68]:
     #         mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
     #         export_uhats(mname)
-    variability_maps()
+    # variability_maps()
+    T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
+    Data, Info = [], []
+    for d, dname in enumerate(T.name[:-1]):
+        data, info, dset = ds.get_dataset(ut.base_dir, dname, atlas="MNISymC2")
+        Data.append(data)
+        Info.append(info)
+    Corr, Corr_norm, Rel = calc_variability(Data, Info, subject_wise=True)
