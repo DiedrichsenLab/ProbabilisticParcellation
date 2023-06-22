@@ -998,6 +998,8 @@ def parcel_individual(mname, subject="all", dataset=None, session=None):
 
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
+
+    # Get the data
     if subject == "all":  # get all subjects
         model_settings = {
             "Models_01": [True, True, False],
@@ -1025,14 +1027,13 @@ def parcel_individual(mname, subject="all", dataset=None, session=None):
         m.initialize(data, subj_ind=subj_ind)
 
     # Get the individual parcellation
-    m, _, _, U_indiv = m.fit_em(
-        iter=200,
-        tol=0.1,
-        fit_emission=True,
-        fit_arrangement=False,
-        first_evidence=False,
-    )
-    Uhats = m.remap_evidence(U_indiv)
+    emloglik = []
+    for e in m.emissions:
+        emloglik.append(e.Estep())
+
+    plt.imshow(np.nanmean(emloglik[0], axis=1))
+    help(pt.softmax)
+
     return Uhats
 
 
