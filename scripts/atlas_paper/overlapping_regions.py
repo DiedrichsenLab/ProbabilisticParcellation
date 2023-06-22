@@ -38,7 +38,7 @@ def inspect_region_overlap(mname='Models_03/NettekovenSym32_space-MNISymC2'):
     plt.imshow(spatial_sim)
     P.sum(axis=1)
 
-def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
+def overlap_analysis(mname='Models_03/NettekovenSym32_space-MNISymC2',
                          subj_n=[0],regions = [29,30],plot='hist'): 
     
     # Individual training dataset:
@@ -74,10 +74,10 @@ def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
     countsI = countsI / len(subj_n)
 
     # Get the average profiles for the two datsets
-    for s in subj_n:
-        avrgD = [] 
-        avrgD.append(pt.linalg.pinv(m1.emissions[0].X) @ idata[s])
-        avrgD.append(pt.linalg.pinv(m1.emissions[1].X) @ tdata[s])
+    avrgD = np.empty((2,len(subj_n)),dtype=object)
+    for s,sn in enumerate(subj_n):
+        avrgD[0,s]=(pt.linalg.pinv(m1.emissions[0].X) @ idata[sn]).numpy()
+        avrgD[1,s]=(pt.linalg.pinv(m1.emissions[1].X) @ tdata[sn]).numpy()
     
     # Prepare calculation of average alignment 
     D=pd.DataFrame()
@@ -87,15 +87,18 @@ def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
     vA=np.zeros((2,3,len(subj_n)),dtype=object)
     ind=np.zeros((2,3,len(subj_n)),dtype=object)
 
-    for s in subj_n:
+    for s,sn in enumerate(subj_n):
         for ds in range(2):
+            # 0: Purely on the data likelihood
             dprime[ds,0,s],dA[ds,0,s],ind[ds,0,s],cA[ds,0,s],vA[ds,0,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_data[s],regions)
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_data[sn],regions)
+            # 1: Based on individual parcellation
             dprime[ds,1,s],dA[ds,1,s],ind[ds,1,s],cA[ds,1,s],vA[ds,1,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_indiv[s],regions)
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_indiv[sn],regions)
+            # 2: Based on group parcellation
             dprime[ds,2,s],dA[ds,2,s],ind[ds,2,s],cA[ds,2,s],vA[ds,2,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_group,regions)
-        d={'SN':[s]*6,
+                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_group,regions)
+        d={'SN':[sn]*6,
                 'region0':[regions[0]]*6,
                 'region1':[regions[1]]*6,
                 'evaldata':[1,1,1,2,2,2],
@@ -110,11 +113,12 @@ def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
             for t in range(3):
                 dA_plot = np.concatenate(dA[ds,t,:])
                 ind_plot = np.concatenate(ind[ds,t,:])
-                ind_plot = np.concatenate(ind[ds,t,:])
                 plt.subplot(2,3,ds*3+t+1)
-                plot_alignment(dA_plot,ind_plot,'hist')
-                sb.histplot(x=dA_plot,hue=ind_plot,
-                            bins=np.linspace(-0.5,0.5,29))
+                sb.histplot(x=dA_plot, hue=ind_plot, element='step',
+                    palette='tab10',
+                    bins=np.linspace(-0.5, 0.5, 29))
+                plt.axvline(vA[ds,t,0] / 2)
+                plt.axvline(-vA[ds,t,0] / 2)
     return D 
 
 
@@ -133,12 +137,12 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
         ind (array): region assignment for each voxel
         v_cosang (float): cos-angle between the two regions
     """
-    v = V[:, regions]
+    v = V[:, regions].numpy()
     v_cosang = v[:, 0] @ v[:, 1]
 
     i = (indx == regions[0]) | (indx == regions[1])
     D = data[:, i]
-    normD = np.sqrt((D**2).sum(dim=0))
+    normD = np.sqrt((D**2).sum(axis=0))
     nD = D/normD
     
     cosang = v.T @ nD 
@@ -153,7 +157,7 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
 
     dp =(m[0]-m[1])/np.sqrt((s[0]**2+s[1]**2)/2)
 
-    return dp,dA.numpy(),indx[i].numpy(),cosang.numpy(),v_cosang.numpy()
+    return dp,dA,indx[i],cosang,v_cosang
 
 
 
@@ -183,11 +187,18 @@ def make_probmap():
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/NettekovenAsym32_space-MNISymC2'
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    
+    # mname  = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-20'
+    
     # make_probmap
     # inspect_region_overlap('Models_03/NettekovenSym32_space-MNISymC2')
     # D=individ_parcellation(mname,sn=[21],regions=[28,29],plot='hist')
-    D=individ_parcellation(mname,subj_n=[0,1],regions=[28,29],plot='hist')
+    D=overlap_analysis(mname,subj_n=np.arange(24),
+                        regions=[28,29],plot='hist')
+    plt.figure()
+    sb.barplot(data=D,x='evaldata',hue='parcel',y='dprime')
+    pass
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',
