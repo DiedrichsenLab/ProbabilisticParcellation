@@ -81,6 +81,33 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
 
     fig.suptitle(parcel)
 
+def plot_parcel_prob(parcel="D1", atlas="NettekovenSym32", 
+                     space="MNISymC2",
+                     backgroundcolor='w',
+                     bordercolor='k'):
+    patlas = nb.load(f"{atlas_dir}{atlas}_space-{space}_probseg.nii")
+    _, cmap, labels = nt.read_lut(f"{atlas_dir}{atlas}.lut")
+    pseg = suit.flatmap.vol_to_surf(patlas, stats="nanmean", space="MNISymC")
+
+    labels = labels[1:]
+    idx = np.array([l.startswith(parcel) for l in labels])
+    iidx = np.where(idx)[0]
+    p = pseg[:, idx].sum(axis=1)
+
+    suit.flatmap.plot(
+        p,
+        cscale=[0, 0.4],
+        render="matplotlib",
+        cmap="Reds",
+        new_figure=False,
+        overlay_type="func",
+        colorbar=False,
+        backgroundcolor=backgroundcolor,
+        bordercolor=bordercolor
+    )
+
+
+
 
 if __name__ == "__main__":
     plot_parcel_summary(parcel="M3")
