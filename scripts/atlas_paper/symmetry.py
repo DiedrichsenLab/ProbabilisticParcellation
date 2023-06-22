@@ -64,15 +64,18 @@ if __name__ == "__main__":
 
     # atlas = 'MNISymC2'
 
-    # var.export_uhats(mname="Models_03/NettekovenSym68_space-MNISymC2")
-    # var.export_uhats(mname="Models_03/NettekovenAsym68_space-MNISymC2")
+    var.export_uhats(mname=model_pair[0])
+    var.export_uhats(mname=model_pair[1])
 
     # load Uhats
-    # prob_a = pt.load(f'{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt')
-    # prob_b = pt.load(f'{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt')
+    prob_a = pt.load(f"{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt")
+    prob_b = pt.load(f"{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt")
 
-    # parcel_a = pt.argmax(prob_a, im=1) + 1
-    # parcel_b = pt.argmax(prob_b, dim=1) + 1
+    parcel_a = pt.argmax(prob_a, im=1) + 1
+    parcel_b = pt.argmax(prob_b, dim=1) + 1
+
+    plt.imshow(np.nanmean(prob_a, axis=1))
+    plt.imshow(np.nanmean(prob_b, axis=1))
 
     # _, cmap_reordered, labels_reordered = nt.read_lut(lut_dir +
     #                                                   'sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered.lut')
