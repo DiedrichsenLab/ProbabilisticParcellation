@@ -7,9 +7,10 @@ import numpy as np
 import torch as pt
 import matplotlib.pyplot as plt
 import seaborn as sb
-import Functional_Fusion.dataset as ds
+import Functional_Fusion.dataset as ffd
 import ProbabilisticParcellation.util as ut
 from copy import deepcopy
+import ProbabilisticParcellation.plot as ppp
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
@@ -20,11 +21,9 @@ import HierarchBayesParcel.evaluation as ev
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-
-def inspect_model_regions_68():
+def inspect_region_overlap(mname='Models_03/NettekovenSym32_space-MNISymC2'):
     """ Check for overlapping regions in 68 atlas
     """
-    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
     info, model = ut.load_batch_best(mname)
     w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
     Prob = np.array(model.arrange.marginal_prob())
@@ -32,48 +31,23 @@ def inspect_model_regions_68():
     P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
     spatial_sim = P @ P.T
 
-    D = pd.read_csv(ut.model_dir + '/Atlases/mixed_assignment_68_16.csv')
-    idx = D.parcel_orig_idx
-    plt.figure(figsize=(16, 8))
-    plt.subplot(1, 2, 1)
-    plt.imshow(w_cos_sim[idx, :][:, idx])
-    plt.subplot(1, 2, 2)
-    plt.imshow(spatial_sim[idx, :][:, idx])
-    P.sum(axis=1)
-    vol[idx]
-    pass
-
-
-def inspect_model_regions_32():
-    """ Check for overlapping regions in 32 atlas
-    """
-    mname = f'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed'
-    info, model = ut.load_batch_best(mname)
-    w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
-    Prob = np.array(model.arrange.marginal_prob())
-    vol = Prob.sum(axis=1)
-    P = Prob / np.sqrt(np.sum(Prob**2, axis=1).reshape(-1, 1))
-    spatial_sim = P @ P.T
-
-    D = pd.read_csv(ut.model_dir + '/Atlases/mixed_assignment_68_16.csv')
     plt.figure(figsize=(16, 8))
     plt.subplot(1, 2, 1)
     plt.imshow(w_cos_sim)
     plt.subplot(1, 2, 2)
     plt.imshow(spatial_sim)
     P.sum(axis=1)
-    idx = D.parcel_orig_idx
-    vol[idx]
-    pass
 
-def individ_parcellation(mname,sn=[0],regions = [29,30],plot='hist'): 
+def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
+                         subj_n=[0],regions = [29,30],plot='hist'): 
+    
     # Individual training dataset:
     info, model = ut.load_batch_best(mname)
-    idata, iinfo, ids = get_dataset(ut.base_dir, 'Mdtb', atlas='MNISymC3',
+    idata, iinfo, ids = ffd.get_dataset(ut.base_dir, 'MDTB', atlas='MNISymC2',
                                     sess=['ses-s1'], type='CondHalf')
 
     # Test data set:
-    tdata, tinfo, tds = get_dataset(ut.base_dir, 'Mdtb', atlas='MNISymC3',
+    tdata, tinfo, tds = ffd.get_dataset(ut.base_dir, 'MDTB', atlas='MNISymC2',
                                     sess=['ses-s2'], type='CondHalf')
 
     idata = pt.tensor(idata, dtype=pt.float32)
@@ -89,6 +63,7 @@ def individ_parcellation(mname,sn=[0],regions = [29,30],plot='hist'):
     emloglik = emloglik.to(pt.float32)
     Uhat, _ = m1.arrange.Estep(emloglik)
 
+    # Winner take all assignment from group, individual data, and posterior
     indx_group = pt.argmax(model.marginal_prob(), dim=0)
     indx_indiv = pt.argmax(Uhat, dim=1)
     indx_data = pt.argmax(emloglik, dim=1)
@@ -97,10 +72,10 @@ def individ_parcellation(mname,sn=[0],regions = [29,30],plot='hist'):
     uni, countsI = np.unique(indx_indiv, return_counts=True)
     countsI = countsI / 24
     D=pd.DataFrame()
-    dA=np.zeros((6,len(sn)),dtype=object)
-    ind=np.zeros((6,len(sn)),dtype=object)
+    dA=np.zeros((6,len(subj_n)),dtype=object)
+    ind=np.zeros((6,len(subj_n)),dtype=object)
 
-    for s in sn:
+    for s in subj_n:
         avrgD = [] 
         avrgD.append(pt.linalg.pinv(m1.emissions[0].X) @ idata[s])
         avrgD.append(pt.linalg.pinv(m1.emissions[1].X) @ tdata[s])
@@ -115,23 +90,23 @@ def individ_parcellation(mname,sn=[0],regions = [29,30],plot='hist'):
     plt.subplot(1, 3, 3)
     calculate_alignment(m1.emissions[0].V, avrgD, indx_group, regions, plot)
 
-        for ds in range(2):
-            i = ds*3
-            dprime[i],dA[i,s],ind[i,s],_ = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_data[s],regions)            
-            dprime[1+i],dA[1+i,s],ind[1+i,s],_= \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_indiv[s],regions)
-            dprime[2+i],dA[2+i,s],ind[2+i,s],ca= \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_group,regions)
-        d={'SN':[s]*6,
-               'region0':[regions[0]]*6,
-               'region1':[regions[1]]*6,
-               'evaldata':[1,1,1,2,2,2],
-               'parcel':['data','indiv','group','data','indiv','group'],
-               'dprime':dprime}
-        
-        D = pd.concat([D,pd.DataFrame(d)])
+    for ds in range(2):
+        i = ds*3
+        dprime[i],dA[i,s],ind[i,s],_ = \
+                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_data[s],regions)            
+        dprime[1+i],dA[1+i,s],ind[1+i,s],_= \
+                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_indiv[s],regions)
+        dprime[2+i],dA[2+i,s],ind[2+i,s],ca= \
+                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_group,regions)
+    d={'SN':[s]*6,
+            'region0':[regions[0]]*6,
+            'region1':[regions[1]]*6,
+            'evaldata':[1,1,1,2,2,2],
+            'parcel':['data','indiv','group','data','indiv','group'],
+            'dprime':dprime}
     
+    D = pd.concat([D,pd.DataFrame(d)])
+
     if plot is not None: 
         plt.figure(figsize=(17,12))    
         for i in range(6):
@@ -178,12 +153,22 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
 
     return dp,dA,indx[i],cos_ang
 
+def make_probmap():
+    plt.figure(figsize=(5, 5))
+    ppp.plot_parcel_prob('S2','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
+    plt.savefig('Prob_S2.png',bbox_inches='tight')
+    plt.figure(figsize=(5, 5))
+    ppp.plot_parcel_prob('S3','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
+    plt.savefig('Prob_S3.png',bbox_inches='tight')
+
+
 
 if __name__ == "__main__":
-    inspect_model_regions_32()
     mname = 'Models_03/NettekovenAsym32_space-MNISymC2'
+    # make_probmap
+    # inspect_region_overlap('Models_03/NettekovenSym32_space-MNISymC2')
     # D=individ_parcellation(mname,sn=[21],regions=[28,29],plot='hist')
-    D=individ_parcellation(mname,sn=np.arange(24),regions=[28,29],plot='hist')
+    D=individ_parcellation(mname,subj_n=[0,1],regions=[28,29],plot='hist')
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',
