@@ -936,6 +936,7 @@ def ARI_voxelwise(U_1, U_2, adjusted=True):
 
 def compare_probs(prob_a, prob_b, method="corr"):
     """Compare two probability maps.
+    Folds the left and right side of the probability maps and calculates correlation between summed probability maps.
     Args:
         prob_a: Probability map a
         prob_b: Probability map b
@@ -1054,15 +1055,19 @@ def compare_voxelwise(
         individual
     ):  # Calculate method-specific comparison for each individual subject, then average
         # Get individual parcellation
-        prob_a = get_individual_parcellation(mname_A)
-        prob_b = get_individual_parcellation(mname_B)
-
-    # Get group parcellation
-    parcel_a = pt.argmax(prob_a, dim=1)
-    parcel_b = pt.argmax(prob_b, dim=1)
+        try:
+            prob_a = pt.load(f"{ut.model_dir}/Models/{mname_A}_Uhat.pt")
+            prob_b = pt.load(f"{ut.model_dir}/Models/{mname_B}_Uhat.pt")
+        except:
+            prob_a = get_individual_parcellation(mname_A)
+            prob_b = get_individual_parcellation(mname_B)
+        atlas = mname_A.split("space-")[1]
 
     # ------ Calculate comparison ------
     if method == "ari" or method == "ri" or method == "match":
+        # Get group parcellation
+        parcel_a = pt.argmax(prob_a, dim=1)
+        parcel_b = pt.argmax(prob_b, dim=1)
         if method == "ari":
             comparison = ARI_voxelwise(parcel_a, parcel_b)
         elif method == "ri":

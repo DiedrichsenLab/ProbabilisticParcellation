@@ -58,8 +58,8 @@ if __name__ == "__main__":
     #               'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem_reordered']
 
     model_pair = [
-        "Models_03/NettekovenSym32_space-MNISymC2",
-        "Models_03/NettekovenAsym32_space-MNISymC2",
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
     ]
 
     # atlas = 'MNISymC2'
@@ -87,16 +87,16 @@ if __name__ == "__main__":
     # Save corr as numpy array
     # np.save(f'{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr.npy', corr)
 
-    comp, comp_group = ev.compare_voxelwise(
-        model_pair[0],
-        model_pair[1],
-        plot=False,
-        method="corr",
-        save_nifti=False,
-        lim=(0, 1),
-        individual=True,
-    )
-    np.save(f"{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_indiv.npy", comp)
+    # comp, comp_group = ev.compare_voxelwise(
+    #     model_pair[0],
+    #     model_pair[1],
+    #     plot=False,
+    #     method="corr",
+    #     save_nifti=True,
+    #     lim=(0, 1),
+    #     individual=True,
+    # )
+    # np.save(f"{ut.model_dir}/Models/{model_pair[0]}_asym_sym_corr_indiv.npy", comp)
 
     comp = ev.compare_voxelwise(
         model_pair[0],

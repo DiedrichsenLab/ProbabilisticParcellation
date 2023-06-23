@@ -51,6 +51,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + "/Atlases")
     probseg = suit_atlas.data_to_nifti(data)
     parcel = np.argmax(data, axis=0) + 1
+    parcel = parcel.astype(np.int8)
     dseg = suit_atlas.data_to_nifti(parcel)
 
     # Figure out correct mapping space
