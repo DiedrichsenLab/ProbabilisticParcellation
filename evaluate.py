@@ -1027,14 +1027,8 @@ def get_individual_parcellation(mname, subject="all", dataset=None, session=None
         m.initialize(data, subj_ind=subj_ind)
 
     # Get the individual parcellation
-    Uhats = []
-    for em in m.emissions:
-        emloglik = em.Estep()
-        emloglik = emloglik.to(pt.float32)
-        Uhat, _ = m.arrange.Estep(emloglik)
-        Uhats.append(Uhat)
-
-    return Uhats
+    Uhat, _ = m.Estep()
+    return Uhat
 
 
 def compare_voxelwise(

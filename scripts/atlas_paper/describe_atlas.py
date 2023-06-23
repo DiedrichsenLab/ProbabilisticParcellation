@@ -55,6 +55,8 @@ def reorder_selected():
         # 'Models_03/sym_De_space-MNISymC3_K-68',
         # 'Models_03/sym_So_space-MNISymC3_K-68',
         # 'Models_03/sym_Hc_space-MNISymC3_K-68',
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
         # "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
         "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
     ]
