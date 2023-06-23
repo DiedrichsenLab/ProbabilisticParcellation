@@ -33,10 +33,11 @@ def inspect_region_overlap(mname='Models_03/NettekovenSym32_space-MNISymC2'):
 
     plt.figure(figsize=(16, 8))
     plt.subplot(1, 2, 1)
-    plt.imshow(w_cos_sim)
+    plt.imshow(cos_sim[0:2].mean(axis=0))
+    plt.title('functional similarity (MDTB)')
     plt.subplot(1, 2, 2)
-    plt.imshow(spatial_sim)
-    P.sum(axis=1)
+    plt.imshow(spatial_sim[0:16,:][:,0:16])
+    plt.title('Spatial overlap')
 
 def overlap_analysis(mname='Models_03/NettekovenSym32_space-MNISymC2',
                          subj_n=[0],regions = [29,30],plot='hist'): 
@@ -63,21 +64,23 @@ def overlap_analysis(mname='Models_03/NettekovenSym32_space-MNISymC2',
     emloglik = emloglik.to(pt.float32)
     Uhat, _ = m1.arrange.Estep(emloglik)
 
-    # Winner take all assignment from group, individual data, and posterior
-    indx_group = pt.argmax(model.marginal_prob(), dim=0)
-    indx_indiv = pt.argmax(Uhat, dim=1)
-    indx_data = pt.argmax(emloglik, dim=1)
+    # Select the subset of voxels that are high in either region 
+    # in the group parcellation
+    prob = model.marginal_prob()
+    indx_group = pt.argmax(prob, dim=0).numpy()
+    ivox = np.where((indx_group == regions[0]) | (indx_group == regions[1]))[0]
 
-    # get counts for each region
-    uni, countsG = np.unique(indx_group, return_counts=True)
-    uni, countsI = np.unique(indx_indiv, return_counts=True)
-    countsI = countsI / len(subj_n)
+    indx_group = pt.argmax(prob[regions,:][:,ivox],dim=0).numpy()
+    indx_indiv = pt.argmax(Uhat[:,regions,:][:,:,ivox], dim=1).numpy()
+    indx_data = pt.argmax(emloglik[:,regions,:][:,:,ivox], dim=1).numpy()
 
     # Get the average profiles for the two datsets
     avrgD = np.empty((2,len(subj_n)),dtype=object)
     for s,sn in enumerate(subj_n):
-        avrgD[0,s]=(pt.linalg.pinv(m1.emissions[0].X) @ idata[sn]).numpy()
-        avrgD[1,s]=(pt.linalg.pinv(m1.emissions[1].X) @ tdata[sn]).numpy()
+        avrgD[0,s]=(pt.linalg.pinv(m1.emissions[0].X) @ 
+                    idata[sn,:,ivox]).numpy()
+        avrgD[1,s]=(pt.linalg.pinv(m1.emissions[1].X) @ 
+                    tdata[sn,:,ivox]).numpy()
     
     # Prepare calculation of average alignment 
     D=pd.DataFrame()
@@ -90,14 +93,23 @@ def overlap_analysis(mname='Models_03/NettekovenSym32_space-MNISymC2',
     for s,sn in enumerate(subj_n):
         for ds in range(2):
             # 0: Purely on the data likelihood
-            dprime[ds,0,s],dA[ds,0,s],ind[ds,0,s],cA[ds,0,s],vA[ds,0,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_data[sn],regions)
+            dprime[ds,0,s],dA[ds,0,s],cA[ds,0,s],vA[ds,0,s] = \
+                    calculate_alignment(m1.emissions[ds].V[:,regions].numpy(),
+                                        avrgD[ds,s],
+                                        indx_data[sn])
+            ind[ds,0,s] = indx_data[sn]
             # 1: Based on individual parcellation
-            dprime[ds,1,s],dA[ds,1,s],ind[ds,1,s],cA[ds,1,s],vA[ds,1,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_indiv[sn],regions)
+            dprime[ds,1,s],dA[ds,1,s],cA[ds,1,s],vA[ds,1,s] = \
+                    calculate_alignment(m1.emissions[ds].V[:,regions].numpy(),
+                                        avrgD[ds,s],
+                                        indx_indiv[sn])
+            ind[ds,1,s] = indx_indiv[sn]
             # 2: Based on group parcellation
-            dprime[ds,2,s],dA[ds,2,s],ind[ds,2,s],cA[ds,2,s],vA[ds,2,s] = \
-                    calculate_alignment(m1.emissions[ds].V,avrgD[ds,s],indx_group,regions)
+            dprime[ds,2,s],dA[ds,2,s],cA[ds,2,s],vA[ds,2,s] = \
+                    calculate_alignment(m1.emissions[ds].V[:,regions].numpy(),
+                                        avrgD[ds,s],
+                                        indx_group)
+            ind[ds,2,s] = indx_group
         d={'SN':[sn]*6,
                 'region0':[regions[0]]*6,
                 'region1':[regions[1]]*6,
@@ -107,22 +119,10 @@ def overlap_analysis(mname='Models_03/NettekovenSym32_space-MNISymC2',
     
         D = pd.concat([D,pd.DataFrame(d)])
 
-    if plot is not None: 
-        plt.figure(figsize=(17,12))    
-        for ds in range(2):
-            for t in range(3):
-                dA_plot = np.concatenate(dA[ds,t,:])
-                ind_plot = np.concatenate(ind[ds,t,:])
-                plt.subplot(2,3,ds*3+t+1)
-                sb.histplot(x=dA_plot, hue=ind_plot, element='step',
-                    palette='tab10',
-                    bins=np.linspace(-0.5, 0.5, 29))
-                plt.axvline(vA[ds,t,0] / 2)
-                plt.axvline(-vA[ds,t,0] / 2)
-    return D 
+    return D,dA,cA,vA,ind
 
 
-def calculate_alignment(V, data, indx, regions, plot='scatter'):
+def calculate_alignment(V, data, indx, plot='scatter'):
     """ Calculate the cosine angle between each voxels profile and multiple different V-vectors
     Args:
         V (array): V-matrix
@@ -137,27 +137,24 @@ def calculate_alignment(V, data, indx, regions, plot='scatter'):
         ind (array): region assignment for each voxel
         v_cosang (float): cos-angle between the two regions
     """
-    v = V[:, regions].numpy()
-    v_cosang = v[:, 0] @ v[:, 1]
+    v_cosang = V[:, 0] @ V[:, 1]
 
-    i = (indx == regions[0]) | (indx == regions[1])
-    D = data[:, i]
-    normD = np.sqrt((D**2).sum(axis=0))
-    nD = D/normD
+    normD = np.sqrt((data**2).sum(axis=0))
+    nD = data/normD
     
-    cosang = v.T @ nD 
+    cosang = V.T @ nD 
     dA =cosang[0]-cosang[1] # Difference in angle
     
     m = np.zeros((2,))
     s = np.zeros((2,))
 
     for r in range(2):
-        m[r] = np.nanmean(dA[indx[i]==regions[r]])
-        s[r] = np.nanstd(dA[indx[i]==regions[r]])
+        m[r] = np.nanmean(dA[indx==r])
+        s[r] = np.nanstd(dA[indx==r])
 
     dp =(m[0]-m[1])/np.sqrt((s[0]**2+s[1]**2)/2)
 
-    return dp,dA,indx[i],cosang,v_cosang
+    return dp,dA,cosang,v_cosang
 
 
 
