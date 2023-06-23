@@ -21,9 +21,9 @@ import HierarchBayesParcel.evaluation as ev
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-def inspect_region_overlap(mname='Models_03/NettekovenSym32_space-MNISymC2'):
-    """ Check for overlapping regions in 68 atlas
-    """
+
+def inspect_region_overlap(mname="Models_03/NettekovenSym32_space-MNISymC2"):
+    """Check for overlapping regions in 68 atlas"""
     info, model = ut.load_batch_best(mname)
     w_cos_sim, cos_sim, _ = cl.parcel_similarity(model, plot=False, sym=False)
     Prob = np.array(model.arrange.marginal_prob())
@@ -38,17 +38,23 @@ def inspect_region_overlap(mname='Models_03/NettekovenSym32_space-MNISymC2'):
     plt.imshow(spatial_sim)
     P.sum(axis=1)
 
-def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
-                         subj_n=[0],regions = [29,30],plot='hist'): 
-    
+
+def individ_parcellation(
+    mname="Models_03/NettekovenSym32_space-MNISymC2",
+    subj_n=[0],
+    regions=[29, 30],
+    plot="hist",
+):
     # Individual training dataset:
     info, model = ut.load_batch_best(mname)
-    idata, iinfo, ids = ffd.get_dataset(ut.base_dir, 'MDTB', atlas='MNISymC2',
-                                    sess=['ses-s1'], type='CondHalf')
+    idata, iinfo, ids = ffd.get_dataset(
+        ut.base_dir, "MDTB", atlas="MNISymC2", sess=["ses-s1"], type="CondHalf"
+    )
 
     # Test data set:
-    tdata, tinfo, tds = ffd.get_dataset(ut.base_dir, 'MDTB', atlas='MNISymC2',
-                                    sess=['ses-s2'], type='CondHalf')
+    tdata, tinfo, tds = ffd.get_dataset(
+        ut.base_dir, "MDTB", atlas="MNISymC2", sess=["ses-s2"], type="CondHalf"
+    )
 
     idata = pt.tensor(idata, dtype=pt.float32)
     tdata = pt.tensor(tdata, dtype=pt.float32)
@@ -71,104 +77,111 @@ def individ_parcellation(mname='Models_03/NettekovenSym32_space-MNISymC2',
     uni, countsG = np.unique(indx_group, return_counts=True)
     uni, countsI = np.unique(indx_indiv, return_counts=True)
     countsI = countsI / 24
-    D=pd.DataFrame()
-    dA=np.zeros((6,len(subj_n)),dtype=object)
-    ind=np.zeros((6,len(subj_n)),dtype=object)
+    D = pd.DataFrame()
+    dA = np.zeros((6, len(subj_n)), dtype=object)
+    ind = np.zeros((6, len(subj_n)), dtype=object)
 
     for s in subj_n:
-        avrgD = [] 
+        avrgD = []
         avrgD.append(pt.linalg.pinv(m1.emissions[0].X) @ idata[s])
         avrgD.append(pt.linalg.pinv(m1.emissions[1].X) @ tdata[s])
-    
+
         dprime = np.zeros((6,))
     plt.figure(figsize=(17, 6))
     plt.subplot(1, 3, 1)
     calculate_alignment(m1.emissions[0].V, avrgD, indx_data[sn], regions, plot)
     plt.subplot(1, 3, 2)
-    calculate_alignment(m1.emissions[0].V, avrgD,
-                        indx_indiv[sn], regions, plot)
+    calculate_alignment(m1.emissions[0].V, avrgD, indx_indiv[sn], regions, plot)
     plt.subplot(1, 3, 3)
     calculate_alignment(m1.emissions[0].V, avrgD, indx_group, regions, plot)
 
     for ds in range(2):
-        i = ds*3
-        dprime[i],dA[i,s],ind[i,s],_ = \
-                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_data[s],regions)            
-        dprime[1+i],dA[1+i,s],ind[1+i,s],_= \
-                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_indiv[s],regions)
-        dprime[2+i],dA[2+i,s],ind[2+i,s],ca= \
-                calculate_alignment(m1.emissions[ds].V,avrgD[ds],indx_group,regions)
-    d={'SN':[s]*6,
-            'region0':[regions[0]]*6,
-            'region1':[regions[1]]*6,
-            'evaldata':[1,1,1,2,2,2],
-            'parcel':['data','indiv','group','data','indiv','group'],
-            'dprime':dprime}
-    
-    D = pd.concat([D,pd.DataFrame(d)])
+        i = ds * 3
+        dprime[i], dA[i, s], ind[i, s], _ = calculate_alignment(
+            m1.emissions[ds].V, avrgD[ds], indx_data[s], regions
+        )
+        dprime[1 + i], dA[1 + i, s], ind[1 + i, s], _ = calculate_alignment(
+            m1.emissions[ds].V, avrgD[ds], indx_indiv[s], regions
+        )
+        dprime[2 + i], dA[2 + i, s], ind[2 + i, s], ca = calculate_alignment(
+            m1.emissions[ds].V, avrgD[ds], indx_group, regions
+        )
+    d = {
+        "SN": [s] * 6,
+        "region0": [regions[0]] * 6,
+        "region1": [regions[1]] * 6,
+        "evaldata": [1, 1, 1, 2, 2, 2],
+        "parcel": ["data", "indiv", "group", "data", "indiv", "group"],
+        "dprime": dprime,
+    }
 
-    if plot is not None: 
-        plt.figure(figsize=(17,12))    
+    D = pd.concat([D, pd.DataFrame(d)])
+
+    if plot is not None:
+        plt.figure(figsize=(17, 12))
         for i in range(6):
-            dA_plot = np.concatenate(dA[i,:])
-            ind_plot = np.concatenate(ind[i,:])
-            plt.subplot(2,3,i+1)
-            sb.histplot(x=dA_plot,hue=ind_plot,bins=np.linspace(-0.5,0.5,29))
-    return D 
+            dA_plot = np.concatenate(dA[i, :])
+            ind_plot = np.concatenate(ind[i, :])
+            plt.subplot(2, 3, i + 1)
+            sb.histplot(x=dA_plot, hue=ind_plot, bins=np.linspace(-0.5, 0.5, 29))
+    return D
 
 
-def calculate_alignment(V, data, indx, regions, plot='scatter'):
+def calculate_alignment(V, data, indx, regions, plot="scatter"):
     v = V[:, regions]
     cos_ang = v[:, 0] @ v[:, 1]
 
     i = (indx == regions[0]) | (indx == regions[1])
     D = data[:, i]
     normD = np.sqrt((D**2).sum(dim=0))
-    nD = D/normD
-    
-    angle = v.T @ nD 
-    dA =angle[0]-angle[1] # Difference in angle
-    
+    nD = D / normD
+
+    angle = v.T @ nD
+    dA = angle[0] - angle[1]  # Difference in angle
+
     m = np.zeros((2,))
     s = np.zeros((2,))
 
     for r in range(2):
-        m[r] = np.nanmean(dA[indx[i]==regions[r]])
-        s[r] = np.nanstd(dA[indx[i]==regions[r]])
+        m[r] = np.nanmean(dA[indx[i] == regions[r]])
+        s[r] = np.nanstd(dA[indx[i] == regions[r]])
 
-    dp =(m[0]-m[1])/np.sqrt((s[0]**2+s[1]**2)/2)
+    dp = (m[0] - m[1]) / np.sqrt((s[0] ** 2 + s[1] ** 2) / 2)
 
-    if plot == 'scatter':
-        sb.scatterplot(dA, (angle[0] + angle[1]) / 2,
-                       hue=indx[i], palette='tab10')
+    if plot == "scatter":
+        sb.scatterplot(dA, (angle[0] + angle[1]) / 2, hue=indx[i], palette="tab10")
         plt.axvline(cos_ang / 2)
         plt.axvline(-cos_ang / 2)
-    elif plot == 'hist':
-        sb.histplot(x=dA, hue=indx[i], element='step',
-                    palette='tab10',
-                    bins=np.linspace(-0.5, 0.5, 29))
+    elif plot == "hist":
+        sb.histplot(
+            x=dA,
+            hue=indx[i],
+            element="step",
+            palette="tab10",
+            bins=np.linspace(-0.5, 0.5, 29),
+        )
         plt.axvline(cos_ang / 2)
         plt.axvline(-cos_ang / 2)
     pass
 
-    return dp,dA,indx[i],cos_ang
+    return dp, dA, indx[i], cos_ang
+
 
 def make_probmap():
     plt.figure(figsize=(5, 5))
-    ppp.plot_parcel_prob('S2','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
-    plt.savefig('Prob_S2.png',bbox_inches='tight')
+    ppp.plot_parcel_prob("S2", "NettekovenSym32", space="MNISymC2", backgroundcolor="w")
+    plt.savefig("Prob_S2.png", bbox_inches="tight")
     plt.figure(figsize=(5, 5))
-    ppp.plot_parcel_prob('S3','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
-    plt.savefig('Prob_S3.png',bbox_inches='tight')
-
+    ppp.plot_parcel_prob("S3", "NettekovenSym32", space="MNISymC2", backgroundcolor="w")
+    plt.savefig("Prob_S3.png", bbox_inches="tight")
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/NettekovenAsym32_space-MNISymC2'
+    mname = "Models_03/NettekovenSym32_space-MNISymC2"
     # make_probmap
     # inspect_region_overlap('Models_03/NettekovenSym32_space-MNISymC2')
     # D=individ_parcellation(mname,sn=[21],regions=[28,29],plot='hist')
-    D=individ_parcellation(mname,subj_n=[0,1],regions=[28,29],plot='hist')
+    D = individ_parcellation(mname, subj_n=[0, 1], regions=[28, 29], plot="hist")
     # make_NettekovenSym68c32()
     # profile_NettekovenSym68c32()
     # ea.resample_atlas('NettekovenSym68c32',

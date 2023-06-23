@@ -55,10 +55,11 @@ def reorder_selected():
         # 'Models_03/sym_De_space-MNISymC3_K-68',
         # 'Models_03/sym_So_space-MNISymC3_K-68',
         # 'Models_03/sym_Hc_space-MNISymC3_K-68',
-        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
+        # "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
     ]
 
-    f_assignment = "mixed_assignment_68_16.csv"
+    f_assignment = "mixed_assignment_68_16_4.csv"
     for mname in mnames:
         symmetry = mname.split("/")[1].split("_")[0]
         if symmetry == "sym":
@@ -66,7 +67,11 @@ def reorder_selected():
         else:
             sym = False
         model_reordered = ea.reorder_model(
-            mname, sym=sym, assignment=f_assignment, save_model=True
+            mname,
+            sym=sym,
+            assignment=f_assignment,
+            original_idx="parcel_med_idx_5Domains",
+            save_model=True,
         )
 
 
@@ -325,7 +330,7 @@ if __name__ == "__main__":
     # features = fp.cognitive_features(mname)
 
     # # --- Reorder selected models according to our assignment ---
-    # reorder_selected()
+    reorder_selected()
     # # --- Export asymmetric model fitted from symmetric model ---
     export_selected()
 

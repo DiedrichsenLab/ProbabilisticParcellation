@@ -987,7 +987,7 @@ def compare_probs(prob_a, prob_b, method="corr"):
     return comparison
 
 
-def parcel_individual(mname, subject="all", dataset=None, session=None):
+def get_individual_parcellation(mname, subject="all", dataset=None, session=None):
     """Calculate individual parcel maps for a model.
     Args:
         model_a: Model
@@ -1027,12 +1027,12 @@ def parcel_individual(mname, subject="all", dataset=None, session=None):
         m.initialize(data, subj_ind=subj_ind)
 
     # Get the individual parcellation
-    emloglik = []
-    for e in m.emissions:
-        emloglik.append(e.Estep())
-
-    plt.imshow(np.nanmean(emloglik[0], axis=1))
-    help(pt.softmax)
+    Uhats = []
+    for em in m.emissions:
+        emloglik = em.Estep()
+        emloglik = emloglik.to(pt.float32)
+        Uhat, _ = m.arrange.Estep(emloglik)
+        Uhats.append(Uhat)
 
     return Uhats
 
@@ -1060,8 +1060,8 @@ def compare_voxelwise(
         individual
     ):  # Calculate method-specific comparison for each individual subject, then average
         # Get individual parcellation
-        prob_a = parcel_individual(mname_A)
-        prob_b = parcel_individual(mname_B)
+        prob_a = get_individual_parcellation(mname_A)
+        prob_b = get_individual_parcellation(mname_B)
 
     # Get group parcellation
     parcel_a = pt.argmax(prob_a, dim=1)
