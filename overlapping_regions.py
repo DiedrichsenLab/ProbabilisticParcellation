@@ -167,19 +167,10 @@ def plot_alignment(dA,indx,cosang,v_cosang,plot='scatter'):
     elif plot == 'hist':
         sb.histplot(x=dA, hue=indx, element='step',
                     palette='tab10',
-                    bins=np.linspace(-0.5, 0.5, 29))
+                    bins=np.linspace(-0.7, 0.7, 40))
         plt.axvline(v_cosang / 2)
         plt.axvline(-v_cosang / 2)
     pass
-
-
-def make_probmap():
-    plt.figure(figsize=(5, 5))
-    ppp.plot_parcel_prob('S2','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
-    plt.savefig('Prob_S2.png',bbox_inches='tight')
-    plt.figure(figsize=(5, 5))
-    ppp.plot_parcel_prob('S3','NettekovenSym32',space='MNISymC2',backgroundcolor='w')
-    plt.savefig('Prob_S3.png',bbox_inches='tight')
 
 
 
