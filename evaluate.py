@@ -1090,8 +1090,10 @@ def compare_voxelwise(
         comp_data = suit_atlas.data_to_nifti(comparison_group)
 
         save_dir = f"{ut.model_dir}/Models/Evaluation/nettekoven_68/sym_vs_asym//"
-        fname = f'comparison-{method}_{mname_A.split("/")[1]}_VS_{mname_B.split("/")[1]}.nii'
-        nb.save(comp_data, save_dir + fname)
+        fname = f'comparison-{method}_{mname_A.split("/")[1]}_VS_{mname_B.split("/")[1]}'
+        if individual:
+            fname = f"{fname}_indiv"
+        nb.save(comp_data, save_dir + fname + ".nii")
 
         print(f"Saved {method} image {fname}.")
 

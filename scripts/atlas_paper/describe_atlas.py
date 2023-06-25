@@ -107,7 +107,7 @@ def export(mname, sym=False):
         _, cmap_sym, _ = nt.read_lut(
             ut.model_dir + "/Atlases/" + "NettekovenSym32_space-MNISymC2.lut"
         )
-        cmap_sym = ListedColormap(cmap_sym[1:])
+        cmap_sym = ListedColormap(cmap_sym)
 
     else:
         labels = assignment["parcel_fine"]
@@ -115,7 +115,7 @@ def export(mname, sym=False):
         _, cmap_sym, _ = nt.read_lut(
             ut.model_dir + "/Atlases/" + "NettekovenSym68_space-MNISymC2.lut"
         )
-        cmap_sym = ListedColormap(cmap_sym[1:])
+        cmap_sym = ListedColormap(cmap_sym)
 
     # Get Prob
     info, model = ut.load_batch_best(mname)
