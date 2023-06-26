@@ -365,25 +365,35 @@ if __name__ == "__main__":
     # df_assignment = pd.read_csv(
     #     ut.model_dir + '/Atlases/' + '/' + f_assignment)
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # f_assignment = 'mixed_assignment_68_16.csv'
-    # df_assignment = pd.read_csv(
-    #     ut.model_dir + '/Atlases/' + '/' + f_assignment)
+    mname = "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68"
+    f_assignment = "mixed_assignment_68_16.csv"
+    df_assignment = pd.read_csv(ut.model_dir + "/Atlases/" + "/archive/" + f_assignment)
 
     # mapping, labels = mixed_clustering(mname, df_assignment)
 
-    # merge_clusters(ks=[32], space='MNISymC3')
+    merge_clusters(ks=[32], space="MNISymC3")
     # export_merged()
     # export_orig_68()
 
     # --- Export merged models ---
 
+    model_names = [
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
+    ]
     # model_names = [
-    #     'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed']
+    #     "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed"
+    # ]
+    # wrong models
+    # model_names = [
+    #     "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed"
+    # ]
+    # wrong models
+    # model_names = ["Models_03/NettekovenAsym32_space-MNISymC2"]
+    info, model = ut.load_batch_best(model_names[0])
 
     # for model_name in model_names:
-    #     # --- Export merged model ---
-    #     export_model_merged(model_name)
+    # --- Export merged model ---
+    # export_model_merged(model_name)
 
     # --- Reorder action network ---
     model_names = [

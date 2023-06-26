@@ -20,6 +20,7 @@ import logging
 import pickle
 import nitools as nt
 
+
 def save_cortex_cifti(fname):
     """Exports a cortical model as a surface-based CIFTI label file.
     Args:
@@ -50,6 +51,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     suit_atlas, _ = am.get_atlas(atlas, ut.base_dir + "/Atlases")
     probseg = suit_atlas.data_to_nifti(data)
     parcel = np.argmax(data, axis=0) + 1
+    parcel = parcel.astype(np.int8)
     dseg = suit_atlas.data_to_nifti(parcel)
 
     # Figure out correct mapping space
@@ -78,7 +80,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     print(f"Exported {base_name}.")
 
 
-def renormalize_probseg(probseg,mask):
+def renormalize_probseg(probseg, mask):
     """Renormalizes a probsegmentation file
     after resampling, so that the probabilies add up to 1
 
@@ -93,10 +95,10 @@ def renormalize_probseg(probseg,mask):
     xs = np.sum(X, axis=3)
     X = X / np.expand_dims(xs, 3)
     maskX = mask.get_fdata()
-    X[maskX==0] = np.nan
+    X[maskX == 0] = np.nan
     probseg_img = nb.Nifti1Image(X, probseg.affine)
     parcel = np.argmax(X, axis=3) + 1
-    parcel[maskX==0] = 0
+    parcel[maskX == 0] = 0
     dseg_img = nb.Nifti1Image(parcel.astype(np.int8), probseg.affine)
     dseg_img.set_data_dtype("int8")
     # dseg_img.header.set_intent(1002,(),"")
@@ -111,9 +113,9 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
     src_dir = ut.model_dir + "/Atlases/"
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
     srcs_dir = ut.base_dir + "/Atlases/" + ainf["dir"]
-    # Load and set NaNs to 0 
+    # Load and set NaNs to 0
     nii_atlas = nb.load(src_dir + f"/{fname}_space-{atlas}_probseg.nii")
-    X=np.nan_to_num(nii_atlas.get_fdata())
+    X = np.nan_to_num(nii_atlas.get_fdata())
     nii_atlasf = nb.Nifti1Image(X, nii_atlas.affine, nii_atlas.header)
     # Reslice to 1mm MNI
     print("normalizing")
@@ -123,8 +125,8 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
             srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii"
         )
         nii_res = nt.deform_image(nii_atlasf, deform, 1)
-        # Get target space mask: 
-        mname = f'tpl-{target_space}_res-1_gmcmask.nii' 
+        # Get target space mask:
+        mname = f"tpl-{target_space}_res-1_gmcmask.nii"
         nii_mask = nb.load(targ_dir + "/" + mname)
     else:
         # Make new shape
@@ -133,7 +135,7 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
         nii_mask = nb.load(targ_dir + "/" + mname)
         shap = nii_mask.shape + nii_atlas.shape[3:]
         nii_res = ns.resample_from_to(nii_atlasf, (shap, nii_mask.affine), 1)
-    nii, dnii = renormalize_probseg(nii_res,nii_mask)
+    nii, dnii = renormalize_probseg(nii_res, nii_mask)
     print("saving")
     nb.save(nii, targ_dir + f"/atl-{fname}_space-{target_space}_probseg.nii")
     nb.save(dnii, targ_dir + f"/atl-{fname}_space-{target_space}_dseg.nii")
@@ -201,7 +203,7 @@ def reorder_model(
 
     # Info
     new_info = deepcopy(info)
-    new_info["ordered_by"] = assignment
+    new_info["ordered_by"] = original_idx
     new_info = new_info.to_frame().T
 
     # Save the model

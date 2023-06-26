@@ -55,10 +55,13 @@ def reorder_selected():
         # 'Models_03/sym_De_space-MNISymC3_K-68',
         # 'Models_03/sym_So_space-MNISymC3_K-68',
         # 'Models_03/sym_Hc_space-MNISymC3_K-68',
-        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
+        # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
+        # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
+        # "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
     ]
 
-    f_assignment = "mixed_assignment_68_16.csv"
+    f_assignment = "mixed_assignment_68_16_4.csv"
     for mname in mnames:
         symmetry = mname.split("/")[1].split("_")[0]
         if symmetry == "sym":
@@ -66,54 +69,61 @@ def reorder_selected():
         else:
             sym = False
         model_reordered = ea.reorder_model(
-            mname, sym=sym, assignment=f_assignment, save_model=True
+            mname,
+            sym=sym,
+            assignment=f_assignment,
+            original_idx="parcel_med_idx_5Domains",
+            save_model=True,
         )
 
 
 def export_selected():
     mnames = [
-        "Models_03/NettekovenSym68_space-MNISymC2_reordered",
-        "Models_03/NettekovenAsym68_space-MNISymC2_reordered",
-        "Models_03/NettekovenSym32_space-MNISymC2_reordered",
-        "Models_03/NettekovenAsym32_space-MNISymC2_reordered",
+        # "Models_03/NettekovenSym68_space-MNISymC2_reordered",
+        # "Models_03/NettekovenAsym68_space-MNISymC2_reordered",
+        # "Models_03/NettekovenSym32_space-MNISymC2_reordered",
+        "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
     for mname in mnames:
         export(mname)
 
 
 def export(mname, sym=False):
+    if "asym" in mname.lower():
+        symmetry = "asym"
+    else:
+        symmetry = "sym"
     space = mname.split("space-")[1].split("_")[0]
-    symmetry = mname.split("/")[1].split("_")[0]
-    if symmetry == "sym":
-        sym = True
-    f_assignment = "mixed_assignment_68_16.csv"
+    # symmetry = mname.split("/")[1].split("_")[0]
+    f_assignment = "mixed_assignment_68_16_4.csv"
 
     # Get assigned labels & clusters
     assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{f_assignment}")
 
-    labels = assignment["parcel_fine"]
-    cluster_names, clusters = np.unique(assignment["domain"], return_inverse=True)
-    clusters = clusters + 1
-    clusters = np.concatenate([clusters, clusters])
+    if "32" in mname:
+        labels = assignment["parcel_medium"].unique()
+        labels = [label + "L" for label in labels] + [label + "R" for label in labels]
+        # Get colour map
+        _, cmap_sym, _ = nt.read_lut(
+            ut.model_dir + "/Atlases/" + "NettekovenSym32_space-MNISymC2.lut"
+        )
+        cmap_sym = ListedColormap(cmap_sym)
 
-    # Extend symmetric labels to both hemispheres
-    labels_left = labels + "L"
-    labels_right = labels + "R"
-    labels = ["0"] + labels_left.tolist() + labels_right.tolist()
+    else:
+        labels = assignment["parcel_fine"]
+        labels = [label + "L" for label in labels] + [label + "R" for label in labels]
+        _, cmap_sym, _ = nt.read_lut(
+            ut.model_dir + "/Atlases/" + "NettekovenSym68_space-MNISymC2.lut"
+        )
+        cmap_sym = ListedColormap(cmap_sym)
 
-    Prob, parcel, atlas, labels, cmap = ea.colour_parcel(
-        mname, labels=labels, clusters=clusters
-    )
-
-    # Get colour map from symmetric 68 model
-    _, cmap_sym, _ = nt.read_lut(
-        ut.model_dir + "/Atlases/" + f"sym_MdPoNiIbWmDeSo_space-{space}_K-68" + ".lut"
-    )
-    cmap_sym = ListedColormap(cmap_sym)
+    # Get Prob
+    info, model = ut.load_batch_best(mname)
+    Prob = model.marginal_prob().numpy().astype("float32")
 
     ea.export_map(
         Prob,
-        atlas.name,
+        space,
         cmap_sym,
         labels,
         f'{ut.model_dir}/Atlases/{mname.split("/")[1]}',

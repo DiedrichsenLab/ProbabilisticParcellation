@@ -15,7 +15,6 @@ import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
-import ProbabilisticParcellation.scripts.atlas_paper.symmetry as sm
 import ProbabilisticParcellation.scripts.atlas_paper.describe_atlas as da
 import ProbabilisticParcellation.evaluate as ppev
 import Functional_Fusion.dataset as ds
@@ -208,7 +207,8 @@ def variability_maps():
     # Plot
     for d, dname in enumerate(T.name[:-1]):
         Nifti = suit_atlas.data_to_nifti(Corr_norm[d])
-        surf_data = suit.flatmap.vol_to_surf(Nifti, stats="nanmean", space="MNISymC")
+        surf_data = suit.flatmap.vol_to_surf(
+            Nifti, stats="nanmean", space="MNISymC")
         plot_variability(
             surf_data,
             filename=f"indiv_var_{dname}_norm",
@@ -217,13 +217,15 @@ def variability_maps():
         )
 
         Nifti = suit_atlas.data_to_nifti(Corr[d])
-        surf_data = suit.flatmap.vol_to_surf(Nifti, stats="nanmean", space="MNISymC")
+        surf_data = suit.flatmap.vol_to_surf(
+            Nifti, stats="nanmean", space="MNISymC")
         plot_variability(
             surf_data, filename=f"indiv_var_{dname}", save=True, cscale=(0, 1)
         )
 
         ifti = suit_atlas.data_to_nifti(Rel[d])
-        surf_data = suit.flatmap.vol_to_surf(Nifti, stats="nanmean", space="MNISymC")
+        surf_data = suit.flatmap.vol_to_surf(
+            Nifti, stats="nanmean", space="MNISymC")
         plot_variability(
             surf_data, filename=f"indiv_rel_{dname}", save=True, cscale=(0, 1)
         )
@@ -239,7 +241,9 @@ def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
     """Export Uhats for all subjects in a model"""
 
     # -- Save individual parcellations --
-    prob = ppev.parcel_individual(mname, subject="all", dataset=None, session=None)
+    prob = ppev.get_individual_parcellation(
+        mname, subject="all", dataset=None, session=None
+    )
 
     pt.save(prob, f"{ut.model_dir}/Models/{mname}_Uhat.pt")
 
@@ -251,7 +255,8 @@ def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
         dclass = ds.get_dataset_class(ut.base_dir, dataset)
         dataset_participants = dclass.get_participants()
         dataset_participants.loc[:, "dataset"] = dataset
-        participant_info.append(dataset_participants[["dataset", "participant_id"]])
+        participant_info.append(
+            dataset_participants[["dataset", "participant_id"]])
     participant_info = pd.concat(participant_info)
 
     participant_info.to_csv(
@@ -269,7 +274,8 @@ def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
 
     # Get individual parcellations
     try:
-        probs_indiv, probs_info = pt.load(f"{ut.model_dir}/Models/{mname}_Uhat.pt")
+        probs_indiv, probs_info = pt.load(
+            f"{ut.model_dir}/Models/{mname}_Uhat.pt")
     except FileNotFoundError:
         probs_indiv = sm.export_uhats(mname=mname)
     probs_indiv, probs_info = probs_indiv.numpy()
