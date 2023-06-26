@@ -76,19 +76,6 @@ def functional_symmetry(method="model", mname=None):
 
         suit_atlas, _ = am.get_atlas("MNISymC2", ut.base_dir + "/Atlases")
 
-        # Flip data
-        # sym_score = []
-        # for d, dataset in enumerate(datasets):
-        #     data_dset = data[d]
-        #     data_mirrored = data[d][:, :, suit_atlas.indx_flip]
-        #     corr_dataset = np.zeros((data_dset.shape[0], data_dset.shape[2]))
-        #     for sub in np.arange(data_dset[:, :, vox].shape[0]):
-        #         for vox in np.arange(suit_atlas.P):
-        #             corr = np.corrcoef(
-        #                 data_dset[sub, :, vox], data_mirrored[sub, :, vox])
-        #             corr_dataset[sub, vox] = corr[0, 1]
-        #     sym_score.append(corr_dataset)
-
         # Calculate cosyne similarity for each dataset
         sym_score = []
         indx1 = np.arange(suit_atlas.P)
