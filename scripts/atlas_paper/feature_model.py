@@ -111,7 +111,7 @@ def normalize(Data, tags_task):
 
 
 def scatter_plot(compare, data, side=None):
-    plt.figure()
+    """Compare two regions"""
     if side is not None:
         data = data[data['side'] == side]
     region1 = data[data['reg'] == compare[0]]
@@ -119,7 +119,7 @@ def scatter_plot(compare, data, side=None):
     # Average within each task
     region1 = region1.groupby(['task']).mean().reset_index()
     region2 = region2.groupby(['task']).mean().reset_index()
-    plt.scatter(region1['score'], region2['score'])
+    fig = plt.scatter(region1['score'], region2['score'])
 
     # Add labels to the dots
     for i in range(len(region1)):
@@ -135,18 +135,18 @@ def scatter_plot(compare, data, side=None):
     if side is None:
         plt.title(f'{compare[0]} vs {compare[1]}')
     else:
-        plt.title(f'{compare[0]} vs {compare[1]} {side}')
+        plt.title(side)
 
 
 def scatter_plot_hemispheres(compare, data):
     """Compare two regions across the hemispheres"""
-    plt.figure()
+
     region1 = data[data['reg'] == compare][data['side'] == 'L']
     region2 = data[data['reg'] == compare][data['side'] == 'R']
     # Average within each task
     region1 = region1.groupby(['task']).mean().reset_index()
     region2 = region2.groupby(['task']).mean().reset_index()
-    plt.scatter(region1['score'], region2['score'])
+    fig = plt.scatter(region1['score'], region2['score'])
 
     # Add labels to the dots
     for i in range(len(region1)):
@@ -159,7 +159,7 @@ def scatter_plot_hemispheres(compare, data):
     # Insert lines
     plt.axhline(0, color='k', linestyle='--')
     plt.axvline(0, color='k', linestyle='--')
-    plt.title(f'{compare} Left vs Right')
+    plt.title(f'{compare}')
 
 
 if __name__ == "__main__":
