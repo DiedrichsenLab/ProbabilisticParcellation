@@ -189,6 +189,7 @@ def figure_indiv_group(D):
     pass
 
 if __name__ == "__main__":
+    mname = 'Model_03/NettekovenSym32_space-MNISymC2'
     info,model = ut.load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model)
     D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group)
