@@ -112,10 +112,17 @@ def normalize(Data, tags_task):
 
 def scatter_plot(compare, data, side=None):
     """Compare two regions"""
+
     if side is not None:
         data = data[data['side'] == side]
-    region1 = data[data['reg'] == compare[0]]
-    region2 = data[data['reg'] == compare[1]]
+
+    if len(compare[0]) == 1:
+        granularity = 'net'
+    else:
+        granularity = 'reg'
+
+    region1 = data[data[granularity] == compare[0]]
+    region2 = data[data[granularity] == compare[1]]
     # Average within each task
     region1 = region1.groupby(['task']).mean().reset_index()
     region2 = region2.groupby(['task']).mean().reset_index()
@@ -160,6 +167,47 @@ def scatter_plot_hemispheres(compare, data):
     plt.axhline(0, color='k', linestyle='--')
     plt.axvline(0, color='k', linestyle='--')
     plt.title(f'{compare}')
+
+
+def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
+    """Compare two tasks across regions
+    color: 'domains' or 'hemispheres'
+    """
+
+    if ignore_side:
+        # average across sides
+        data = data.groupby(['reg', 'task']).mean().reset_index()
+        data['index'] = data['reg'].str[0:2]
+
+    task1 = data[data['task'] == compare[0]]
+    task2 = data[data['task'] == compare[1]]
+    # Average within each task
+    task1 = task1.groupby(['index']).mean().reset_index()
+    task2 = task2.groupby(['index']).mean().reset_index()
+
+    # Determine color
+    if color == 'domains':
+        lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+        _, cmap, regions = nt.read_lut(lut_dir +
+                                       'NettekovenSym32_domain.lut')
+        colors = [cmap[regions.index(i[:2])] for i in task1['index']]
+    elif color == 'hemispheres':
+        cmap = dict(zip(['L', 'R'], ['blue', 'red']))
+        colors = [cmap[i[-1]] for i in task1['index']]
+    plt.scatter(task1['score'], task2['score'], c=colors)
+
+    # Add labels to the dots
+    for i in range(len(task1)):
+        plt.annotate(f'{task1.iloc[i]["index"]}',
+                     (task1.iloc[i]['score'], task2.iloc[i]['score']))
+
+    # Label
+    plt.xlabel(compare[0])
+    plt.ylabel(compare[1])
+    # Insert lines
+    plt.axhline(0, color='k', linestyle='--')
+    plt.axvline(0, color='k', linestyle='--')
+    plt.title(f'{compare[0]} vs {compare[1]}')
 
 
 if __name__ == "__main__":
