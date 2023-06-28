@@ -16,7 +16,7 @@ import HierarchBayesParcel.spatial as sp
 import HierarchBayesParcel.arrangements as ar
 import HierarchBayesParcel.emissions as em
 import HierarchBayesParcel.evaluation as ev
-from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut 
 import ProbabilisticParcellation.evaluate as ppev
 
 # pytorch cuda global flag
@@ -24,36 +24,14 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            if pt.cuda.is_available() else
                            pt.FloatTensor)
 
-# Find model directory to save model fitting results
-model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/srv/diedrichsen/data/Cerebellum/robabilisticParcellationModel'
-if not Path(model_dir).exists():
-    model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/robabilisticParcellationModel'
-if not Path(model_dir).exists():
-    raise (NameError('Could not find model_dir'))
 
-base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/FunctionalFusion'
-if not Path(base_dir).exists():
-    base_dir = 'Y:\data\FunctionalFusion'
-if not Path(base_dir).exists():
-    raise(NameError('Could not find base_dir'))
-
-
-def individ_group(model):
-    # Individual training dataset:
-    idata,iinfo,ids = get_dataset(base_dir,'Mdtb', atlas='MNISymC3',
+def get_individ_group_mdtb(model):
+    """ Gets individual (data only), group, and integrated estimates for 1-16 runs of first ses-s1 fro, the MDTB data set"""
+    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
                                   sess=['ses-s1'], type='CondRun')
-
-    # Test data set:
-    tdata,tinfo,tds = get_dataset(base_dir,'Mdtb', atlas='MNISymC3',
-                                  sess=['ses-s2'], type='CondHalf')
 
     # convert tdata to tensor
     idata = pt.tensor(idata, dtype=pt.get_default_dtype())
-    tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
     if not hasattr(model.arrange, 'tmp_list'):
         if model.arrange.__class__.__name__ == 'ArrangeIndependent':
@@ -82,14 +60,15 @@ def individ_group(model):
     indivtrain_em.initialize(idata)
     m1.emissions = [indivtrain_em]
     m1.initialize()
-    m1,ll,theta,U_indiv = m1.fit_em(
-                    iter=200, tol=0.1,
-                    fit_emission=True,
-                    fit_arrangement=False,
-                    first_evidence=False)
+    # Why refit model? REmove? 
+    # m1,ll,theta,U_indiv = m1.fit_em(
+    #                 iter=200, tol=0.1,
+    #                 fit_emission=True,
+    #                 fit_arrangement=False,
+    #                first_evidence=False)
 
-    Uhat_em_all = []
-    Uhat_complete_all = []
+    Uhat_data_all = []  # Parcellation based only on data 
+    Uhat_complete_all = [] # Parcellation based on data and model
     for i in runs:
         ind = part_vec<=i
         m1.emissions[0].X = pt.tensor(matrix.indicator(cond_vec[ind]), dtype=pt.get_default_dtype())
@@ -98,14 +77,69 @@ def individ_group(model):
 
         LL_em = m1.collect_evidence([m1.emissions[0].Estep()])
         Uhat_complete, _ = m1.arrange.Estep(LL_em)
-        Uhat_em_all.append(m1.remap_evidence(pt.softmax(LL_em,dim=1)))
-        Uhat_complete_all.append(m1.remap_evidence(Uhat_complete))
+        Uhat_data_all.append(pt.softmax(LL_em,dim=1))
+        Uhat_complete_all.append(Uhat_complete)
 
     Uhat_group = m1.marginal_prob()
-    all_eval = [Uhat_group] + Uhat_em_all + Uhat_complete_all
+    return Uhat_data_all, Uhat_complete_all, Uhat_group
+    
 
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
+    """Do DCBC evaluation on all and collect in data frame. 
+    """ 
+    tdata,tinfo,tds = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+                                  sess=['ses-s2'], type='CondHalf')
+    tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+
+    atlas, _ = am.get_atlas(atlas, atlas_dir=base_dir + '/Atlases')
+    dist = ut.compute_dist(atlas.world.T, resolution=1)
+    dcbc_group = ut.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
+    dcbc_data = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
+    dcbc_complete = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
+
+    T = pd.DataFrame()
+    for sub in range(tdata.shape[0]):
+        for r in range(len(Uhat_data)):
+            D1 = {}
+            D1['type'] = ['data']
+            D1['runs'] = [r + 1]
+            D1['dcbc'] = [dcbc_em[r][sub].item()]
+            D1['subject'] = [sub + 1]
+            T = pd.concat([T, pd.DataFrame(D1)])
+            D1 = {}
+            D1['type'] = ['data and group']
+            D1['runs'] = [r + 1]
+            D1['dcbc'] = [dcbc_complete[r][sub].item()]
+            D1['subject'] = [sub + 1]
+            T = pd.concat([T, pd.DataFrame(D1)])
+        # Group
+        D1 = {}
+        D1['type'] = ['group']
+        D1['runs'] = [0]
+        # D1['coserr'] = [coserr[0, sub]]
+        D1['dcbc'] = [dcbc_group[sub].item()]
+        D1['subject'] = [sub + 1]
+        T = pd.concat([T, pd.DataFrame(D1)])
+        # noise floor
+        D1 = {}
+        D1['type'] = ['floor']
+        D1['runs'] = [0]
+        # D1['coserr'] = [coserr[-1, sub]]
+        D1['dcbc'] = ""
+        D1['subject'] = [sub + 1]
+        T = pd.concat([T, pd.DataFrame(D1)])
+    return T 
+
+
+def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
+    # Do cosine-error evaluation...
     # Build model for sc2 (testing session):
     #     indivtrain_em = em.MixVMF(K=m1.K,
+        # Test data set:
+    tdata,tinfo,tds = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+                                  sess=['ses-s2'], type='CondHalf')
+    tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+
     m2 = deepcopy(model)
     cond_vec = tinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = tinfo['half'].values.reshape(-1,)
@@ -118,7 +152,7 @@ def individ_group(model):
     m2.emissions = [test_em]
     m2.initialize()
 
-    coserr = ppev.calc_test_error(m2,tdata,all_eval)
+    coserr = ppev.calc_test_error(m2,tdata,[Uhat_group]+Uhat_data+Uhat_complete)
 
     T = pd.DataFrame()
     for sub in range(coserr.shape[1]):
@@ -155,10 +189,9 @@ def figure_indiv_group(D):
     pass
 
 if __name__ == "__main__":
-    info,model = load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
-    D = individ_group(model)
-    fname = model_dir + '/Models/Evaluation_02/indivgroup_prederr_Md_K-10.tsv'
-    D.to_csv(fname,sep='\t',index=False)
+    info,model = ut.load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
+    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model)
+    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group)
     pass
     # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
     # D = pd.read_csv(fname,sep='\t')

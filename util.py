@@ -493,7 +493,7 @@ def compute_dist(coord, resolution=2):
 def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
                  func=None, dist=None, weighting=True):
     """
-    The main entry of DCBC calculation for volume space
+    The main DCBC calculation for volume space - same as in the DCBC package, but GPU accelerated 
     :param hems:        Hemisphere to test. 'L' - left hemisphere; 'R' - right hemisphere; 'all' - both hemispheres
     :param maxDist:     The maximum distance for vertices pairs
     :param binWidth:    The spatial binning width in mm, default 1 mm
