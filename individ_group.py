@@ -25,9 +25,9 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 
-def get_individ_group_mdtb(model):
+def get_individ_group_mdtb(model,atlas='MNISymC3'):
     """ Gets individual (data only), group, and integrated estimates for 1-16 runs of first ses-s1 fro, the MDTB data set"""
-    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
+    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s1'], type='CondRun')
 
     # convert tdata to tensor
@@ -189,9 +189,9 @@ def figure_indiv_group(D):
     pass
 
 if __name__ == "__main__":
-    mname = 'Model_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
-    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model)
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    info,model = ut.load_batch_best(mname)
+    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
     D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group)
     pass
     # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
