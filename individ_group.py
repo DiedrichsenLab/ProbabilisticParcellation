@@ -91,11 +91,11 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
                                   sess=['ses-s2'], type='CondHalf')
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
-    atlas, _ = am.get_atlas(atlas, atlas_dir=base_dir + '/Atlases')
+    atlas, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
     dist = ut.compute_dist(atlas.world.T, resolution=1)
-    dcbc_group = ut.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
-    dcbc_data = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
-    dcbc_complete = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
+    dcbc_group = ppev.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
+    dcbc_data = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
+    dcbc_complete = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
 
     T = pd.DataFrame()
     for sub in range(tdata.shape[0]):
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
     info,model = ut.load_batch_best(mname)
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
-    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group)
+    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2')
     pass
     # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
     # D = pd.read_csv(fname,sep='\t')
