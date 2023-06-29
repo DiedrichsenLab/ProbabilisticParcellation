@@ -39,8 +39,14 @@ if not Path(base_dir).exists():
     base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
-
 atlas_dir = base_dir + f'/Atlases'
+
+figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
+if not Path(figure_dir).exists():
+    figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
+
+export_dir = f'{base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/'
+
 
 # pytorch cuda global flag
 if pt.cuda.is_available():
@@ -268,7 +274,7 @@ def plot_data_flat(data, atlas,
                                bordersize=bordersize,
                                bordercolor=bordercolor,
                                backgroundcolor=backgroundcolor
-                            )
+                               )
     # Mapping probabilities on the flatmap and then
     # determining a winner from this (slightly better than label)
     elif dtype == 'prob':
@@ -285,7 +291,7 @@ def plot_data_flat(data, atlas,
                                bordersize=bordersize,
                                bordercolor=bordercolor,
                                backgroundcolor=backgroundcolor
-                            )
+                               )
     else:
         raise (NameError('Unknown data type'))
     return ax
@@ -374,15 +380,17 @@ def plot_model_pmaps(Prob, atlas, sym=True, labels=None, subset=None, grid=None)
                     titles=labels[subset],
                     colorbar=False,
                     save_fig=False)
-    
-def plot_connectivity_map(pscalar, surf,border,indx=0):
-    if isinstance(pscalar,str):
+
+
+def plot_connectivity_map(pscalar, surf, border, indx=0):
+    if isinstance(pscalar, str):
         pscalar = np.load(pscalar)
-    if isinstance(surf,str):
+    if isinstance(surf, str):
         pscalar = np.load(surf)
-     
-    pscalar = pscalar[indx,:]
-    surf.plot.plotmap(DR,'fs32k_R',underlay = s02sulc[1],cscale = [-3,3],threshold= [-1,1])
+
+    pscalar = pscalar[indx, :]
+    surf.plot.plotmap(
+        DR, 'fs32k_R', underlay=s02sulc[1], cscale=[-3, 3], threshold=[-1, 1])
 
 
 def plot_model_parcel(model_names, grid, cmap='tab20b', align=False, device=None):
