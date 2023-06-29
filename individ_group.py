@@ -25,9 +25,9 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 
-def get_individ_group_mdtb(model):
+def get_individ_group_mdtb(model,atlas='MNISymC3'):
     """ Gets individual (data only), group, and integrated estimates for 1-16 runs of first ses-s1 fro, the MDTB data set"""
-    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas='MNISymC3',
+    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s1'], type='CondRun')
 
     # convert tdata to tensor
@@ -91,11 +91,11 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
                                   sess=['ses-s2'], type='CondHalf')
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
-    atlas, _ = am.get_atlas(atlas, atlas_dir=base_dir + '/Atlases')
+    atlas, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
     dist = ut.compute_dist(atlas.world.T, resolution=1)
-    dcbc_group = ut.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
-    dcbc_data = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
-    dcbc_complete = [ut.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
+    dcbc_group = ppev.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
+    dcbc_data = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
+    dcbc_complete = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
 
     T = pd.DataFrame()
     for sub in range(tdata.shape[0]):
@@ -189,10 +189,10 @@ def figure_indiv_group(D):
     pass
 
 if __name__ == "__main__":
-    mname = 'Model_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best('Models_05/asym_Ib_space-MNISymC3_K-10')
-    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model)
-    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group)
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    info,model = ut.load_batch_best(mname)
+    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
+    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2')
     pass
     # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
     # D = pd.read_csv(fname,sep='\t')
