@@ -15,26 +15,18 @@ import numpy as np
 from PcmPy import matrix
 
 
-base_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-if not Path(base_dir).exists():
-    base_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-if not Path(base_dir).exists():
-    base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
-if not Path(base_dir).exists():
-    raise (NameError('Could not find base_dir'))
-
-
-def load_profiles():
+def load_profiles(file='NettekovenSym32_profile_individ', regions=None):
     # Load functional profiles
-    D = pd.read_csv(base_dir + 'Profiles/' +
-                    'NettekovenSym32_profile_individ.tsv', delimiter='\t')
+    D = pd.read_csv(ut.export_dir + 'Profiles/' +
+                    file + '.tsv', delimiter='\t')
     # Reduce to only MDTB Tasks
     Data = D[D.dataset == 'MDTB']
 
-    lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-    _, cmap, regions = nt.read_lut(lut_dir +
-                                   'NettekovenSym32.lut')
-    regions = regions[1:]
+    if regions is None:
+        lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+        _, cmap, regions = nt.read_lut(lut_dir +
+                                       'NettekovenSym32.lut')
+        regions = regions[1:]
 
     Data = Data[['condition'] + regions]
     return Data, regions

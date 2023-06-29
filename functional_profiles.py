@@ -89,6 +89,96 @@ def get_profiles_model(model, info):
     return parcel_profiles, profile_data
 
 
+def get_profiles_vermal_lateral(region='A1'):
+    mname = "Models_03/NettekovenSym32_space-MNISymC2"
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
+    # get functional profiles
+
+    # --- Get profile ---
+    # Get task profile for each emission model and concatenate
+    parcel_profiles = []
+    profile_data = []
+    data, cond_vec, part_vec, subj_ind, info_ds = lf.build_data_list(
+        info.datasets, atlas=info.atlas, type=info.type, join_sess=False
+    )
+    # Attach the data
+    model.initialize(data, subj_ind=subj_ind)
+    Uhat, _ = model.Estep()
+
+    Uhat = Uhat.numpy()
+    # Split uhat into vermal and lateral component for region
+    # Left end of vermis x = 58 (MNISymC2 space x=44)
+    # Right end of vermis x = 80 (MNISymC2 space x=33)
+    # Import labels
+    index, cmap, labels = nt.read_lut(
+        ut.model_dir + "/Atlases/NettekovenSym32.lut")
+    labels = labels[1:]
+
+    regions_hem = [region + hem for hem in ['L', 'R']]
+    index_hem = [labels.index(reg) for reg in regions_hem]
+    # Extract region
+    Uhat_region = Uhat[:, index_hem, :]
+    # Extract vermal and lateral
+    suit_atlas, _ = am.get_atlas(info.atlas, ut.base_dir + "/Atlases")
+    Uhat_vermal = Uhat_region.copy()
+    Uhat_vermal[:, :, (suit_atlas.vox[0, :] < 33) | (
+        suit_atlas.vox[0, :] > 44)] = 0
+
+    Uhat_lateral = Uhat_region.copy()
+    Uhat_lateral[:, :, (suit_atlas.vox[0, :] > 33) & (
+        suit_atlas.vox[0, :] < 44)] = 0
+
+    prof_d = get_profile_info(info)
+
+    Uhat_region = np.concatenate([Uhat_vermal, Uhat_lateral], axis=1)
+
+    parcel_profiles = []
+    profile_data = []
+    for d, D in enumerate(data):
+        # Average data across partitions within session
+        C = matrix.indicator(cond_vec[d])
+        avrgD = np.linalg.pinv(C) @ D
+        # Individual parcellations for this session
+        U = Uhat_region[subj_ind[d]]
+        T = info_ds[d]["dataset"].get_participants()
+        # Get the weighted avarage across the dividual ROIs
+        for s in range(subj_ind[d].shape[0]):
+            good = ~np.isnan(avrgD[s].sum(axis=0))
+            # WEighted sum of the data
+            sumD = avrgD[s, :, good].T @ U[s, :, good]
+            # Weighted average of the data
+            dat = sumD / np.sum(U[s, :, good], axis=0)
+            parcel_profiles.append(dat)
+            # add data to profile data
+            prof_dd = prof_d[
+                (prof_d.dataset == info_ds[d]["dname"])
+                & (prof_d.session == info_ds[d]["sess"])
+            ].copy()
+            prof_dd["participant_id"] = [
+                T.participant_id.iloc[s]] * prof_dd.shape[0]
+            prof_dd["participant_num"] = [0] * prof_dd.shape[0]
+            profile_data.append(prof_dd)
+
+    parcel_profiles = np.vstack(parcel_profiles)
+    profile_data = pd.concat(profile_data, ignore_index=True)
+
+    # make functional profile dataframe
+    labels = [region + '_' + part for part in ['vermal', 'lateral']
+              for region in regions_hem]
+    parcel_responses = pd.DataFrame(parcel_profiles, columns=labels)
+    Prof = pd.concat([profile_data, parcel_responses], axis=1)
+
+    # --- Save profile ---
+    # save functional profile as tsv
+    mname = mname.split("/")[-1]
+    mname = mname.split("_")[0]
+
+    fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_individ_vermal_lateral.tsv"
+    Prof.to_csv(fname, sep="\t", index=False)
+    return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
+
+
 def get_profiles_individ(model, info, dseg=False):
     """Returns the functional profile for each parcel for each subject (unscaled) from data
     Args:
@@ -126,15 +216,18 @@ def get_profiles_individ(model, info, dseg=False):
         # Get the weighted avarage across the dividual ROIs
         for s in range(subj_ind[d].shape[0]):
             good = ~np.isnan(avrgD[s].sum(axis=0))
-            sumD = avrgD[s, :, good].T @ U[s, :, good]  # WEighted sum of the data
-            dat = sumD / np.sum(U[s, :, good], axis=0)  # Weighted average of the data
+            # WEighted sum of the data
+            sumD = avrgD[s, :, good].T @ U[s, :, good]
+            # Weighted average of the data
+            dat = sumD / np.sum(U[s, :, good], axis=0)
             parcel_profiles.append(dat)
             # add data to profile data
             prof_dd = prof_d[
                 (prof_d.dataset == info_ds[d]["dname"])
                 & (prof_d.session == info_ds[d]["sess"])
             ].copy()
-            prof_dd["participant_id"] = [T.participant_id.iloc[s]] * prof_dd.shape[0]
+            prof_dd["participant_id"] = [
+                T.participant_id.iloc[s]] * prof_dd.shape[0]
             prof_dd["participant_num"] = [0] * prof_dd.shape[0]
             profile_data.append(prof_dd)
     return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
@@ -174,15 +267,18 @@ def get_profiles_group(model, info, dseg=False):
         # Get the weighted avarage across the dividual ROIs
         for s in range(subj_ind[d].shape[0]):
             good = ~np.isnan(avrgD[s].sum(axis=0))
-            sumD = avrgD[s, :, good].T @ U[:, good].T  # WEighted sum of the data
-            dat = sumD / np.sum(U[:, good], axis=1)  # Weighted average of the data
+            # WEighted sum of the data
+            sumD = avrgD[s, :, good].T @ U[:, good].T
+            # Weighted average of the data
+            dat = sumD / np.sum(U[:, good], axis=1)
             parcel_profiles.append(dat)
             # add data to profile data
             prof_dd = prof_d[
                 (prof_d.dataset == info_ds[d]["dname"])
                 & (prof_d.session == info_ds[d]["sess"])
             ].copy()
-            prof_dd["participant_id"] = [T.participant_id.iloc[s]] * prof_dd.shape[0]
+            prof_dd["participant_id"] = [
+                T.participant_id.iloc[s]] * prof_dd.shape[0]
             prof_dd["participant_num"] = [0] * prof_dd.shape[0]
             profile_data.append(prof_dd)
     return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
@@ -207,7 +303,8 @@ def export_profile(
 
     # get functional profiles
     if source == "model":
-        parcel_profiles, profile_data = get_profiles_model(model=model, info=info)
+        parcel_profiles, profile_data = get_profiles_model(
+            model=model, info=info)
     elif source == "individ":
         parcel_profiles, profile_data = get_profiles_individ(
             model=model, info=info, dseg=dseg
@@ -339,7 +436,8 @@ def cognitive_features(mname):
     profile_matrix = profile[parcel_columns].to_numpy()
 
     feature_dir = f"{ut.model_dir}/Atlases/Profiles/Cognitive_Features"
-    features = pd.read_csv(f"{ut.model_dir}/Atlases/Profiles/tags/tags.tsv", sep="\t")
+    features = pd.read_csv(
+        f"{ut.model_dir}/Atlases/Profiles/tags/tags.tsv", sep="\t")
     first_feature = features.columns.tolist().index("condition") + 1
     feature_columns = features.columns[first_feature:]
     feature_matrix = features[feature_columns].to_numpy()
@@ -361,18 +459,19 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    short_name = "NettekovenSym32"
-    mname = "Models_03/NettekovenSym32_space-MNISymC2"
-    info, model = ut.load_batch_best(mname)
-    info = ut.recover_info(info, model, mname)
-    # data,inf=get_profiles_individ(model, info)
+    # short_name = "NettekovenSym32"
+    # mname = "Models_03/NettekovenSym32_space-MNISymC2"
+    # info, model = ut.load_batch_best(mname)
+    # info = ut.recover_info(info, model, mname)
+    # # data,inf=get_profiles_individ(model, info)
 
-    fileparts = mname.split("/")
-    index, cmap, labels = nt.read_lut(ut.model_dir + "/Atlases/" + short_name + ".lut")
-    export_profile(mname, info, model, labels, source="group")
-    export_profile(mname, info, model, labels, source="group", dseg=True)
-    export_profile(mname, info, model, labels, source="individ")
-    export_profile(mname, info, model, labels, source="model")
+    # fileparts = mname.split("/")
+    # index, cmap, labels = nt.read_lut(
+    #     ut.model_dir + "/Atlases/" + short_name + ".lut")
+    # export_profile(mname, info, model, labels, source="group")
+    # export_profile(mname, info, model, labels, source="group", dseg=True)
+    # export_profile(mname, info, model, labels, source="individ")
+    # export_profile(mname, info, model, labels, source="model")
 
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
@@ -384,4 +483,7 @@ if __name__ == "__main__":
     # plt.imshow(wc, interpolation="bilinear")
     # plt.axis("off")
     # plt.show()
-    pass
+
+    # export_profile(mname, info, model, labels, source="individ")
+
+    get_profiles_vermal_lateral(region='A1')
