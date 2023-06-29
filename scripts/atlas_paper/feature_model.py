@@ -24,17 +24,18 @@ if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
 
 
-def load_profiles():
+def load_profiles(file='NettekovenSym32_profile_individ', regions=None):
     # Load functional profiles
     D = pd.read_csv(base_dir + 'Profiles/' +
-                    'NettekovenSym32_profile_individ.tsv', delimiter='\t')
+                    file + '.tsv', delimiter='\t')
     # Reduce to only MDTB Tasks
     Data = D[D.dataset == 'MDTB']
 
-    lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
-    _, cmap, regions = nt.read_lut(lut_dir +
-                                   'NettekovenSym32.lut')
-    regions = regions[1:]
+    if regions is None:
+        lut_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel/Atlases/'
+        _, cmap, regions = nt.read_lut(lut_dir +
+                                       'NettekovenSym32.lut')
+        regions = regions[1:]
 
     Data = Data[['condition'] + regions]
     return Data, regions
