@@ -21,38 +21,9 @@ import seaborn as sb
 import sys
 import time
 import pickle
-from ProbabilisticParcellation.util import *
+import ProbabilisticParcellation.util as ut
 from copy import deepcopy
 import ProbabilisticParcellation.learn_fusion_gpu as lf
-
-######################################################
-# The new GPU capatible DCBC evaluation function is now
-# callable in util.py. If you prefer use CPU version, please
-# uncomment below import line (highly not-recommend)
-######################################################
-# from DCBC.DCBC_vol import compute_DCBC, compute_dist
-
-
-# Find model directory to save model fitting results
-model_dir = "Y:\data\Cerebellum\ProbabilisticParcellationModel"
-if not Path(model_dir).exists():
-    model_dir = "/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel"
-if not Path(model_dir).exists():
-    model_dir = (
-        "/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel"
-    )
-if not Path(model_dir).exists():
-    raise (NameError("Could not find model_dir"))
-
-base_dir = "/Volumes/diedrichsen_data$/data/FunctionalFusion"
-if not Path(base_dir).exists():
-    base_dir = "/srv/diedrichsen/data/FunctionalFusion"
-if not Path(base_dir).exists():
-    base_dir = "Y:\data\FunctionalFusion"
-if not Path(base_dir).exists():
-    raise (NameError("Could not find base_dir"))
-
-atlas_dir = base_dir + f"/Atlases"
 
 
 def calc_test_error(M, tdata, U_hats):
@@ -146,7 +117,7 @@ def calc_test_dcbc(
             print(f"Subject {sub}", end=":")
         tic = time.perf_counter()
         if parcels.ndim == 1:
-            D = compute_DCBC(
+            D = ut.compute_DCBC(
                 maxDist=max_dist,
                 binWidth=bin_width,
                 parcellation=parcels,
@@ -154,7 +125,7 @@ def calc_test_dcbc(
                 func=testdata[sub].T,
             )
         else:
-            D = compute_DCBC(
+            D = ut.compute_DCBC(
                 maxDist=max_dist,
                 binWidth=bin_width,
                 parcellation=parcels[sub],
@@ -204,7 +175,7 @@ def run_prederror(
         data-frame with model evalution
     """
     tdata, tinfo, tds = ds.get_dataset(
-        base_dir, test_data, atlas="MNISymC3", sess=test_sess
+        ut.base_dir, test_data, atlas="MNISymC3", sess=test_sess
     )
     # convert tdata to tensor
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
@@ -360,10 +331,10 @@ def run_dcbc_group(
     """
     if tdata is None:
         tdata, _, _ = ds.get_dataset(
-            base_dir, test_data, atlas=space, sess=test_sess, verbose=True
+            ut.base_dir, test_data, atlas=space, sess=test_sess, verbose=True
         )
-    atlas, _ = am.get_atlas(space, atlas_dir=base_dir + "/Atlases")
-    dist = compute_dist(atlas.world.T, resolution=1)
+    atlas, _ = am.get_atlas(space, atlas_dir=ut.atlas_dir)
+    dist = ut.compute_dist(atlas.world.T, resolution=1)
 
     num_subj = tdata.shape[0]
     results = pd.DataFrame()
@@ -409,7 +380,7 @@ def run_dcbc_group(
         results = pd.concat([results, ev_df], ignore_index=True)
 
     if saveFile is not None:
-        oname = model_dir + f"/Models/{saveFile}.tsv"
+        oname = ut.model_dir + f"/Models/{saveFile}.tsv"
         results.to_csv(oname, index=False, sep="\t")
 
     return results
@@ -454,7 +425,7 @@ def run_dcbc(
         requested by Jorn.
     """
     # Calculate distance metric given by input atlas
-    dist = compute_dist(atlas.world.T, resolution=1)
+    dist = ut.compute_dist(atlas.world.T, resolution=1)
     # convert tdata to tensor
     if type(tdata) is np.ndarray:
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
@@ -580,10 +551,10 @@ def run_dcbc_IBC(
         data-frame with model evalution
     """
     tdata, tinfo, tds = ds.get_dataset(
-        base_dir, test_data, atlas="MNISymC3", sess=test_sess
+        ut.base_dir, test_data, atlas="MNISymC3", sess=test_sess
     )
-    atlas, _ = am.get_atlas("MNISymC3", atlas_dir=base_dir + "/Atlases")
-    dist = compute_dist(atlas.world.T, resolution=1)
+    atlas, _ = am.get_atlas("MNISymC3", atlas_dir=ut.base_dir + "/Atlases")
+    dist = ut.compute_dist(atlas.world.T, resolution=1)
 
     # convert tdata to tensor
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
@@ -663,7 +634,7 @@ def run_dcbc_IBC(
                     0
                 ]
                 traind, info, _ = ds.get_dataset(
-                    base_dir, test_data, atlas="MNISymC3", sess=trainsess
+                    ut.base_dir, test_data, atlas="MNISymC3", sess=trainsess
                 )
                 # Check if the model was trained joint or separate sessions
                 if len(model.emissions) == 1:
@@ -750,7 +721,7 @@ def eval_all_prederror(model_type, prefix, K, verbose=True):
         )
         results = pd.concat([results, R], ignore_index=True)
     fname = (
-        base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv"
+        ut.base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{prefix}_K-{K}.tsv"
     )
     results.to_csv(fname, sep="\t", index=False)
 
@@ -801,7 +772,7 @@ def eval_all_dcbc(
         results = pd.concat([results, R], ignore_index=True)
 
     prefix = "_".join(models)
-    fname = model_dir + f"/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv"
+    fname = ut.model_dir + f"/Models/Evaluation_{model_type}/eval_dcbc_{prefix}_K-{K}.tsv"
     if fname_suffix is not None:
         # Append fname suffix to avoid overwriting old results
         fname = fname.strip(".tsv") + f"_{fname_suffix}.tsv"
@@ -820,7 +791,7 @@ def eval_old_dcbc(models=None, datasets=None, fname_suffix=None):
     par_name = []
     for p in parcels:
         par_name.append(
-            base_dir
+            ut.base_dir
             + "/Atlases/tpl-MNI152NLin2009cSymC/"
             + f"atl-{p}_space-MNI152NLin2009cSymC_dseg.nii"
         )
@@ -830,7 +801,7 @@ def eval_old_dcbc(models=None, datasets=None, fname_suffix=None):
         print(f"Testdata: {ds}\n")
         R = run_dcbc_group(par_name, space="MNISymC3", test_data=ds, test_sess="all")
         results = pd.concat([results, R], ignore_index=True)
-    fname = base_dir + f"/Models/eval_dcbc_group.tsv"
+    fname = ut.base_dir + f"/Models/eval_dcbc_group.tsv"
     if fname_suffix is not None:
         # Append fname suffix to avoid overwriting old results
         fname = fname.strip(".tsv") + f"_{fname_suffix}.tsv"
@@ -842,12 +813,12 @@ def concat_all_prederror(model_type, prefix, K, outfile):
     for p in prefix:
         for k in K:
             fname = (
-                base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{p}_K-{k}.tsv"
+                ut.base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{p}_K-{k}.tsv"
             )
             T = pd.read_csv(fname, delimiter="\t")
             T["prefix"] = [p] * T.shape[0]
             D = pd.concat([D, T], ignore_index=True)
-    oname = base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv"
+    oname = ut.base_dir + f"/Models/Evaluation_{model_type}/eval_prederr_{outfile}.tsv"
     D.to_csv(oname, index=False, sep="\t")
 
     pass
