@@ -190,11 +190,12 @@ def figure_indiv_group(D):
 
 if __name__ == "__main__":
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best(mname)
+    info,model = ut.load_batch_best(mname,device='cuda')
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
     D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2')
+    fname = ut.base_dir+ '/Models/Evaluation_03/indivgroup_NettekovenSym32.tsv'
+    D.to_csv(fname,sep='\t')
     pass
-    # fname = base_dir+ '/Models/Evaluation_01/indivgroup_prederr_Md_K-20.tsv'
     # D = pd.read_csv(fname,sep='\t')
     # figure_indiv_group(D)
     # plt.show()
