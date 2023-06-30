@@ -103,7 +103,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
             D1 = {}
             D1['type'] = ['data']
             D1['runs'] = [r + 1]
-            D1['dcbc'] = [dcbc_em[r][sub].item()]
+            D1['dcbc'] = [dcbc_data[r][sub].item()]
             D1['subject'] = [sub + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             D1 = {}
@@ -116,16 +116,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
         D1 = {}
         D1['type'] = ['group']
         D1['runs'] = [0]
-        # D1['coserr'] = [coserr[0, sub]]
         D1['dcbc'] = [dcbc_group[sub].item()]
-        D1['subject'] = [sub + 1]
-        T = pd.concat([T, pd.DataFrame(D1)])
-        # noise floor
-        D1 = {}
-        D1['type'] = ['floor']
-        D1['runs'] = [0]
-        # D1['coserr'] = [coserr[-1, sub]]
-        D1['dcbc'] = ""
         D1['subject'] = [sub + 1]
         T = pd.concat([T, pd.DataFrame(D1)])
     return T 
@@ -190,10 +181,10 @@ def figure_indiv_group(D):
 
 if __name__ == "__main__":
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best(mname,device='cuda')
+    info,model = ut.load_batch_best(mname,device='cpu')
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
     D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2')
-    fname = ut.base_dir+ '/Models/Evaluation_03/indivgroup_NettekovenSym32.tsv'
+    fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_NettekovenSym32.tsv'
     D.to_csv(fname,sep='\t')
     pass
     # D = pd.read_csv(fname,sep='\t')
