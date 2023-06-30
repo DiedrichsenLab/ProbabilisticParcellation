@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sb
 from copy import copy,deepcopy
 import Functional_Fusion.atlas_map as am
-from Functional_Fusion.dataset import *
+import Functional_Fusion.dataset as ds
 import Functional_Fusion.matrix as matrix
 import HierarchBayesParcel.full_model as fm
 import HierarchBayesParcel.spatial as sp
@@ -27,7 +27,7 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
 
 def get_individ_group_mdtb(model,atlas='MNISymC3'):
     """ Gets individual (data only), group, and integrated estimates for 1-16 runs of first ses-s1 fro, the MDTB data set"""
-    idata,iinfo,ids = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+    idata,iinfo,ids = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s1'], type='CondRun')
 
     # convert tdata to tensor
@@ -84,41 +84,56 @@ def get_individ_group_mdtb(model,atlas='MNISymC3'):
     return Uhat_data_all, Uhat_complete_all, Uhat_group
     
 
-def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40):
     """Do DCBC evaluation on all and collect in data frame. 
     """ 
-    tdata,tinfo,tds = get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
-                                  sess=['ses-s2'], type='CondHalf')
-    tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
-
+    tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
+    T = tds.get_participants()
+    ut.report_cuda_memory()
     atlas, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
+    parcel_group = pt.argmax(Uhat_group, dim=0) + 1
+    parcel_data = [pt.argmax(i, dim=1) + 1 for i in Uhat_data]
+    parcel_complete = [pt.argmax(i, dim=1) + 1 for i in Uhat_complete]
+    del Uhat_complete,Uhat_group,Uhat_data
+    pt.cuda.empty_cache()
+    ut.report_cuda_memory()
+    
     dist = ut.compute_dist(atlas.world.T, resolution=1)
-    dcbc_group = ppev.calc_test_dcbc(pt.argmax(Uhat_group, dim=0) + 1, tdata, dist)
-    dcbc_data = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_data]
-    dcbc_complete = [ppev.calc_test_dcbc(pt.argmax(i, dim=1) + 1, tdata, dist) for i in Uhat_complete]
+    dist[dist>max_dist]=0
+    dist = dist.to_sparse()
 
     T = pd.DataFrame()
-    for sub in range(tdata.shape[0]):
-        for r in range(len(Uhat_data)):
+    for s in range(24):    
+        print(f'subj {s}')
+        tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+                                  sess=['ses-s2'], type='CondHalf',subj=[s])
+        tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+        
+        dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata, dist,max_dist=max_dist)
+        D1 = {}
+        D1['type'] = ['group']
+        D1['runs'] = [0]
+        D1['dcbc'] = [dcbc_group.item()]
+        D1['subject'] = [s + 1]
+        T = pd.concat([T, pd.DataFrame(D1)])
+
+        for r in range(len(parcel_data)):
+            dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata, dist,max_dist=max_dist) 
+            dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata, dist,max_dist=max_dist) 
+
             D1 = {}
             D1['type'] = ['data']
             D1['runs'] = [r + 1]
-            D1['dcbc'] = [dcbc_data[r][sub].item()]
-            D1['subject'] = [sub + 1]
+            D1['dcbc'] = [dcbc_data.item()]
+            D1['subject'] = [s + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             D1 = {}
             D1['type'] = ['data and group']
             D1['runs'] = [r + 1]
-            D1['dcbc'] = [dcbc_complete[r][sub].item()]
-            D1['subject'] = [sub + 1]
+            D1['dcbc'] = [dcbc_complete.item()]
+            D1['subject'] = [s + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
         # Group
-        D1 = {}
-        D1['type'] = ['group']
-        D1['runs'] = [0]
-        D1['dcbc'] = [dcbc_group[sub].item()]
-        D1['subject'] = [sub + 1]
-        T = pd.concat([T, pd.DataFrame(D1)])
     return T 
 
 
