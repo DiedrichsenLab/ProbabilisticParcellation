@@ -23,6 +23,7 @@ import Functional_Fusion.atlas_map as am
 import SUITPy as suit
 import os
 import nitools as nt
+import nibabel as nb
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
@@ -325,3 +326,15 @@ if __name__ == "__main__":
         Data.append(data)
         Info.append(info)
     Corr, Corr_norm, Rel = calc_variability(Data, Info, subject_wise=True)
+
+    # Export average across all datasets as nifti
+    exclude = []
+    Corr_norm_mean = np.nanmean([Corr_norm[i] for i in range(
+        len(Corr_norm)) if T.name[i] not in exclude], axis=0)
+
+    suit_atlas, _ = am.get_atlas(info.atlas, ut.base_dir + "/Atlases")
+    corr_data = suit_atlas.data_to_nifti(Corr_norm_mean)
+
+    save_dir = f"{ut.model_dir}/Models/Evaluation/nettekoven_68/"
+    fname = f'individual_variability_group_norm'
+    nb.save(corr_data, save_dir + fname + ".nii")
