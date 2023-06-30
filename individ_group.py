@@ -90,7 +90,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
     T = tds.get_participants()
     ut.report_cuda_memory()
-    atlas, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
+    atlas_obj, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
     parcel_group = pt.argmax(Uhat_group, dim=0) + 1
     parcel_data = [pt.argmax(i, dim=1) + 1 for i in Uhat_data]
     parcel_complete = [pt.argmax(i, dim=1) + 1 for i in Uhat_complete]
@@ -98,7 +98,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     pt.cuda.empty_cache()
     ut.report_cuda_memory()
     
-    dist = ut.compute_dist(atlas.world.T, resolution=1)
+    dist = ut.compute_dist(atlas_obj.world.T, resolution=1)
     dist[dist>max_dist]=0
     dist = dist.to_sparse()
 
@@ -196,10 +196,10 @@ def figure_indiv_group(D):
 
 if __name__ == "__main__":
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best(mname,device='cuda')
+    info,model = ut.load_batch_best(mname,device='cpu')
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2')
     D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2')
-    fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_NettekovenSym32_3.tsv'
+    fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_NettekovenSym32_4.tsv'
     D.to_csv(fname,sep='\t')
     pass
     # D = pd.read_csv(fname,sep='\t')
