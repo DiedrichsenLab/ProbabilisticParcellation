@@ -89,7 +89,7 @@ def get_profiles_model(model, info):
     return parcel_profiles, profile_data
 
 
-def get_profiles_vermal_lateral(region='A1'):
+def get_profiles_vermal_lateral(region='A1', source='individ'):
     mname = "Models_03/NettekovenSym32_space-MNISymC2"
     info, model = ut.load_batch_best(mname)
     info = ut.recover_info(info, model, mname)
@@ -102,10 +102,18 @@ def get_profiles_vermal_lateral(region='A1'):
     data, cond_vec, part_vec, subj_ind, info_ds = lf.build_data_list(
         info.datasets, atlas=info.atlas, type=info.type, join_sess=False
     )
-    # Attach the data
-    model.initialize(data, subj_ind=subj_ind)
-    Uhat, _ = model.Estep()
-
+    if source == "individ":
+        # Attach the data
+        model.initialize(data, subj_ind=subj_ind)
+        Uhat, _ = model.Estep()
+    elif source == "group":
+        Uhat = model.marginal_prob()
+        # Repeat for each subject
+        T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
+        all_subjects = [
+            T[T.name == dset].return_nsubj.values for dset in info.datasets]
+        all_subjects = np.cumsum(all_subjects)[-1]
+        Uhat = Uhat.repeat(all_subjects, 1, 1)
     Uhat = Uhat.numpy()
     # Split uhat into vermal and lateral component for region
     # Left end of vermis x = 58 (MNISymC2 space x=44)
@@ -117,6 +125,7 @@ def get_profiles_vermal_lateral(region='A1'):
 
     regions_hem = [region + hem for hem in ['L', 'R']]
     index_hem = [labels.index(reg) for reg in regions_hem]
+
     # Extract region
     Uhat_region = Uhat[:, index_hem, :]
     # Extract vermal and lateral
@@ -174,9 +183,9 @@ def get_profiles_vermal_lateral(region='A1'):
     mname = mname.split("/")[-1]
     mname = mname.split("_")[0]
 
-    fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_individ_vermal_lateral.tsv"
+    fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_vermal_lateral.tsv"
     Prof.to_csv(fname, sep="\t", index=False)
-    return np.vstack(parcel_profiles), pd.concat(profile_data, ignore_index=True)
+    pass
 
 
 def get_profiles_individ(model, info, dseg=False):
@@ -486,4 +495,17 @@ if __name__ == "__main__":
 
     # export_profile(mname, info, model, labels, source="individ")
 
-    get_profiles_vermal_lateral(region='A1')
+    # get_profiles_vermal_lateral(region='A1')
+    # get_profiles_vermal_lateral(region='A1', source='group')
+
+    source = 'group'
+    Prof = pd.read_csv(
+        f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_vermal_lateral.tsv', sep='\t')
+    Prof = Prof.drop(columns=['dataset', 'session',
+                     'condition', 'participant_id', 'participant_num'])
+    file = f'NettekovenSym32_profile_{source}'
+    D = pd.read_csv(ut.export_dir + 'Profiles/' +
+                    file + '.tsv', delimiter='\t')
+    df = pd.concat([D, Prof], axis=1)
+    df.to_csv(f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_A1split.tsv',
+              sep='\t', index=False)
