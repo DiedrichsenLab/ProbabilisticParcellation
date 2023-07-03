@@ -275,11 +275,14 @@ def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
 
     # Get individual parcellations
     try:
-        probs_indiv, probs_info = pt.load(
+        probs_indiv = pt.load(
             f"{ut.model_dir}/Models/{mname}_Uhat.pt")
+        probs_info = pd.read_csv(
+            f"{ut.model_dir}/Models/{mname}_Uhat_info.tsv", sep="\t"
+        )
     except FileNotFoundError:
         probs_indiv = sm.export_uhats(mname=mname)
-    probs_indiv, probs_info = probs_indiv.numpy()
+    probs_indiv = probs_indiv.numpy()
 
     fileparts = mname.split("/")
     index, cmap, labels = nt.read_lut(
@@ -312,29 +315,29 @@ def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
 
 if __name__ == "__main__":
     # model_variability()
-    # plot_dataset_pmaps(['M1', 'M3', 'D1', 'D2', 'D3', 'D4'])
+    plot_dataset_pmaps(['M1', 'M2', 'M3', 'M4', 'A1', 'A2'])
     # # --- Export individual parcellations ---
     # for sym in ["Sym", "Asym"]:
     #     for K in [32, 68]:
     #         mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
     #         export_uhats(mname)
     # variability_maps()
-    T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
-    Data, Info = [], []
-    for d, dname in enumerate(T.name[:-1]):
-        data, info, dset = ds.get_dataset(ut.base_dir, dname, atlas="MNISymC2")
-        Data.append(data)
-        Info.append(info)
-    Corr, Corr_norm, Rel = calc_variability(Data, Info, subject_wise=True)
+    # T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
+    # Data, Info = [], []
+    # for d, dname in enumerate(T.name[:-1]):
+    #     data, info, dset = ds.get_dataset(ut.base_dir, dname, atlas="MNISymC2")
+    #     Data.append(data)
+    #     Info.append(info)
+    # Corr, Corr_norm, Rel = calc_variability(Data, Info, subject_wise=True)
 
-    # Export average across all datasets as nifti
-    exclude = []
-    Corr_norm_mean = np.nanmean([Corr_norm[i] for i in range(
-        len(Corr_norm)) if T.name[i] not in exclude], axis=0)
+    # # Export average across all datasets as nifti
+    # exclude = []
+    # Corr_norm_mean = np.nanmean([Corr_norm[i] for i in range(
+    #     len(Corr_norm)) if T.name[i] not in exclude], axis=0)
 
-    suit_atlas, _ = am.get_atlas(info.atlas, ut.base_dir + "/Atlases")
-    corr_data = suit_atlas.data_to_nifti(Corr_norm_mean)
+    # suit_atlas, _ = am.get_atlas(info.atlas, ut.base_dir + "/Atlases")
+    # corr_data = suit_atlas.data_to_nifti(Corr_norm_mean)
 
-    save_dir = f"{ut.model_dir}/Models/Evaluation/nettekoven_68/"
-    fname = f'individual_variability_group_norm'
-    nb.save(corr_data, save_dir + fname + ".nii")
+    # save_dir = f"{ut.model_dir}/Models/Evaluation/nettekoven_68/"
+    # fname = f'individual_variability_group_norm'
+    # nb.save(corr_data, save_dir + fname + ".nii")
