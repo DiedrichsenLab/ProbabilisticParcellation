@@ -102,6 +102,7 @@ def plot_parcel_prob(parcel="D1", atlas="NettekovenSym32",
         new_figure=False,
         overlay_type="func",
         colorbar=False,
+        bordersize=4,
         backgroundcolor=backgroundcolor,
         bordercolor=bordercolor
     )
