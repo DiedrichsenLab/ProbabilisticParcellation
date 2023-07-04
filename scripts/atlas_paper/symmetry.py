@@ -128,8 +128,10 @@ if __name__ == "__main__":
 
     # atlas = 'MNISymC2'
 
-    # var.export_uhats(mname=model_pair[0])
-    # var.export_uhats(mname=model_pair[1])
+    var.export_uhats(mname=model_pair[0])
+    var.export_uhats(mname=model_pair[1])
+    var.export_uhats(mname="Models_03/NettekovenAsym32_space-MNISymC2")
+    var.export_uhats(mname="Models_03/NettekovenSym32_space-MNISymC2")
 
     # load Uhats
     # prob_a = pt.load(f"{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt")

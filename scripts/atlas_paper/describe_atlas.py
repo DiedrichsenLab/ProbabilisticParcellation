@@ -58,11 +58,31 @@ def reorder_selected():
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered',
         # 'Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem'
         # "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
-        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
+        # "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
+        # "Models_03/NettekovenSym32_space-MNISymC2",
+        # "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
+    # For reordering the parcels the first time
+    # f_assignment = "mixed_assignment_68_16.csv"
+    # original_idx = "parcel_med_idx"
 
-    f_assignment = "mixed_assignment_68_16_4.csv"
+    # For reordering Introspection into action
+    # f_assignment = "mixed_assignment_68_16_4.csv"
+    # original_idx = "parcel_med_idx_5Domains"
+
+
+
     for mname in mnames:
+        # For swapping M2 and A1
+        if "32" in mname:
+            f_assignment = "mixed_assignment_68_16_4.csv"
+            original_idx = "parcel_med_before_tongue_swap_idx"
+        if "68" in mname:
+            # For swapping M2 and A1 in K68
+            f_assignment = "mixed_assignment_68_16_4.csv"
+            original_idx = "parcel_orig_idx_before_tongue_swap_idx"
         symmetry = mname.split("/")[1].split("_")[0]
         if symmetry == "sym":
             sym = True
@@ -72,17 +92,20 @@ def reorder_selected():
             mname,
             sym=sym,
             assignment=f_assignment,
-            original_idx="parcel_med_idx_5Domains",
+            original_idx=original_idx,
             save_model=True,
+            mname_new = mname + "_tongueSwap"
         )
+
+    pass
 
 
 def export_selected():
     mnames = [
-        # "Models_03/NettekovenSym68_space-MNISymC2_reordered",
-        # "Models_03/NettekovenAsym68_space-MNISymC2_reordered",
-        # "Models_03/NettekovenSym32_space-MNISymC2_reordered",
-        "Models_03/NettekovenAsym32_space-MNISymC2",
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
+        # "Models_03/NettekovenSym32_space-MNISymC2",
+        # "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
     for mname in mnames:
         export(mname)
@@ -103,9 +126,8 @@ def export(mname, sym=False):
     if "32" in mname:
         labels = assignment["parcel_medium"].unique()
         labels = [label + "L" for label in labels] + [label + "R" for label in labels]
-        # Get colour map
         _, cmap_sym, _ = nt.read_lut(
-            ut.model_dir + "/Atlases/" + "NettekovenSym32_space-MNISymC2.lut"
+            ut.model_dir + "/Atlases/" + "NettekovenSym32.lut"
         )
         cmap_sym = ListedColormap(cmap_sym)
 
@@ -113,7 +135,7 @@ def export(mname, sym=False):
         labels = assignment["parcel_fine"]
         labels = [label + "L" for label in labels] + [label + "R" for label in labels]
         _, cmap_sym, _ = nt.read_lut(
-            ut.model_dir + "/Atlases/" + "NettekovenSym68_space-MNISymC2.lut"
+            ut.model_dir + "/Atlases/" + "NettekovenSym68.lut"
         )
         cmap_sym = ListedColormap(cmap_sym)
 
@@ -180,8 +202,8 @@ def probability_maps(plot_parcels=["M1", "M2", "A1", "A2", "A3", "A4"]):
     model_names = [
         "Models_03/NettekovenSym68_space-MNISymC2",
         "Models_03/NettekovenAsym68_space-MNISymC2",
-        "Models_03/NettekovenSym32_space-MNISymC2",
-        "Models_03/NettekovenAsym32_space-MNISymC2",
+        # "Models_03/NettekovenSym32_space-MNISymC2",
+        # "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
 
     for mname in model_names:
