@@ -19,7 +19,28 @@ from copy import deepcopy
 import logging
 import pickle
 import nitools as nt
+import matplotlib.pyplot as plt
+import surfAnalysisPy as surf
+import ProbabilisticParcellation.plot as ppp
+conn_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/connectivity/maps/'
+surf_dir = surf.plot._surf_dir
 
+def export_conn_summary():
+    """Exports the connectivity profiles of all parcels"""
+    # load labels
+    index, cmap, labels = nt.read_lut(
+            ut.export_dir
+            + "NettekovenSym32.lut"
+        )
+
+    for parcel in labels[1:len(labels)-1//2]:
+        parcel=parcel[:2]
+        ppp.plot_parcel_summary(parcel=parcel,atlas='NettekovenSym32',space='MNISymC2')
+        # Make layout tighter
+        plt.tight_layout()
+        plt.savefig(f'{ut.figure_dir}/parcel_summary_{parcel}.png')
+
+    pass
 
 def save_cortex_cifti(fname):
     """Exports a cortical model as a surface-based CIFTI label file.
@@ -280,3 +301,7 @@ def colour_parcel(
         ax.show()
 
     return Prob, parcel, atlas, labels, cmap
+
+
+if __name__ == "__main__":
+    export_conn_summary()

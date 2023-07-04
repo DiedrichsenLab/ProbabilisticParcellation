@@ -31,7 +31,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
     p = pseg[:, idx].sum(axis=1)
 
     fig = plt.figure(figsize=(22, 16))
-    spec = fig.add_gridspec(3, 6)
+    spec = fig.add_gridspec(2, 6)
 
     axC = fig.add_subplot(spec[0:2, 2:4])
     ax = suit.flatmap.plot(
