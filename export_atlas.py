@@ -76,7 +76,7 @@ def export_map(data, atlas, cmap, labels, base_name):
     nb.save(dseg, base_name + f"_dseg.nii")
     nb.save(probseg, base_name + f"_probseg.nii")
     nb.save(Gifti, base_name + "_dseg.label.gii")
-    nt.save_lut(base_name + ".lut", np.arange(len(labels)), cmap[:, 0:4], labels)
+    # nt.save_lut(base_name + ".lut", np.arange(len(labels)), cmap[:, 0:4], labels)
     print(f"Exported {base_name}.")
 
 

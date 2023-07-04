@@ -32,7 +32,7 @@ import matplotlib as mpl
 from matplotlib.colors import TABLEAU_COLORS
 from matplotlib.patches import Rectangle
 from copy import deepcopy
-from wordcloud import WordCloud
+# from wordcloud import WordCloud
 import re
 import nitools as nt
 
@@ -468,19 +468,19 @@ def cognitive_features(mname):
 
 
 if __name__ == "__main__":
-    # short_name = "NettekovenSym32"
-    # mname = "Models_03/NettekovenSym32_space-MNISymC2"
-    # info, model = ut.load_batch_best(mname)
-    # info = ut.recover_info(info, model, mname)
+    short_name = "NettekovenSym32"
+    mname = "Models_03/NettekovenSym32_space-MNISymC2"
+    info, model = ut.load_batch_best(mname)
+    info = ut.recover_info(info, model, mname)
     # # data,inf=get_profiles_individ(model, info)
 
-    # fileparts = mname.split("/")
-    # index, cmap, labels = nt.read_lut(
-    #     ut.model_dir + "/Atlases/" + short_name + ".lut")
-    # export_profile(mname, info, model, labels, source="group")
-    # export_profile(mname, info, model, labels, source="group", dseg=True)
-    # export_profile(mname, info, model, labels, source="individ")
-    # export_profile(mname, info, model, labels, source="model")
+    fileparts = mname.split("/")
+    index, cmap, labels = nt.read_lut(
+        ut.model_dir + "/Atlases/" + short_name + ".lut")
+    export_profile(mname, info, model, labels, source="group")
+    export_profile(mname, info, model, labels, source="group", dseg=True)
+    export_profile(mname, info, model, labels, source="individ")
+    export_profile(mname, info, model, labels, source="model")
 
     # features = cognitive_features(mname)
     # profile = pd.read_csv(
@@ -495,8 +495,8 @@ if __name__ == "__main__":
 
     # export_profile(mname, info, model, labels, source="individ")
 
-    # get_profiles_vermal_lateral(region='A1')
-    # get_profiles_vermal_lateral(region='A1', source='group')
+    get_profiles_vermal_lateral(region='M2')
+    get_profiles_vermal_lateral(region='M2', source='group')
 
     source = 'group'
     Prof = pd.read_csv(
