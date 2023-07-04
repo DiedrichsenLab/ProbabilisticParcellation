@@ -45,7 +45,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
     )
 
     # Now do connectivity maps
-    conn_map = nb.load(conn_dir + "Fusion_L2_05.pscalar.nii")
+    conn_map = nb.load(conn_dir + "Fusion_L2_06.pscalar.nii")
     weights = nt.cifti.surf_from_cifti(conn_map)
     sc = conn_map.header.get_axis(0).name
     cidx = np.empty((2,), dtype=int)
