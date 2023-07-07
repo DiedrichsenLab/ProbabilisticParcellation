@@ -60,7 +60,7 @@ def reorder_selected():
         # "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed"
         # "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
         "Models_03/NettekovenSym68_space-MNISymC2",
-        "Models_03/NettekovenAsym68_space-MNISymC2",
+        # "Models_03/NettekovenAsym68_space-MNISymC2",
         # "Models_03/NettekovenSym32_space-MNISymC2",
         # "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
@@ -103,7 +103,7 @@ def reorder_selected():
 def export_selected():
     mnames = [
         "Models_03/NettekovenSym68_space-MNISymC2",
-        "Models_03/NettekovenAsym68_space-MNISymC2",
+        # "Models_03/NettekovenAsym68_space-MNISymC2",
         # "Models_03/NettekovenSym32_space-MNISymC2",
         # "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
@@ -357,7 +357,7 @@ if __name__ == "__main__":
     # features = fp.cognitive_features(mname)
 
     # # --- Reorder selected models according to our assignment ---
-    # reorder_selected()
+    reorder_selected()
     # # --- Export asymmetric model fitted from symmetric model ---
     export_selected()
 

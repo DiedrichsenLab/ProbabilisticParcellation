@@ -31,7 +31,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
     p = pseg[:, idx].sum(axis=1)
 
     fig = plt.figure(figsize=(22, 16))
-    spec = fig.add_gridspec(3, 6)
+    spec = fig.add_gridspec(2, 6)
 
     axC = fig.add_subplot(spec[0:2, 2:4])
     ax = suit.flatmap.plot(
@@ -45,7 +45,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
     )
 
     # Now do connectivity maps
-    conn_map = nb.load(conn_dir + "Fusion_L2_05.pscalar.nii")
+    conn_map = nb.load(conn_dir + "Fusion_L2_06.pscalar.nii")
     weights = nt.cifti.surf_from_cifti(conn_map)
     sc = conn_map.header.get_axis(0).name
     cidx = np.empty((2,), dtype=int)
@@ -79,7 +79,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
                 borders=border[h],
             )
 
-    fig.suptitle(parcel)
+    # fig.suptitle(parcel)
 
 def plot_parcel_prob(parcel="D1", atlas="NettekovenSym32", 
                      space="MNISymC2",

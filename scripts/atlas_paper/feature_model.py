@@ -119,6 +119,8 @@ def scatter_plot(compare, data, side=None):
     region1 = region1.groupby(['task']).mean().reset_index()
     region2 = region2.groupby(['task']).mean().reset_index()
     fig = plt.scatter(region1['score'], region2['score'])
+    # Remove upper and right box lines
+    sb.despine()
 
     # Add labels to the dots
     for i in range(len(region1)):
@@ -131,9 +133,7 @@ def scatter_plot(compare, data, side=None):
     # Insert lines
     plt.axhline(0, color='k', linestyle='--')
     plt.axvline(0, color='k', linestyle='--')
-    if side is None:
-        plt.title(f'{compare[0]} vs {compare[1]}')
-    else:
+    if side is not None:
         plt.title(side)
 
 
@@ -146,6 +146,8 @@ def scatter_plot_hemispheres(compare, data):
     region1 = region1.groupby(['task']).mean().reset_index()
     region2 = region2.groupby(['task']).mean().reset_index()
     fig = plt.scatter(region1['score'], region2['score'])
+    # Remove upper and right box lines
+    sb.despine()
 
     # Add labels to the dots
     for i in range(len(region1)):
@@ -158,7 +160,7 @@ def scatter_plot_hemispheres(compare, data):
     # Insert lines
     plt.axhline(0, color='k', linestyle='--')
     plt.axvline(0, color='k', linestyle='--')
-    plt.title(f'{compare}')
+    # plt.title(f'{compare}')
 
 
 def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
@@ -187,6 +189,8 @@ def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
         cmap = dict(zip(['L', 'R'], ['blue', 'red']))
         colors = [cmap[i[-1]] for i in task1['index']]
     plt.scatter(task1['score'], task2['score'], c=colors)
+    # Remove upper and right box lines
+    sb.despine()
 
     # Add labels to the dots
     for i in range(len(task1)):
@@ -199,7 +203,7 @@ def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
     # Insert lines
     plt.axhline(0, color='k', linestyle='--')
     plt.axvline(0, color='k', linestyle='--')
-    plt.title(f'{compare[0]} vs {compare[1]}')
+    # plt.title(f'{compare[0]} vs {compare[1]}')
 
 
 if __name__ == "__main__":
