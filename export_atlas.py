@@ -42,6 +42,20 @@ def export_conn_summary():
 
     pass
 
+
+def export_all_probmaps():
+    index, cmap, labels = nt.read_lut(
+            ut.export_dir
+            + "NettekovenSym32.lut"
+        )
+
+    for parcel in labels[1:len(labels)-1//2]:
+        parcel=parcel[:2]
+
+        plt.figure(figsize=(8, 8))
+        ppp.plot_parcel_prob(parcel,'NettekovenSym32',space='MNISymC2',backgroundcolor='w',bordercolor='k')
+        plt.savefig(ut.figure_dir + f'Prob_{parcel}.pdf',bbox_inches='tight')
+
 def save_cortex_cifti(fname):
     """Exports a cortical model as a surface-based CIFTI label file.
     Args:
@@ -304,4 +318,5 @@ def colour_parcel(
 
 
 if __name__ == "__main__":
-    export_conn_summary()
+    # export_conn_summary()
+    export_all_probmaps()

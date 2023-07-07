@@ -79,7 +79,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
                 borders=border[h],
             )
 
-    fig.suptitle(parcel)
+    # fig.suptitle(parcel)
 
 def plot_parcel_prob(parcel="D1", atlas="NettekovenSym32", 
                      space="MNISymC2",
