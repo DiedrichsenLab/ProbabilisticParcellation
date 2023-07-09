@@ -45,7 +45,7 @@ suit_dir = "/Volumes/diedrichsen_data$/data/FunctionalFusion/Atlases/tpl-SUIT/"
 
 
 
-def dissect_atlas(mname, from_model=True):
+def dissect_atlas(mname):
     '''Dissect the atlas into primary, secondary and tertiary parcels'''
     # Import probabilities and parcels
     fileparts = mname.split("/")
@@ -53,12 +53,8 @@ def dissect_atlas(mname, from_model=True):
     atlasname = fileparts[1].split("_space")[0]
 
     info, model = ut.load_batch_best(mname)
-    if from_model:
-        Prob = model.marginal_prob().numpy()
-        parcel = Prob.argmax(axis=0) + 1
-    else:
-        Prob = nb.load(atlas_dir + fileparts[1] + "_probseg.nii")
-        parcel = nb.load(atlas_dir + fileparts[1] + "_dseg.nii")
+    Prob = model.marginal_prob().numpy()
+    parcel = Prob.argmax(axis=0) + 1
 
     suit_atlas, _ = am.get_atlas(space, ut.base_dir + "/Atlases")
     Nifti = suit_atlas.data_to_nifti(parcel.astype(float))
@@ -74,6 +70,11 @@ def dissect_atlas(mname, from_model=True):
     # Plot parcel size for left parcels
     D = cl.plot_parcel_size(Prob, ListedColormap(cmap), labels, wta=True, sort=False, side='L')
     plt.savefig(ut.figure_dir + f"parcel_sizes.pdf")
+
+    D = cl.plot_parcel_size(Prob, ListedColormap(cmap), labels, wta=False, sort=False, side='L')
+    plt.savefig(ut.figure_dir + f"parcel_sizes_probs.pdf")
+
+
     
     # Get lobules 
     a, ainf = am.get_atlas(space, ut.atlas_dir)
@@ -99,19 +100,7 @@ def dissect_atlas(mname, from_model=True):
     mask[sec] = 2
     mask[tert] = 3
     
-    # Plot mask via nifti
-    # Nifti = suit_atlas.data_to_nifti(mask.astype(int))
-    # lobules_surf = suit.flatmap.vol_to_surf(Nifti, stats='mode',
-    #                                     space='MNISymC', ignore_zeros=True)
-    # # get categorical colormap
-
-    # suit.flatmap.plot(lobules_surf,
-    #         render='matplotlib',
-    #         cmap='Set1',
-    #         new_figure=False,
-    #         overlay_type='label')
-    
-    
+    # Plot mask   
     ut.plot_data_flat(mask.astype(int), 'MNISymC2',
                    dtype='label',
                    render='matplotlib',
@@ -145,28 +134,20 @@ def dissect_atlas(mname, from_model=True):
     labels_sections = ['0'] + [f"{d}{r}_{s}_{h}" for h in hemispheres for d in domains  for r in regions  for s in sections]
 
     
-    
-    
     # Plot parcel size for left parcels
     D = cl.plot_parcel_size(Prob_sections, ListedColormap(cmap_sections), labels_sections, wta=True, sort=False, side='L')
     # Adjust figure size
     plt.gcf().set_size_inches(10, 40)
     plt.savefig(ut.figure_dir + f"parcel_sizes_SDI.pdf")
 
-    
-    
-    
-    
-    
+    D = cl.plot_parcel_size(Prob_sections, ListedColormap(cmap_sections), labels_sections, wta=False, sort=False, side='L')
+    # Adjust figure size
+    plt.gcf().set_size_inches(10, 40)
+    plt.savefig(ut.figure_dir + f"parcel_sizes_SDI_probs.pdf")
 
     
-
-
-
-    # secion_primary = 
-    # section_secondary =
-    # section_tertiary =  
-
+    
+    
 
 
     pass
