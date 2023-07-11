@@ -54,7 +54,7 @@ def export_all_probmaps():
 
         plt.figure(figsize=(8, 8))
         ppp.plot_parcel_prob(parcel,'NettekovenSym32',space='MNISymC2',backgroundcolor='w',bordercolor='k')
-        plt.savefig(ut.figure_dir + f'Prob_{parcel}.pdf',bbox_inches='tight')
+        plt.savefig(ut.figure_dir + f'Prob_{parcel}.png',bbox_inches='tight')
 
 def save_cortex_cifti(fname):
     """Exports a cortical model as a surface-based CIFTI label file.

@@ -353,14 +353,18 @@ def calc_parcel_size(Prob):
     return sumP, sumV
 
 
-def plot_parcel_size(Prob, cmap, labels, wta=True):
+def plot_parcel_size(Prob, cmap, labels, wta=True, sort=True, side=None):
     sumP, sumV = calc_parcel_size(Prob)
 
     D = pd.DataFrame({'region': labels[1:],
                       'sumP': sumP,
                      'sumV': sumV,
                       'cnum': np.arange(Prob.shape[0]) + 1})
-    D = D.sort_values(by='region')
+    if sort:
+        D = D.sort_values(by='region')
+    if side is not None:
+        D['side'] = D.region.str[-1]
+        D = D[D.side == side]
     pal = {d.region: cmap(d.cnum) for i, d in D.iterrows()}
     if wta:
         sb.barplot(data=D, y='region', x='sumV', palette=pal)
