@@ -21,8 +21,8 @@ if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
-# if not Path(model_dir).exists():
-#     model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
+if not Path(model_dir).exists():
+    model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(model_dir).exists():
     model_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
 if not Path(model_dir).exists():
