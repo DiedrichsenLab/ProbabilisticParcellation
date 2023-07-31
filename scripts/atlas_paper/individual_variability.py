@@ -239,7 +239,8 @@ def variability_maps():
 
 
 def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reordered"):
-    """Export Uhats for all subjects in a model"""
+    """Export Uhats for all subjects in a model
+    """
 
     # -- Save individual parcellations --
     prob = ppev.get_individual_parcellation(
