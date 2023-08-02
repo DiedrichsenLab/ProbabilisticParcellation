@@ -7,23 +7,39 @@ Diedrichsenlab/FunctionalFusion
 Diedrichsenlab/DCBC
 Diedrichsenlab/cortico_cereb_connectivity 
 
-Other dependencies 
+Other dependencies: 
 
+see ```requirements.txt```
 
 ## Notebooks / Code to replicate different sections of the paper
 
+### Estimation of the atlas 
+
+
+
 ### State dependency of functional atlases 
+
+
 
 ### Fusion outperforms other atlases
 
+
+
 ### Symmetric and Asymmetric atlasses  
+
+
 
 ### Fine level of granularity advantageous for individual parcellation
 
 
+
 ### Hierarchical atlas organisation 
 
+
+
 ### Characterization of regions
+
+
 
 ### Cortical Connectivity
 
@@ -33,7 +49,26 @@ Cortical connectivity models are estimated and evaluated in the repository
 
 Models were trained evaluated ```ccc.run_model```, which is called from ```ccc.scripts.scipt_train_eval_models.py```
 
-The final results reported in the paper can be found in ```ccc.notebooks.Evaluate_model_int.ipynb```. 
+The final model evaluation results reported in the paper can be found in ```ccc.notebooks.Evaluate_model_int.ipynb```. 
+
+To summarize the connectivity pattern by cerebellar regions: 
+
+```
+import cortico_cereb_connectivity.scripts.script_summarize_weights as csw
+csw.make_weight_map('Fusion','05')
+```
+
+To summarize further by cortical ROI: 
+
+```
+T = csw.make_weight_table(dataset="Fusion",extension="06",cortical_roi="yeo17")
+```
+
+Summary figures (by yeo17) and full connectivity maps are in the following two notebooks: 
+```
+cortical_connectivity.ipynb
+parcel_summary.ipynb
+```
 
 ### Function and boundary (a)symmetry 
 
@@ -66,4 +101,6 @@ Comparing group and individual parcellations with varying length of data (Fig XD
 ```notebooks/individual_group.ipynb```
 
 
+
+### Final export / Production of the atlas
 
