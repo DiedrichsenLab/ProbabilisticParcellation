@@ -2,9 +2,10 @@
 Cerebellar Probabilistic Parcellation project using HierarchBayesParcel and FunctionalFusion
 
 ## Dependencies: 
-Diedrichsenlab/HierarchicalBayesParcel
+Diedrichsenlab/HierarchicalBayesParcel 
 Diedrichsenlab/FunctionalFusion
 Diedrichsenlab/DCBC
+Diedrichsenlab/cortico_cereb_connectivity 
 
 Other dependencies 
 
@@ -26,7 +27,17 @@ Other dependencies
 
 ### Cortical Connectivity
 
+Cortical connectivity models are estimated and evaluated in the repository 
+
+```diedrichsenlab/cortico_cereb_connectivity``` denoted ```ccc``` for short.
+
+Models were trained evaluated ```ccc.run_model```, which is called from ```ccc.scripts.scipt_train_eval_models.py```
+
+The final results reported in the paper can be found in ```ccc.notebooks.Evaluate_model_int.ipynb```. 
+
 ### Function and boundary (a)symmetry 
+
+
 
 
 ### Individual localization
@@ -53,7 +64,6 @@ Plotting probability maps for parcels (Fig XC):
 
 Comparing group and individual parcellations with varying length of data (Fig XD):
 ```notebooks/individual_group.ipynb```
-
 
 
 
