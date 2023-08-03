@@ -24,6 +24,12 @@ see ```requirements.txt```
 ### Fusion outperforms other atlases
 
 
+Plotting MDS plots for different datasets (Fig 1B & 1C & 1D) & Statistics for Similarity to task-based and rest-based data:
+```notebooks/evaluate_mds.ipynb```
+
+Plotting DCBC & Statistics DCBC (Fig 1E & 1F):
+```notebooks/evaluate_dcbc.ipynb```
+
 
 ### Symmetric and Asymmetric atlasses  
 
