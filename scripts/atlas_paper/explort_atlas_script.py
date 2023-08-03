@@ -1,5 +1,5 @@
 """
-Fits the 
+Minimal script to export the atlas to different spaces
 """
 
 import pandas as pd

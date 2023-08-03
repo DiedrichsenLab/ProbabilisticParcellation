@@ -26,7 +26,15 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
 
 
 def get_individ_group_mdtb(model,atlas='MNISymC3'):
-    """ Gets individual (data only), group, and integrated estimates for 1-16 runs of first ses-s1 fro, the MDTB data set"""
+    """ Gets individual (data only), group, and integrated Uhats for 1-16 runs of first ses-s1 fro, the MDTB data set
+    Args:
+        model: model name
+        atlas: atlas name
+    Returns:
+        Uhat_data_all: list (for each run) of parcellations based on data only 
+        Uhat_complete_all: list of parcellations for integrated estimate
+        Uhat_group: group map 
+    """
     idata,iinfo,ids = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s1'], type='CondRun')
 

@@ -933,57 +933,57 @@ if __name__ == "__main__":
     # save_ari()
 
     # # ---- Load results ----
-    # with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
-    #     aris = np.load(f)
+    with open(f'{ut.model_dir}/Models/Evaluation/nettekoven_68/ARI_granularity.npy', 'rb') as f:
+        aris = np.load(f)
 
-    # # Normalize aris by within-dataset reliability
-    # ARI_avg = average_comp_matrix(aris)
-    # ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
+    # Normalize aris by within-dataset reliability
+    ARI_avg = average_comp_matrix(aris)
+    ARI_norm, aris_norm = norm_comp_matrix(aris, ARI_avg)
 
-    # # ---- Plots ----
-    # dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
-    #                   'Wm', 'De', 'So', 'Hc']
+    # ---- Plots ----
+    dataset_labels = ['Md', 'Po', 'Ni', 'Ib',
+                      'Wm', 'De', 'So', 'Hc']
 
-    # fig, ax = plt.subplots(figsize=(11, 9))
-    # sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
-    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
-    # plt.title('Average ARI between granularities')
-    # plt.show()
+    fig, ax = plt.subplots(figsize=(11, 9))
+    sns.heatmap(ARI_avg, annot=True, vmin=0, vmax=0.5, ax=ax,
+                xticklabels=dataset_labels, yticklabels=dataset_labels)
+    plt.title('Average ARI between granularities')
+    plt.show()
 
-    # fig, ax = plt.subplots(figsize=(11, 9))
-    # sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
-    #             xticklabels=dataset_labels, yticklabels=dataset_labels)
-    # plt.title('Average ARI between granularities')
-    # plt.show()
+    fig, ax = plt.subplots(figsize=(11, 9))
+    sns.heatmap(ARI_norm, annot=True, vmin=0, vmax=0.5, ax=ax,
+                xticklabels=dataset_labels, yticklabels=dataset_labels)
+    plt.title('Average ARI between granularities')
+    plt.show()
 
-    # # ---- Stats ----
-    # # Test whether task based datasets are more similar to MDTB than to HCP
-    # n_parcellations = int(np.sqrt(len(aris)))
-    # mdtb_row = dataset_labels.index('Md')
-    # hcp_row = dataset_labels.index('Hc')
+    # ---- Stats ----
+    # Test whether task based datasets are more similar to MDTB than to HCP
+    n_parcellations = int(np.sqrt(len(aris)))
+    mdtb_row = dataset_labels.index('Md')
+    hcp_row = dataset_labels.index('Hc')
 
-    # mdtb_values = [aris_norm[i * n_parcellations + j]
-    #                for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
-    # mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
+    mdtb_values = [aris_norm[i * n_parcellations + j]
+                   for j in np.arange(n_parcellations) for i in np.arange(n_parcellations) if i == mdtb_row and j != mdtb_row and j < hcp_row]
+    mdtb_values = [el for arr in mdtb_values for row in arr for el in row]
 
-    # hcp_values = [aris_norm[i * n_parcellations + j]
-    #               for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
-    # hcp_values = [el for arr in hcp_values for row in arr for el in row]
+    hcp_values = [aris_norm[i * n_parcellations + j]
+                  for j in np.arange(hcp_row) for i in np.arange(n_parcellations) if i == hcp_row and j < hcp_row]
+    hcp_values = [el for arr in hcp_values for row in arr for el in row]
 
-    # task_values = [aris_norm[i * n_parcellations + j]
-    #                for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
-    # task_values = [el for arr in task_values for row in arr for el in row]
+    task_values = [aris_norm[i * n_parcellations + j]
+                   for j in np.arange(hcp_row) for i in np.arange(j + 1, hcp_row) if i != j]
+    task_values = [el for arr in task_values for row in arr for el in row]
 
-    # import scipy.stats as stats
-    # print(stats.ttest_ind(mdtb_values, hcp_values))
-    # print(np.mean(mdtb_values), np.mean(hcp_values))
-    # print(stats.ttest_ind(task_values, hcp_values))
-    # print(np.mean(task_values), np.mean(hcp_values))
+    import scipy.stats as stats
+    print(stats.ttest_ind(mdtb_values, hcp_values))
+    print(np.mean(mdtb_values), np.mean(hcp_values))
+    print(stats.ttest_ind(task_values, hcp_values))
+    print(np.mean(task_values), np.mean(hcp_values))
 
     #  --- Evaluate asymmetric fitted from symmetric ---
-    # ks = [10, 20, 34, 40, 68]
-    # mname_suffix = '_arrange-asym_sep-hem'
-    # evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
-    # 'task'], test_on='task', mname_suffix=mname_suffix)
+    ks = [10, 20, 34, 40, 68]
+    mname_suffix = '_arrange-asym_sep-hem'
+    evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
+    'task'], test_on='task', mname_suffix=mname_suffix)
 
-    compile_results()
+    # compile_results()

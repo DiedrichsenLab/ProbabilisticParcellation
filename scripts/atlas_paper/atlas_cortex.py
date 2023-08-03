@@ -1,5 +1,5 @@
 """
-Script to analyze parcels using clustering and colormaps
+Script to find the cortical parcels correlated best to specific cerebellar parcels
 """
 
 import pandas as pd
@@ -25,7 +25,7 @@ import Functional_Fusion.atlas_map as am
 import HierarchBayesParcel.evaluation as ev
 import logging
 import nitools as nt
-import cortico_cereb_connectivity.scripts.script_plot_weights as cc
+import cortico_cereb_connectivity.scripts.script_summarize_weights as cc
 from pathlib import Path
 import nibabel as nb
 
@@ -103,6 +103,7 @@ def get_modelled_cortex(mname, mname_new=None, symmetry=None):
 
 
 def get_cortex(method='corr', mname='Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_meth-mixed', symmetry=None):
+    """ Get the cortex from the cerebellar parcel profiles """
     mname_new = f'{mname.split("/")[-1]}_cortex-{method}'
     if symmetry is not None:
         mname_new = f'{symmetry}_{mname_new.split("sym_")[1]}'
