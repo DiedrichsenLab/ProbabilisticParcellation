@@ -351,7 +351,7 @@ def run_dcbc_group(
         pname_parts = pname.split(".")
         print(f"evaluating {pname}")
         if pname_parts[-1] == "pickle":
-            minfo, model = load_batch_best(
+            minfo, model = ut.load_batch_best(
                 f"{fileparts[-2]}/{pname_parts[-2]}", device=device
             )
             Prop = model.marginal_prob()
@@ -441,9 +441,9 @@ def run_dcbc(
         if verbose:
             ut.report_cuda_memory()
         if load_best:
-            minfo, model = load_batch_best(f"{model_name}", device=device)
+            minfo, model = ut.load_batch_best(f"{model_name}", device=device)
         else:
-            minfo, model = load_batch_fit(f"{model_name}")
+            minfo, model = ut.load_batch_fit(f"{model_name}")
             minfo = minfo.iloc[0]
 
         Prop = model.marginal_prob()
@@ -591,9 +591,9 @@ def run_dcbc_IBC(
     for i, model_name in enumerate(model_names):
         print(f"Doing model {model_name}\n")
         if load_best:
-            minfo, model = load_batch_best(f"{model_name}", device=device)
+            minfo, model = ut.load_batch_best(f"{model_name}", device=device)
         else:
-            minfo, model = load_batch_fit(f"{model_name}")
+            minfo, model = ut.load_batch_fit(f"{model_name}")
             minfo = minfo.iloc[0]
 
         Prop = model.marginal_prob()
