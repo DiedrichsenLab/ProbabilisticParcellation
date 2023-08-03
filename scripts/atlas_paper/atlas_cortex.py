@@ -25,7 +25,7 @@ import Functional_Fusion.atlas_map as am
 import HierarchBayesParcel.evaluation as ev
 import logging
 import nitools as nt
-import cortico_cereb_connectivity.scripts.script_plot_weights as cc
+import cortico_cereb_connectivity.scripts.script_summarize_weights as cc
 from pathlib import Path
 import nibabel as nb
 
