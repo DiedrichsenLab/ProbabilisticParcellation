@@ -54,7 +54,7 @@ def plot_parcel_summary(parcel="D1", atlas="NettekovenSym32", space="MNISymC2"):
 
     flat = []
     # Use the mirrored flatmap for the left hemisphere
-    flat.append(nb.load(surf_dir + "/fs_L/fs_LR.32k.L.flat.surf.gii"))
+    flat.append(nb.load(surf_dir + "/fs_L/fs_LR.32k.Lm.flat.surf.gii"))
     flat.append(nb.load(surf_dir + "/fs_R/fs_LR.32k.R.flat.surf.gii"))
     border = []
     border.append(surf_dir + "/fs_L/fs_LR.32k.L.border")
