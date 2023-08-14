@@ -745,6 +745,18 @@ def plot_comp_matrix(aris, labels, parcels):
 
 
 def average_comp_matrix(aris, diag=True):
+    """
+    Compute the average ARI matrix from a list of individual ARI matrices.
+
+    Parameters:
+        aris (list of numpy.ndarray): A list of individual comparison matrices (ARI scores).
+        diag (bool, optional): Whether to include the diagonal elements in the averaging. 
+                               If set to True (default), the diagonal elements are included; 
+                               if set to False, the diagonal elements are excluded.
+
+    Returns:
+        numpy.ndarray: The average comparison matrix as a 2D numpy array.
+    """
     n_parcellations = int(np.sqrt(len(aris)))
 
     ARI_avg = np.zeros((n_parcellations, n_parcellations))
