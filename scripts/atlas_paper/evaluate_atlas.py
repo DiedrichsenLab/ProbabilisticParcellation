@@ -7,11 +7,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import Functional_Fusion.atlas_map as am
-import Functional_Fusion.matrix as matrix
 import Functional_Fusion.dataset as ds
-import HierarchBayesParcel.emissions as em
-import HierarchBayesParcel.arrangements as ar
-import HierarchBayesParcel.full_model as fm
 import HierarchBayesParcel.evaluation as gev
 
 from scipy.linalg import block_diag
@@ -758,12 +754,12 @@ def average_comp_matrix(aris, diag=True):
         numpy.ndarray: The average comparison matrix as a 2D numpy array.
     """
     n_parcellations = int(np.sqrt(len(aris)))
-
+    # 
     ARI_avg = np.zeros((n_parcellations, n_parcellations))
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
-
+            # 
             if not diag and i == j:
                 # Average off-diagonal elements of each matrix
                 mask = np.zeros_like(ari, dtype=bool)
@@ -779,13 +775,13 @@ def norm_comp_matrix(aris, ARI_avg, diag=True):
     diag: Indicates whether to take out the diagonal when calculating reliability (during normalization)
     """
     n_parcellations = int(np.sqrt(len(aris)))
-
+    # 
     ARI_norm = np.zeros((n_parcellations, n_parcellations))
     aris_norm = []
     for i in np.arange(n_parcellations):
         for j in np.arange(n_parcellations):
             ari = aris[i * n_parcellations + j]
-
+            # 
             if not diag and i == j:
                 mask = np.zeros_like(ari, dtype=bool)
                 mask[np.diag_indices(ari.shape[0])] = True
@@ -793,10 +789,10 @@ def norm_comp_matrix(aris, ARI_avg, diag=True):
                     np.sqrt(ARI_avg[i, i] * ARI_avg[j, j])
             else:
                 ari_norm = ari / np.sqrt(ARI_avg[i, i] * ARI_avg[j, j])
-
+            # 
             ARI_norm[i, j] = np.mean(ari_norm)
             aris_norm.append(ari_norm)
-
+    # 
     # Normalize each row
     return ARI_norm, aris_norm
 
