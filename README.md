@@ -32,7 +32,7 @@ Plotting DCBC & Statistics DCBC (Fig 1E & 1F):
 
 
 ### Symmetric and Asymmetric atlasses  
-Plotting symmetry (boundary and functional symmetry, i.e. functional lateralization)
+Plotting symmetry (boundary and functional symmetry, i.e. functional lateralization) and comparing asymmetric and symmetric atlas versions:
 ```notebooks/symmetry.ipynb```
 
 
