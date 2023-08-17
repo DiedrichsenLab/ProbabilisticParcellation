@@ -346,10 +346,15 @@ def calc_parcel_size(Prob):
     """
     if isinstance(Prob, pt.Tensor):
         Prob = Prob.numpy()
-    sumP = np.sum(Prob, axis=1)
+    if Prob.ndim == 3:
+        voxel_axis = 2
+    else:
+        voxel_axis = 1
+    parcel_axis = voxel_axis - 1
+    sumP = np.sum(Prob, axis=voxel_axis)
     counts = np.zeros(Prob.shape)
-    counts[np.argmax(Prob, axis=0), np.arange(Prob.shape[1])] = 1
-    sumV = np.sum(counts, axis=1)
+    counts[np.argmax(Prob, axis=parcel_axis), np.arange(Prob.shape[voxel_axis])] = 1
+    sumV = np.sum(counts, axis=voxel_axis)
     return sumP, sumV
 
 
