@@ -108,7 +108,22 @@ Plotting probability maps for parcels (Fig XC):
 Comparing group and individual parcellations with varying length of data (Fig XD):
 ```notebooks/individual_group.ipynb```
 
+### Model to atlas 
+```export_atlas.export_map``` takes a marginal probabiltiy of a arangement model and generates the probseg and dseg to save in the Atlas directory 
+
+
+### Spatial subdivision of the atlas 
 
 
 ### Final export / Production of the atlas
+The final step is to take the 2mm atlas in MNISymC2 space and resample it to 1mm isotropic in SUIT, MNIAsym and MNISym spaces defined in the `FunctionalFusion/Atlases` directory. The reslicing is done on the `probseg.nii` files and then a new `dseg.nii` file is computed. 
 
+```scripts.export_atlas_script.py```
+
+which calls
+ 
+```
+export_atlas.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
+```
+
+The files are then copied for inclusion into the `cerebellar_atlases` repository. 
