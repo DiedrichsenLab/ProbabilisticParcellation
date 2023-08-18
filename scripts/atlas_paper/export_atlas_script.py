@@ -19,5 +19,9 @@ import ProbabilisticParcellation.learn_fusion_gpu as lf
 
 if __name__=="__main__":
     ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin6AsymC')
     ea.resample_atlas('NettekovenSym32','MNISymC2','SUIT')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin6AsymC')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','SUIT')
     pass 

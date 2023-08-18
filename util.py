@@ -46,7 +46,8 @@ if not Path(figure_dir).exists():
     figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
 
 export_dir = f'{base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/'
-
+if not Path(export_dir).exists():
+    export_dir = f'{base_dir}/Atlases/'
 
 # pytorch cuda global flag
 if pt.cuda.is_available():
