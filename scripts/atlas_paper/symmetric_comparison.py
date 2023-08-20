@@ -367,3 +367,29 @@ if __name__ == "__main__":
 
 
 
+    # --- Bar Plot of left and right comparison of asymmetric atlas ---
+    # Make left and right into columns 
+    df_wide['reg'] = df_wide['region'].str[:-1]
+    df_wider = df_wide.pivot_table(index=['subject', 'reg',  'domain'],
+                            columns=['side'],
+                            values = ['prob_sym', 'prob_asym', 'voxels_sym', 'voxels_asym'],
+                            aggfunc='first').reset_index()
+    df_wider.columns = ['_'.join(col).strip() if col[1] != '' else col[0] for col in df_wider.columns.values]
+
+    # Calculate standard error and mean, then plot bar plot
+    df_diff = df_wider[['reg', 'subject', 'domain']]
+    df_diff['voxel_diff'] = (df_wider.voxels_asym_R.values - df_wider.voxels_asym_L.values)
+    df_diff_barplot = df_diff[['reg', 'voxel_diff']].groupby(['reg']).mean().reset_index()
+    df_diff_barplot['voxels_diff_sem'] = df_diff[['reg', 'voxel_diff']].groupby(['reg']).sem().reset_index()['voxel_diff']
+    # Plot the horizontal bar charts
+    fig, ax = plt.subplots(figsize=(3, 6))
+    # Plot the horizontal bar charts
+    plt.barh(df_diff_barplot.reg, df_diff_barplot.voxel_diff, xerr=df_diff_barplot.voxels_diff_sem, color=pal_one_hem.values())
+    ax.invert_yaxis()
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(ut.figure_dir + f"parcel_sizes_asym_hem_indiv_horzbarplot.pdf")
+
+
+
+
