@@ -21,6 +21,8 @@ import Functional_Fusion.atlas_map as am
 from matplotlib.colors import ListedColormap
 import nitools as nt
 import seaborn as sb
+from matplotlib.ticker import MultipleLocator
+
 
 
 figsize = (20, 20)
@@ -191,7 +193,7 @@ def make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels):
     }
     )
     df['side'] = df['region'].str[-1]
-    df['region'] = df['region'].str[:-1]
+    df['reg'] = df['region'].str[:-1]
     df['domain'] = df['region'].str[0]
     return df
 
@@ -200,24 +202,23 @@ def make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels):
 def plot_counts_hist(df, plot='prob'):
     # Plot histogram of counts
     # Create a FacetGrid with regions as rows and hemisphere side as columns
-    for d in df.domain.unique():
-        df_d = df[df.domain == d]
-        grid = sns.FacetGrid(df_d, row='region', col='side', hue='symmetry', height=3, aspect=1)
-        figname = f"parcel_sizes_sym_vs_asym_indiv_grid_{plot}_{d}.pdf"
-    
-        # Map the histograms onto the grid
-        grid.map(sns.histplot, plot, bins=10, kde=False)
-        # Adding labels and titles
-        grid.set_axis_labels(plot, 'N Subjects')
-        grid.set_titles(row_template="{row_name}", col_template="{col_name}")
-        plt.ylim([0, 105])
-        plt.xlim([0, 8050])
-        # Adjust layout
-        plt.tight_layout()
-        if d == df.domain.unique()[0]:
-            plt.legend()
-        # Show the plot
-        plt.savefig(ut.figure_dir + figname)
+    grid = sb.FacetGrid(df, col='region', hue='symmetry', height=3, aspect=1, col_wrap=8, col_order=
+        [f"{region}{num}{side}" for region in ['M', 'A', 'D', 'S'] for num in range(1, 5) for side in ['L', 'R']]
+    )
+    figname = f"parcel_sizes_sym_vs_asym_indiv_grid_{plot}.pdf"
+
+    # Map the histograms onto the grid
+    grid.map(sb.histplot, plot, bins=10, kde=False)
+    # Adding labels and titles
+    grid.set_axis_labels(plot, 'N Subjects')
+    grid.set_titles(row_template="{row_name}", col_template="{col_name}")
+    plt.ylim([0, 105])
+    plt.xlim([0, 8050])
+    # Adjust layout
+    plt.tight_layout()
+    plt.legend()
+    # Show the plot
+    plt.savefig(ut.figure_dir + figname)
     
     
 
@@ -237,6 +238,57 @@ def group_change():
     plot_change(voxel_change, cmap, labels)
 
 
+
+def plot_mean_scatter(df_mean, plot='prob'):
+    # Plot mean across subjects
+    # Make markers reflect region number and color reflect domain
+    markers = ['o', 's', '^', "x"]
+    domains = ['M', 'A', 'D', 'S']
+    regions = [1, 2, 3, 4]
+    domain_palette = [(0.4, 0.71, 0.98), (0.3239, 0.3067, 0.881),(0.8, 0.3261, 0.7),(0.98, 0.76, 0.13)]
+    
+    pal = {d.region: domain_palette[domains.index(d.domain)] for i, d in df_mean.iterrows()}
+    mark = [markers[int(d.region[1])-1] for i, d in df_mean.iterrows()]
+
+    ax = sb.catplot(data=df_mean,
+                        x=f'{plot}_sym', 
+                        y=f'{plot}_asym', 
+                        hue='region', 
+                        col='side', 
+                        kind='point', 
+                        col_wrap=2, 
+                        palette=pal, 
+                        markers=mark, 
+                        legend=False, 
+                        aspect=1)  
+
+    for subax in ax.axes.flat:
+        xticklabels = subax.get_xticklabels() # get x labels
+        for i,l in enumerate(xticklabels):
+            if(i%2 == 0): xticklabels[i] = '' # skip even labels
+        subax.set_xticklabels(xticklabels, rotation=30) # set new labels
+
+    # add custom legend
+    plt.gca()
+    f = lambda m,c: plt.plot([],[],marker=m, color=c, ls="none")[0]
+    handles = [f("s", domain_palette[i]) for i in range(4)]
+    handles += [f(markers[i], "k") for i in range(4)]
+    labels = domains + ["1", "2", "3", "4"]
+    plt.legend(handles, labels, framealpha=1, loc=2)
+
+    # plot 1/1 line, adjust ticks, etc.
+    plt.subplot(1, 2, 1)
+    plt.plot([0, 1], [0, 1], transform=plt.gca().transAxes, color='k', linestyle='--', alpha=0.5)
+    plt.tight_layout()
+
+    plt.subplot(1, 2, 2)
+    plt.plot([0, 1], [0, 1], transform=plt.gca().transAxes, color='k', linestyle='--', alpha=0.5)
+    plt.tight_layout()
+
+    # plot legend outside of plot
+    plt.savefig(ut.figure_dir + f"parcel_sizes_sym_vs_asym_indiv_scatter_mean_{plot}.pdf")
+
+
 if __name__ == "__main__":
 
 
@@ -250,33 +302,68 @@ if __name__ == "__main__":
     
     # Plot histogram of voxel counts
     df = make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels)
-    plot_counts_hist(df)
-    plot_counts_hist(df, plot='voxels')
+    # plot_counts_hist(df)
+    # plot_counts_hist(df, plot='voxels')
 
-    # Make dataframe into wide form where each symmetry type is a column
+    # Plot scatter plots asym vs sym
+    # Make dataframe wide
     df_wide = df.pivot_table(index=['subject', 'region', 'side', 'domain'],
                           columns=['symmetry'],
                           values=['voxels', 'prob'],
                           aggfunc='first').reset_index()
     df_wide.columns = ['_'.join(col).strip() if col[1] != '' else col[0] for col in df_wide.columns.values]
 
-
-
-    # Plot scatter plots asym vs sym
-    plt.figure(figsize=(10, 10))
-    sb.catplot(data=df_wide, x='prob_sym', y='prob_asym', col='region', hue='subject', kind='point', col_wrap=4)
+    # plt.figure(figsize=(10, 10))
+    # sb.catplot(data=df_wide, x='prob_sym', y='prob_asym', col='region', hue='subject', kind='point', col_wrap=4)
+    # plt.savefig(ut.figure_dir + f"parcel_sizes_sym_vs_asym_indiv_scatter.pdf")
     
-    sb.catplot(data=df_wide.groupby('subject').mean(), x='prob_sym', y='prob_asym', hue='region', col='side', kind='point', col_wrap=2)
-    
+    df_wide['subject_num'] = df_wide['subject'].str[-1].astype(int)
+    df_wide = df_wide.drop(columns=['subject'])
 
+    # df_mean = df_wide.drop(columns=['subject', 'side', 'domain']).groupby(['region']).mean().reset_index()
+    # df_mean['side'] = df_mean['region'].str[-1]
+    # df_mean['domain'] = df_mean['region'].str[0]
 
+    # plot_mean_scatter(df_mean, plot='prob')
+    # plot_mean_scatter(df_mean, plot='voxels')
+
+    # Calculate voxel difference and voxel change
     df_change = df[['subject', 'region', 'cnum', 'side', 'domain']][df.symmetry == 'sym']
-    df_change['change'] = (df[df.symmetry=='asym'].voxels.values - df[df.symmetry=='sym'].voxels.values) \
-        / df[df.symmetry=='sym'].voxels.values
+    df_change['voxel_diff'] = (df_wide.voxels_asym.values - df_wide.voxels_sym.values)
+    df_change['voxel_change'] = (df_wide.voxels_asym.values - df_wide.voxels_sym.values) \
+        / df_wide.voxels_sym.values
 
-    # Plot scatter plots of change
+    df_change[df_change['voxel_diff'] == np.inf] = np.nan
+    df_change[df_change['voxel_change'] == np.inf] = np.nan
 
-    
+    # --- Horizontal Bar Plot ---
+    # Calculate standard error and mean, then plot bar plot
+    df_barplot = df_change[['region', 'voxel_diff', 'voxel_change']].groupby(['region']).mean().reset_index()
+    df_barplot['side'] = df_barplot['region'].str[-1]
+    df_barplot['domain'] = df_barplot['region'].str[0]
+    df_barplot['change_voxels_sem'] = df_change[['region', 'voxel_diff']].groupby(['region']).sem().reset_index()['voxel_diff']
+    df_barplot['change_voxels_norm_sem'] = df_change[['region', 'voxel_change']].groupby(['region']).sem().reset_index()['voxel_change']
+    # Sort regions by domain and number
+    domains = ['M', 'A', 'D', 'S']
+    df_barplot['domain_num'] = df_barplot['domain'].apply(lambda x: domains.index(x))
+    df_barplot['region_num'] = df_barplot['region'].apply(lambda x: int(x[1]))
+    df_barplot = df_barplot.sort_values(by=['domain_num', 'region_num'])
+
+
+    df_left= df_barplot[df_barplot.side == 'L']
+    df_right= df_barplot[df_barplot.side == 'R']
+    pal_one_hem = {r: ListedColormap(cmap)(i+1) for i, r in enumerate(df_left.region)}
+
+    # Plot the horizontal bar charts
+    fig, axes = plt.subplots(1, 2, sharex=True, figsize=(10, 8))
+    # Plot the horizontal bar charts
+    axes[0].barh(df_left.region, df_left.voxel_diff, xerr=df_left.change_voxels_sem, color=pal_one_hem.values())
+    axes[1].barh(df_right.region, df_right.voxel_diff, xerr=df_right.change_voxels_sem, color=pal_one_hem.values())
+    for ax in axes:
+        ax.invert_yaxis()
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(ut.figure_dir + f"parcel_sizes_sym_vs_asym_indiv_horzbarplot.pdf")
 
 
 
