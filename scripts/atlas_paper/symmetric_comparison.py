@@ -355,7 +355,7 @@ if __name__ == "__main__":
     pal_one_hem = {r: ListedColormap(cmap)(i+1) for i, r in enumerate(df_left.region)}
 
     # Plot the horizontal bar charts
-    fig, axes = plt.subplots(1, 2, sharex=True, figsize=(10, 8))
+    fig, axes = plt.subplots(1, 2, sharex=True, figsize=(6, 6))
     # Plot the horizontal bar charts
     axes[0].barh(df_left.region, df_left.voxel_diff, xerr=df_left.change_voxels_sem, color=pal_one_hem.values())
     axes[1].barh(df_right.region, df_right.voxel_diff, xerr=df_right.change_voxels_sem, color=pal_one_hem.values())
