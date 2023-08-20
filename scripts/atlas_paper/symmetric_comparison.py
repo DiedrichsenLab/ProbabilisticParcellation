@@ -1,3 +1,4 @@
+
 import sys
 sys.path.append("..")
 import ProbabilisticParcellation.evaluate as ev
@@ -167,47 +168,6 @@ def plot_counts(sym_counts, asym_counts, labels):
         plt.show()
 
 
-# def plot_counts_hist(sym_counts, asym_counts, labels, subplot=False):
-#     if sym_counts[0][0].is_integer():
-#         title = 'Voxel'
-#     else:
-#         title = 'Probability Mass'
-
-#     if subplot:
-#         plt.figure(figsize=(10,10))
-#         # cols = int(np.ceil(np.sqrt(sym_counts.shape[1])))
-#         cols = 4
-#         rows = int(np.ceil(sym_counts.shape[1]/cols))
-#         for region_index in np.arange(0, sym_sumV.shape[1]):
-#             plt.subplot(rows, cols, region_index+1)
-#             # for region_index in np.arange(0, 2):
-#             sb.histplot(sym_counts[:, region_index], color='blue', alpha=0.5, label='Symmetric')
-#             sb.histplot(asym_counts[:, region_index], color='green', alpha=0.5, label='Asymmetric')
-#             if (region_index/rows).is_integer():
-#                 plt.xlabel(f'{title} Count')
-#             if (region_index/cols).is_integer() or region_index==0:
-#                 plt.ylabel('N subjects')
-            
-            
-#             # plt.legend()
-#             plt.tight_layout()
-#             plt.title(f'{labels[region_index +1]}')
-#         plt.legend()
-#     else:
-#         for region_index in np.arange(0, sym_sumV.shape[1]):
-#         # for region_index in np.arange(0, 2):
-#             sb.histplot(sym_counts[:, region_index], color='blue', alpha=0.5, label='Symmetric')
-#             sb.histplot(asym_counts[:, region_index], color='green', alpha=0.5, label='Asymmetric')
-#             plt.xlabel(f'{title} Count')
-#             plt.ylabel('N subjects')
-#             plt.legend()
-#             plt.tight_layout()
-#             plt.title(f'{labels[region_index +1]}')
-#             plt.show()
-
-#     plt.savefig(ut.figure_dir + f"parcel_sizes_sym_vs_asym_indiv.pdf")
-
-
 def make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels):
     # subjects = np.stack((np.arange(0, sym_sumV.shape[0]), np.arange(0, sym_sumV.shape[0])))
     # subjects = np.repeat(subjects, 32, axis=0).flatten()
@@ -240,24 +200,25 @@ def make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels):
 def plot_counts_hist(df, plot='prob'):
     # Plot histogram of counts
     # Create a FacetGrid with regions as rows and hemisphere side as columns
-    # for d in df.domain.unique():
-        # df_d = df[df.domain == d]
-        # grid = sns.FacetGrid(df_d, row='region', col='side', hue='symmetry', height=3, aspect=1)
-        # figname = f"parcel_sizes_sym_vs_asym_indiv_grid_{plot}_{d}.pdf"
-    for r in df.region.unique().str[:-1]
-        df_r = df[df.region == r]
-        grid = sns.FacetGrid(df_r, row='domain', col='side', hue='symmetry', height=3, aspect=1)
-        figname = f"parcel_sizes_sym_vs_asym_indiv_grid_{plot}_{r}.pdf"
+    for d in df.domain.unique():
+        df_d = df[df.domain == d]
+        grid = sns.FacetGrid(df_d, row='region', col='side', hue='symmetry', height=3, aspect=1)
+        figname = f"parcel_sizes_sym_vs_asym_indiv_grid_{plot}_{d}.pdf"
+    
         # Map the histograms onto the grid
         grid.map(sns.histplot, plot, bins=10, kde=False)
         # Adding labels and titles
-        grid.set_axis_labels('Value', 'Frequency')
+        grid.set_axis_labels(plot, 'N Subjects')
         grid.set_titles(row_template="{row_name}", col_template="{col_name}")
         plt.ylim([0, 105])
+        plt.xlim([0, 8050])
         # Adjust layout
         plt.tight_layout()
+        if d == df.domain.unique()[0]:
+            plt.legend()
         # Show the plot
         plt.savefig(ut.figure_dir + figname)
+    
     
 
 def group_change():
@@ -288,15 +249,32 @@ if __name__ == "__main__":
                                         fileparts[-1].split('_space')[0] + '.lut')
     
     # Plot histogram of voxel counts
-    # plot_counts(sym_sumP, asym_sumP, labels)
-    # plot_counts_hist(sym_sumV, asym_sumV, labels, subplot=True)
     df = make_df(sym_sumP, sym_sumV, asym_sumP, asym_sumV, labels)
     plot_counts_hist(df)
     plot_counts_hist(df, plot='voxels')
 
-    voxel_change_indiv = (df[df.symmetry=='asym'].voxels.values - df[df.symmetry=='sym'].voxels.values) / df[df.symmetry=='sym'].voxels.values
+    # Make dataframe into wide form where each symmetry type is a column
+    df_wide = df.pivot_table(index=['subject', 'region', 'side', 'domain'],
+                          columns=['symmetry'],
+                          values=['voxels', 'prob'],
+                          aggfunc='first').reset_index()
+    df_wide.columns = ['_'.join(col).strip() if col[1] != '' else col[0] for col in df_wide.columns.values]
+
+
+
+    # Plot scatter plots asym vs sym
+    plt.figure(figsize=(10, 10))
+    sb.catplot(data=df_wide, x='prob_sym', y='prob_asym', col='region', hue='subject', kind='point', col_wrap=4)
+    
+    sb.catplot(data=df_wide.groupby('subject').mean(), x='prob_sym', y='prob_asym', hue='region', col='side', kind='point', col_wrap=2)
+    
+
+
     df_change = df[['subject', 'region', 'cnum', 'side', 'domain']][df.symmetry == 'sym']
-    df_change['change'] = voxel_change_indiv
+    df_change['change'] = (df[df.symmetry=='asym'].voxels.values - df[df.symmetry=='sym'].voxels.values) \
+        / df[df.symmetry=='sym'].voxels.values
+
+    # Plot scatter plots of change
 
     
 
