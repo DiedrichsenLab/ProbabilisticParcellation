@@ -383,7 +383,14 @@ if __name__ == "__main__":
     df_diff_barplot['voxels_diff_sem'] = df_diff[['reg', 'voxel_diff']].groupby(['reg']).sem().reset_index()['voxel_diff']
     # Plot the horizontal bar charts
     fig, ax = plt.subplots(figsize=(3, 6))
+
+    # sort df_diff_barplot by domain and region number
+    df_diff_barplot['domain_num'] = df_diff_barplot['reg'].apply(lambda x: domains.index(x[0]))
+    df_diff_barplot['region_num'] = df_diff_barplot['reg'].apply(lambda x: int(x[1]))
+    df_diff_barplot = df_diff_barplot.sort_values(by=['domain_num', 'region_num'])
+
     # Plot the horizontal bar charts
+    pal_one_hem = {r: ListedColormap(cmap)(i+1) for i, r in enumerate(df_diff_barplot.reg)}
     plt.barh(df_diff_barplot.reg, df_diff_barplot.voxel_diff, xerr=df_diff_barplot.voxels_diff_sem, color=pal_one_hem.values())
     ax.invert_yaxis()
     # Adjust layout
