@@ -137,7 +137,7 @@ if __name__ == "__main__":
     # prob_a = pt.load(f"{ut.model_dir}/Models/{model_pair[0]}_Uhat.pt")
     # prob_b = pt.load(f"{ut.model_dir}/Models/{model_pair[1]}_Uhat.pt")
 
-    # parcel_a = pt.argmax(prob_a, im=1) + 1
+    # parcel_a = pt.argmax(prob_a, dim=1) + 1
     # parcel_b = pt.argmax(prob_b, dim=1) + 1
 
     # plt.imshow(np.nanmean(prob_a, axis=1))
