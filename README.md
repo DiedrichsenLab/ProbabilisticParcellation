@@ -83,9 +83,13 @@ To summarize further by cortical ROI:
 T = csw.make_weight_table(dataset="Fusion",extension="06",cortical_roi="yeo17")
 ```
 
-Summary figures (by yeo17) and full connectivity maps are in the following two notebooks: 
+Summary figures (by yeo17)  
 ```
 cortical_connectivity.ipynb
+```
+
+Full connectivity maps:
+```
 parcel_summary.ipynb
 ```
 
