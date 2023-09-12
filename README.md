@@ -45,9 +45,20 @@ Some manual adjustments had to be made on the produced figure, because the inter
 
 
 ### Characterization of regions
+Motor regions
+```notebooks/atlas_paper/motor.ipynb```
 
+Action regions
+```notebooks/atlas_paper/action.ipynb```
 
+Demand regions
+```notebooks/atlas_paper/demand.ipynb```
 
+Sociolinguistic regions
+```notebooks/atlas_paper/social.ipynb```
+
+Localizing individual regions
+```notebooks/atlas_paper/social.ipynb```
 
 ### Cortical Connectivity
 
@@ -80,8 +91,8 @@ parcel_summary.ipynb
 
 ### Function and boundary (a)symmetry 
 
-
-
+Size comparison of left and right regions (voxel-wise) of the asymmetric atlas
+```scripts/atlas_paper/symmetric_comparison.py```
 
 ### Individual localization
 
