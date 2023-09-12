@@ -70,7 +70,7 @@ def subdivde_atlas_spatial(fname,atlas):
     parcel = np.argmax(prob_new,axis=1)+1
     parcel[prob_new.sum(axis=1)==0]=0
     probseg = a.data_to_nifti(prob_new.T)
-    parcel = parcel.astype(np.uint8)
+    parcel = parcel.astype(np.int16)
     dseg = a.data_to_nifti(parcel)
 
     out_name = fname + 'sp'
