@@ -188,9 +188,9 @@ def renormalize_probseg(probseg, mask):
     probseg_img = nb.Nifti1Image(X, probseg.affine)
     parcel = np.argmax(X, axis=3) + 1
     parcel[maskX == 0] = 0
-    dseg_img = nb.Nifti1Image(parcel.astype(np.int8), probseg.affine)
-    dseg_img.set_data_dtype("int8")
-    # dseg_img.header.set_intent(1002,(),"")
+    dseg_img = nb.Nifti1Image(parcel.astype(np.uint8), probseg.affine)
+    dseg_img.set_data_dtype("uint8")
+    dseg_img.header.set_intent(1002,(),"")
     probseg_img.set_data_dtype("float32")
     # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
     return probseg_img, dseg_img
@@ -206,7 +206,6 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
     a, ainf = am.get_atlas(atlas, ut.atlas_dir)
     src_dir = ut.model_dir + "/Atlases/"
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
-    srcs_dir = ut.base_dir + "/Atlases/" + ainf["dir"]
     # Load and set NaNs to 0
     nii_atlas = nb.load(src_dir + f"/{fname}_space-{atlas}_probseg.nii")
     X = np.nan_to_num(nii_atlas.get_fdata())
@@ -216,7 +215,7 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
     if ainf["space"] != target_space:
         print(f"deforming from {ainf['space']} to {target_space}")
         deform = nb.load(
-            srcs_dir + f"/tpl-{ainf['space']}_space-{target_space}_xfm.nii"
+            targ_dir + f"/tpl-{target_space}_from-{ainf['space']}_mode-image_xfm.nii"
         )
         nii_res = nt.deform_image(nii_atlasf, deform, 1)
         # Get target space mask:

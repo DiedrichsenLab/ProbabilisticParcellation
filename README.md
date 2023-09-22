@@ -128,8 +128,7 @@ Comparing group and individual parcellations with varying length of data (Fig XD
 ```notebooks/individual_group.ipynb```
 
 ### Model to atlas 
-```export_atlas.export_map``` takes a marginal probabiltiy of a arangement model and generates the probseg and dseg to save in the Atlas directory 
-
+```export_atlas.export_map``` takes a marginal probabilitiy of a arrangement model and generates the probseg and dseg to save in the ProbabilisticParcellationModel/Atlases directory.  
 
 ### Spatial subdivision of the atlas 
 
