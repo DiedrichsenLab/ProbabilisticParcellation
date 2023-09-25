@@ -26,6 +26,10 @@ Plotting MDS plots for different single dataset parcellations (Fig 1B & 1C & 1D)
 Plotting DCBC & Statistics DCBC (Fig 1E & 1F):
 ```notebooks/evaluate_dcbc.ipynb```
 
+Comparison of existing atlasses to fusion
+```scripts/atlas_paper/evaluate_existing.py```
+
+
 
 ### Symmetric and Asymmetric atlasses  
 Plotting symmetry (boundary and functional symmetry, i.e. functional lateralization) and comparing asymmetric and symmetric atlas versions:

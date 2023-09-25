@@ -154,18 +154,6 @@ def export(mname, sym=False):
     pass
 
 
-def export_orig_68():
-    space = "MNISymC2"
-    mname_fine = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68"
-
-    Prob, parcel, atlas, labels, cmap = ea.analyze_parcel(mname_fine, sym=True)
-    ea.export_map(
-        Prob,
-        atlas.name,
-        cmap,
-        labels,
-        f'{ut.model_dir}/Atlases/{mname_fine.split("/")[1]}',
-    )
 
 
 def make_NettekovenSym68c32():

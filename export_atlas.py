@@ -123,7 +123,7 @@ def save_cortex_cifti(fname):
     nb.save(img, ut.model_dir + f"/Models/{fname}.dlabel.nii")
 
 
-def export_map(data, atlas, cmap, labels, base_name):
+def export_map(data, atlas, cmap, label_names, base_name):
     """Exports a marginal probability of a arrangement model to a Nifti (probseg), Nifti (dseg), Gifti, and lut-file.
 
     Args:
@@ -133,6 +133,10 @@ def export_map(data, atlas, cmap, labels, base_name):
         labels (list): List of labels for fields
         base_name (_type_): File directory + basename for atlas
     """
+    # Error if cmap and label_names are not the same length
+    if cmap.shape[0] != len(label_names):
+        raise (NameError("cmap and label_names must be the same length"))
+    
     # Transform cmap into numpy array
     if not isinstance(cmap, np.ndarray):
         cmap = cmap(np.arange(cmap.N))
@@ -158,7 +162,7 @@ def export_map(data, atlas, cmap, labels, base_name):
         surf_parcel.reshape(-1, 1),
         anatomical_struct="Cerebellum",
         labels=np.arange(surf_parcel.max() + 1),
-        label_names=labels,
+        label_names=label_names,
         label_RGBA=cmap,
     )
 
@@ -378,4 +382,5 @@ def colour_parcel(
 if __name__ == "__main__":
     # export_conn_summary()
     # export_all_probmaps()
-    subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNISymC2') 
+    # subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNISymC2')
+    pass

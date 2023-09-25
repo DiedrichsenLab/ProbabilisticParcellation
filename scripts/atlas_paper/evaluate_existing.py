@@ -14,6 +14,21 @@ import glob
 import numpy as np
 import os
 
+# == To generate the eval_all_5existing_on_taskDatasets.tsv file, run the following functions:
+# eval_existing in FusionModel/scripts/eval_existing.py
+
+# == To generate the eval_dataset7_sym.tsv and eval_dataset7_asym-hem.tsv files, loop through Ks (10, 20, 34, 40, 68) and datasets run the following functions:
+#   -- Evaluate symmetric --
+# model_name = ['Md','Po','Ni','Ib','Wm','De','So','MdPoNiIbWmDeSo', 'MdNiIbWmDeSo', 'MdPoIbWmDeSo', 'MdPoNiWmDeSo', 'MdPoNiIbDeSo', 'MdPoNiIbWmSo', 'MdPoNiIbWmDe']
+# ks = [10, 20, 34, 40, 68]
+# for K in ks:
+#   result_5_eval(K=K, symmetric='sym', model_type=['03','04'], model_name=model_name)
+
+#  -- Evaluate asymmetric fitted from symmetric --
+# mname_suffix = '_arrange-asym_sep-hem'
+# evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
+# 'task'], test_on='task', mname_suffix=mname_suffix)
+
 def import_existing():
     Data = pd.read_csv(
         f'{ut.model_dir}/Models/Evaluation/eval_all_5existing_on_taskDatasets.tsv', sep='\t')
