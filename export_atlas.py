@@ -123,7 +123,7 @@ def save_cortex_cifti(fname):
     nb.save(img, ut.model_dir + f"/Models/{fname}.dlabel.nii")
 
 
-def export_map(data, atlas, cmap, labels, base_name):
+def export_map(data, atlas, cmap, label_names, base_name):
     """Exports a marginal probability of a arrangement model to a Nifti (probseg), Nifti (dseg), Gifti, and lut-file.
 
     Args:
@@ -133,6 +133,10 @@ def export_map(data, atlas, cmap, labels, base_name):
         labels (list): List of labels for fields
         base_name (_type_): File directory + basename for atlas
     """
+    # Error if cmap and label_names are not the same length
+    if cmap.shape[0] != len(label_names):
+        raise (NameError("cmap and label_names must be the same length"))
+    
     # Transform cmap into numpy array
     if not isinstance(cmap, np.ndarray):
         cmap = cmap(np.arange(cmap.N))
@@ -158,7 +162,7 @@ def export_map(data, atlas, cmap, labels, base_name):
         surf_parcel.reshape(-1, 1),
         anatomical_struct="Cerebellum",
         labels=np.arange(surf_parcel.max() + 1),
-        label_names=labels,
+        label_names=label_names,
         label_RGBA=cmap,
     )
 
@@ -374,37 +378,9 @@ def colour_parcel(
 
     return Prob, parcel, atlas, labels, cmap
 
-def export_atlas_gifti():
-    model_names = [
-        "Models_03/NettekovenSym68_space-MNISymC2",
-        "Models_03/NettekovenAsym68_space-MNISymC2",
-        "Models_03/NettekovenSym32_space-MNISymC2",
-        "Models_03/NettekovenAsym32_space-MNISymC2",
-    ]
-    space='MNISymC2'
-    for model_name in model_names:
-        atlas_name = model_name.split("Models_03/")[1] 
-        
-        _, cmap, labels = nt.read_lut(ut.export_dir + f'{atlas_name.split("_space-")[0]}.lut')
-        labels=labels[1:]
-        # add alpha value one to each rgb array
-        cmap = np.hstack((cmap, np.ones((cmap.shape[0], 1))))
-        
-        # load model
-        info, model = ut.load_batch_best(model_name)
-        data = model.arrange.marginal_prob().numpy()
-
-        export_map(
-            data,
-            space,
-            cmap,
-            labels,
-            f'{ut.model_dir}/Atlases/{atlas_name}',
-        )
-
 
 if __name__ == "__main__":
     # export_conn_summary()
     # export_all_probmaps()
-    # subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNISymC2') 
-    export_atlas_gifti()
+    # subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNISymC2')
+    pass
