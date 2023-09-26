@@ -135,7 +135,7 @@ def export_map(data, atlas, cmap, label_names, base_name):
     """
     # Error if cmap and label_names are not the same length
     if cmap.shape[0] != len(label_names):
-        raise (NameError("cmap and label_names must be the same length"))
+        raise (ValueError("cmap and label_names must be the same length"))
     
     # Transform cmap into numpy array
     if not isinstance(cmap, np.ndarray):
