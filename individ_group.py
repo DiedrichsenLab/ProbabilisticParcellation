@@ -25,11 +25,12 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 
-def get_individ_group_mdtb(model,atlas='MNISymC3'):
+def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
     """ Gets individual (data only), group, and integrated Uhats for 1-16 runs of first ses-s1 fro, the MDTB data set
     Args:
         model: model name
         atlas: atlas name
+        localizer_tasks: list of localizer tasks to use (default: None, use all tasks)
     Returns:
         Uhat_data_all: list (for each run) of parcellations based on data only 
         Uhat_complete_all: list of parcellations for integrated estimate
@@ -59,6 +60,13 @@ def get_individ_group_mdtb(model,atlas='MNISymC3'):
     m1 = deepcopy(model)
     cond_vec = iinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = iinfo['run'].values.reshape(-1,)
+    if localizer_tasks is not None:
+        # get data, particion vector and condition vector for localizer tasks only
+        localizer_ind = np.isin(iinfo['cond_num_uni'], localizer_tasks)
+        idata = idata[:, localizer_ind, :]
+        cond_vec = cond_vec[localizer_ind]
+        part_vec = part_vec[localizer_ind]
+        
     runs = np.unique(part_vec)
 
     # 
