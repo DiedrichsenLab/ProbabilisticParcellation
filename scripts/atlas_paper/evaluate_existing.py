@@ -117,8 +117,9 @@ if __name__ == "__main__":
     # Sym = Fusion[Fusion['symmetry'] == 'Symmetric']
     # Asym = Fusion[Fusion['symmetry'] == 'Asymmetric']
 
-
-    
+    # Remove any entries from Fusion where train_data_string contains a bracket
+    Fusion = Fusion[~Fusion['train_data_string'].str.contains("'")]
+        
     # Average across subjects
     Existing = Existing[['K', 'train_data_string', 'test_data', 'dcbc_group', 'model_type']].groupby(['K', 'train_data_string', 'test_data', 'model_type']).mean().reset_index()
     Fusion = Fusion[['symmetry', 'K', 'train_data_string', 'test_data', 'dcbc_group', 'model_type']].groupby(['symmetry', 'K', 'train_data_string', 'test_data', 'model_type']).mean().reset_index()
@@ -171,7 +172,7 @@ if __name__ == "__main__":
             result = stats.ttest_ind(x,y)
             print(result)
             print(np.mean(x), np.mean(y))
-            pass
+        
             # Show only MDTB as test_data
             # plt.figure()
             # sb.barplot(data=plot_data[plot_data['test_data'] == 'MDTB'], x='train_data_string', y='dcbc_group')
