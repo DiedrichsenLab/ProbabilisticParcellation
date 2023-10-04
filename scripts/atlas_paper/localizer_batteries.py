@@ -30,41 +30,45 @@ dataset = ds.get_dataset_class(ut.base_dir, 'Mdtb')
 dinfo = dataset.get_info(ses_id='ses-s1', type='CondRun')
 
 
-localizer_language = ['UnpleasantScenes',
-'PleasantScenes',
-'SadFaces',
-'HappyFaces',
-'ToM',
-'VideoAct',
-'FingerSeq',
-'rest']
+localizer_language = [
+    'UnpleasantScenes',
+    'PleasantScenes',
+    'SadFaces',
+    'HappyFaces',
+    'ToM',
+    'VideoAct',
+    'FingerSeq',
+    'rest']
 
-localizer_demand = ['Motor imagery',
-'ToM',
-'VideoAct',
-'FingerSeq',
-'SpatialNavigation',
-'VerbGen',
-'WordRead',
-'rest']
+localizer_demand = [
+    'Motor imagery',
+    'ToM',
+    'VideoAct',
+    'FingerSeq',
+    'SpatialNavigation',
+    'VerbGen',
+    'WordRead',
+    'rest']
 
-localizer_social = ['NoGo',
-'Math',
-'IntervalTiming',
-'StroopIncon',
-'FingerSeq',
-'Object2Back',
-'VisualSearchLarge',
-'rest']
+localizer_social = [
+    'NoGo',
+    'Math',
+    'IntervalTiming',
+    'StroopIncon',
+    'FingerSeq',
+    'Object2Back',
+    'VisualSearchLarge',
+    'rest']
 
-localizer_general = ['ToM',
-'VideoAct',
-'FingerSeq',
-'Object2Back',
-'VisualSearchLarge',
-'SpatialNavigation',
-'VerbGen',
-'rest']
+localizer_general = [
+    'ToM',
+    'VideoAct',
+    'FingerSeq',
+    'Object2Back',
+    'VisualSearchLarge',
+    'SpatialNavigation',
+    'VerbGen',
+    'rest']
 
 # create a dictionary of localizer batteries
 localizer_batteries = {'language':localizer_language,
@@ -76,7 +80,7 @@ localizer_batteries = {'language':localizer_language,
 
 if __name__ == "__main__":
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    info,model = ut.load_batch_best(mname,device='cpu')
+    info,model = ut.load_batch_best(mname,device=ut.default_device)
     for key, localizer_tasks in localizer_batteries.items():
         # Make localizer task strings into regressor indicators
         # get cond_num_uni where localizer_tasks entry equals cond_name
