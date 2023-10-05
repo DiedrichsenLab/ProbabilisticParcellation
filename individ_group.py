@@ -131,6 +131,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
         dist = dist[:,mask]
         parcel_data = [i[:, mask] for i in parcel_data]
         parcel_complete = [i[:, mask] for i in parcel_complete]
+        parcel_group = parcel_group[mask]
     dist[dist>max_dist]=0
     dist = dist.to_sparse()
 
@@ -141,7 +142,10 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
                                   sess=['ses-s2'], type='CondHalf',subj=[s])
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
         
-        dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata, dist,max_dist=max_dist)
+        if mask is not None:
+            dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata[:,:,mask], dist,max_dist=max_dist)
+        else:
+            dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata, dist,max_dist=max_dist)
         D1 = {}
         D1['type'] = ['group']
         D1['runs'] = [0]
