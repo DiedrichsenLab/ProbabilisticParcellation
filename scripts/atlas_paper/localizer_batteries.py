@@ -83,16 +83,16 @@ localizer_other = [
 
 
 # create a dictionary of localizer batteries
-localizer_batteries = {'language':localizer_language,
-                       'demand':localizer_demand,
-                       'social':localizer_social,
-                       'general':localizer_general}
-
 # localizer_batteries = {'language':localizer_language,
 #                        'demand':localizer_demand,
 #                        'social':localizer_social,
-#                        'general':localizer_general,
-#                        'other':localizer_other}
+#                        'general':localizer_general}
+
+localizer_batteries = {'language':localizer_language,
+                       'demand':localizer_demand,
+                       'social':localizer_social,
+                       'general':localizer_general,
+                       'other':localizer_other}
 
 
 def get_masks(atlas, model):
@@ -124,11 +124,11 @@ if __name__ == "__main__":
     mot, act, soc, dem = get_masks(atlas,model)
     socdem = np.logical_or(soc,dem)
     masks = {
-                        'motor':mot,
-                        'action':act,
-                        'social':soc,
-                        'demand':dem,
-                        'social_demand':socdem}
+            'motor':mot,
+            'action':act,
+            'socio-ling':soc,
+            'demand':dem,
+            'socio-ling_demand':socdem}
 
 
     # --- Sanity check: Plot mask ---
@@ -152,11 +152,12 @@ if __name__ == "__main__":
         Uhat_data, Uhat_complete, Uhat_group = ig.get_individ_group_mdtb(model,atlas=space,  localizer_tasks=localizer_tasks)
 
         # Calculate DCBC across entire cerebellum
-        # D = ig.evaluate_dcbc(Uhat_data, Uhat_complete, Uhat_group,atlas=space,max_dist=max_dist)
-        # D['localizer'] = key
-        # D['mask'] = 'whole cerebellum
-        # data = [D]
-        data = []
+        D = ig.evaluate_dcbc(Uhat_data, Uhat_complete, Uhat_group,atlas=space,max_dist=max_dist)
+        D['localizer'] = key
+        D['mask'] = 'whole cerebellum
+        data = [D]
+        # data = []
+        
         # Calculate DCBC within masks
         for mask_name, mask in masks.items():
             D = ig.evaluate_dcbc(Uhat_data, Uhat_complete, Uhat_group,atlas=space,max_dist=max_dist, mask=mask)
