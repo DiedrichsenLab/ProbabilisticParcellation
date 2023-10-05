@@ -110,9 +110,10 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
     return Uhat_data_all, Uhat_complete_all, Uhat_group
     
 
-def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40):
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None):
     """Do DCBC evaluation on all and collect in data frame. 
-    """ 
+    
+    """     
     tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
     T = tds.get_participants()
     ut.report_cuda_memory()
@@ -125,6 +126,11 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     ut.report_cuda_memory()
     
     dist = ut.compute_dist(atlas_obj.world.T, resolution=1)
+    if mask is not None:
+        dist = dist[mask,:]
+        dist = dist[:,mask]
+        parcel_data = [i[:, mask] for i in parcel_data]
+        parcel_complete = [i[:, mask] for i in parcel_complete]
     dist[dist>max_dist]=0
     dist = dist.to_sparse()
 
@@ -144,8 +150,12 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
         T = pd.concat([T, pd.DataFrame(D1)])
 
         for r in range(len(parcel_data)):
-            dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata, dist,max_dist=max_dist) 
-            dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata, dist,max_dist=max_dist) 
+            if mask is not None:
+                dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata[:,:,mask], dist,max_dist=max_dist) 
+                dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata[:,:,mask], dist,max_dist=max_dist) 
+            else:
+                dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata, dist,max_dist=max_dist) 
+                dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata, dist,max_dist=max_dist) 
 
             D1 = {}
             D1['type'] = ['data']
