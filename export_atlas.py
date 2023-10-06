@@ -96,7 +96,7 @@ def prob_to_label_gii(probseg,atlas_space,cmap,label_names):
     Args:
         probseg (Nifti1Image): _description_
         mapspace (str): 'SUIT' or 'MNISymC'
-        cmap (nd.array): Color map including a row for 0 
+        cmap (nd.array): Color map including a row for 0
         label_names (list): label names (including a ??? for 0)
     """
     # Error if cmap and label_names are not the same length
@@ -114,12 +114,14 @@ def prob_to_label_gii(probseg,atlas_space,cmap,label_names):
         map_space = "MNISymC"
     elif atlas_space == "MNI152NLin2009cSymC":
         map_space = "MNISymC"
+    elif atlas_space == "MNI152NLin6AsymC":
+        map_space = "FSL"
     else:
         raise (NameError("Unknown atlas space"))
 
     # Plotting label
-    surf_data = suit.flatmap.vol_to_surf(probseg, 
-                                         stats="nanmean", 
+    surf_data = suit.flatmap.vol_to_surf(probseg,
+                                         stats="nanmean",
                                          space=map_space)
     surf_parcel = np.argmax(surf_data, axis=1) + 1
     gifti = nt.make_label_gifti(
@@ -217,7 +219,7 @@ def subdivde_atlas_spatial(fname,atlas,outname):
 
     out = f"atl-{outname}_space-{atlas}"
 
-    #Save the files for the new atlas 
+    #Save the files for the new atlas
     nb.save(dseg_img, tpl_dir + f"atl-{outname}_space-{atlas}_dseg.nii")
     nb.save(pseg_img, tpl_dir + f"atl-{outname}_space-{atlas}_probseg.nii")
     nb.save(gifti, tpl_dir + f"atl-{outname}_dseg.label.gii")
