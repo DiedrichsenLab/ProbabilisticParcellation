@@ -25,8 +25,9 @@ import ProbabilisticParcellation.plot as ppp
 conn_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/connectivity/maps/'
 surf_dir = surf.plot._surf_dir
 
-def subdivde_atlas_spatial(fname,atlas):
+def subdivde_atlas_spatial(fname,atlas,outname):
     """ Subdivides the 32 region atlas into s,i,t,v
+    It performs this on the already resampled atlases in the FunctionFusion/atlas directory.
         s: superior (lobule I-crusI)
         i: inferior (crus II - VIIIb)
         t: tertiary (IX/X)
@@ -36,49 +37,51 @@ def subdivde_atlas_spatial(fname,atlas):
     """
     sp_ext = ['s','i','t','v']
     comp = [[1,2,3,4,5,6,7,8,10],
-            [11,13,14,16,17,19,20,22], 
+            [11,13,14,16,17,19,20,22],
             [23,25,26,28],
             [9,12,15,18,21,24,27]]
-    a, ainf = am.get_atlas(atlas, ut.atlas_dir)
-    src_dir = ut.model_dir + "/Atlases/"
 
     # Load and set NaNs to 0
-    base_name = f"{fname}_space-{atlas}"
-    prob_atlas = src_dir + base_name + '_probseg.nii' 
-    anat_atlas = ut.atlas_dir + f"/tpl-{ainf['space']}/atl-Anatom_space-{ainf['space']}_dseg.nii"
-    lutfile = src_dir + f"{fname}.lut"
-    prob = a.read_data(prob_atlas,0)
-    anat = a.read_data(anat_atlas,0)
-    P,K = prob.shape
-    prob_new = np.zeros((P,K*4))
+    base_name = f"atl-{fname}_space-{atlas}"
+    tpl_dir = ut.atlas_dir + f"/tpl-{atlas}/"
+    prob_atlas = tpl_dir + base_name + '_probseg.nii'
+    anat_atlas = tpl_dir + f"atl-Anatom_space-{atlas}_dseg.nii"
+    lutfile = tpl_dir + f"atl-{fname}.lut"
+    prob_img = nb.load(prob_atlas)
+    anat_img = nb.load(anat_atlas)
+    prob = prob_img.get_fdata()
+    anat = anat_img.get_fdata()
+    nx,ny,nz,K = prob.shape
+    prob_new = np.zeros((nx,ny,nz,K*4))
 
-    # Load Lut file and make new version of it 
+    # Load Lut file and make new version of it
     indx,colors,labels = nt.read_lut(lutfile)
     indx_new = np.arange(K*4+1)
     colors_new = np.zeros((K*4+1,3))
-    labels_new = ['0'] 
+    labels_new = ['0']
 
     # Loop over all regions and subdivide them
-    for k in range(K): 
+    for k in range(K):
         for i,(s,compartment) in enumerate(zip(sp_ext,comp)):
             inew = k*4+i
-            prob_new[:,inew] = prob[:,k]*(np.isin(anat,compartment))
+            prob_new[:,:,:,inew] = prob[:,:,:,k]*(np.isin(anat,compartment))
             labels_new.append(labels[k+1] + s)
             colors_new[inew+1,:] = colors[k+1,:]
-    
+
     # Save new atlas
-    parcel = np.argmax(prob_new,axis=1)+1
-    parcel[prob_new.sum(axis=1)==0]=0
-    probseg = a.data_to_nifti(prob_new.T)
-    parcel = parcel.astype(np.int16)
-    dseg = a.data_to_nifti(parcel)
+    parcel = np.argmax(prob_new,axis=3)+1
+    sumOfProb = np.nansum(prob_new,axis=3)
+    parcel[sumOfProb==0]=0
+    pseg_img = nb.Nifti1Image(prob_new, prob_img.affine)
+    dseg_img = nb.Nifti1Image(parcel.astype(np.uint8),prob_img.affine)
 
-    out_name = fname + 'sp'
-    nb.save(dseg, src_dir + out_name + f"_space-{atlas}_dseg.nii")
-    nb.save(probseg, src_dir + out_name + f"_space-{atlas}_probseg.nii")
-    nt.save_lut(src_dir + out_name + ".lut", indx_new, colors_new, labels_new)
+    out = f"atl-{outname}_space-{atlas}"
 
-        
+    nb.save(dseg_img, tpl_dir + out + f"_space-{atlas}_dseg.nii")
+    nb.save(pseg_img, tpl_dir + out + f"_space-{atlas}_probseg.nii")
+    nt.save_lut(tpl_dir + out + ".lut", indx_new, colors_new, labels_new)
+
+
 def export_conn_summary():
     """Exports the connectivity profiles of all parcels"""
     # load labels
@@ -135,8 +138,7 @@ def export_map(data, atlas, cmap, label_names, base_name):
     """
     # Error if cmap and label_names are not the same length
     if cmap.shape[0] != len(label_names):
-        raise (ValueError("cmap and label_names must be the same length"))
-    
+        raise (NameError("cmap and label_names must be the same length"))
     # Transform cmap into numpy array
     if not isinstance(cmap, np.ndarray):
         cmap = cmap(np.arange(cmap.N))
@@ -382,5 +384,5 @@ def colour_parcel(
 if __name__ == "__main__":
     # export_conn_summary()
     # export_all_probmaps()
-    # subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNISymC2')
+    subdivde_atlas_spatial(fname='NettekovenSym32',atlas='SUIT',outname='NettekovenSym128')
     pass

@@ -78,7 +78,6 @@ def import_fusion(cv=False):
     
     
     Data = pd.concat([Sym, Asym], axis=0)
-    # Data = pd.concat([Data, Sym_add], axis=0)
 
     # Loop through rows and add indicator for those where train_data list is of length 6
     Data['train_data_len'] = Data['train_data'].apply(lambda x: len(x))
@@ -89,7 +88,6 @@ def import_fusion(cv=False):
     Data.loc[Data['train_data_len'] == 6, 'train_data_string'] = 'Leave_one_out'
     Data.loc[Data['train_data_len'] == 7, 'train_data_string'] = 'All'
 
-    # Show How many leave_one_out each K and each symmetry has
     # Drop K=100
     Data[Data['K'] != 100].groupby(
         ['symmetry', 'K', 'Training']).count()['test_data']
@@ -100,8 +98,6 @@ def import_fusion(cv=False):
 
     # Remove model_type 04 and K=100
     Data = Data[(Data['model_type'] == 'Models_03') & (Data['K'] != 100)]
-    # Show pretty
-    # Data[(Data['K'] == 10) & (Data['model_name'] == 'sym_MdPoIbWmDeSo')]
 
     return Sym, Asym, Data
 
@@ -110,12 +106,10 @@ if __name__ == "__main__":
     
     Existing = import_existing()
     _, _, Fusion = import_fusion()
-    # # Get only leave_one_out
     
+    # # Get only leave_one_out
     # Fusion = Fusion[Fusion['Training'] == 'Leave_one_out']
     
-    # Sym = Fusion[Fusion['symmetry'] == 'Symmetric']
-    # Asym = Fusion[Fusion['symmetry'] == 'Asymmetric']
 
     # Remove any entries from Fusion where train_data_string contains a bracket
     Fusion = Fusion[~Fusion['train_data_string'].str.contains("'")]
@@ -173,12 +167,12 @@ if __name__ == "__main__":
             print(result)
             print(np.mean(x), np.mean(y))
         
-            # Show only MDTB as test_data
+            # --- Show only MDTB as test_data ---
             # plt.figure()
             # sb.barplot(data=plot_data[plot_data['test_data'] == 'MDTB'], x='train_data_string', y='dcbc_group')
             # plt.savefig(f'{ut.figure_dir}/{symmetry}_vs_ex_K{K}_testdata_MDTB.png')
 
-            # Test if Leave_one_out is significantly different from Buckner17
+            # --- Test if Leave_one_out is significantly different from Buckner17 ---
             # print(f'{symmetry} K{K} Leave_one_out vs Buckner17')
             # result = stats.ttest_ind(plot_data[(plot_data['train_data_string'] == 'Leave_one_out') & (plot_data['test_data'] == 'MDTB')]['dcbc_group'],
             #                       plot_data[(plot_data['train_data_string'] == 'Buckner17') & (plot_data['test_data'] == 'MDTB')]['dcbc_group'])
