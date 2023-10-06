@@ -154,7 +154,7 @@ if __name__ == "__main__":
         # Calculate DCBC across entire cerebellum
         D = ig.evaluate_dcbc(Uhat_data, Uhat_complete, Uhat_group,atlas=space,max_dist=max_dist)
         D['localizer'] = key
-        D['mask'] = 'whole cerebellum
+        D['mask'] = 'whole cerebellum'
         data = [D]
         # data = []
         
