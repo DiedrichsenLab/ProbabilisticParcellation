@@ -98,7 +98,7 @@ def calc_test_dcbc(
         dist (<AtlasVolumetric>): the class object of atlas
         testdata (np.ndarray): the functional test dataset,
                                 shape (num_sub, N, P)
-        trim_nan (boolean): if true, make the nan voxel label will be
+        trim_nan (boolean): if true, the nan voxel label will be
                             removed from DCBC calculation. Otherwise,
                             we treat nan voxels are in the same parcel
                             which is label 0 by default.

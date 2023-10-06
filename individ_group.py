@@ -25,11 +25,12 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 
-def get_individ_group_mdtb(model,atlas='MNISymC3'):
+def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
     """ Gets individual (data only), group, and integrated Uhats for 1-16 runs of first ses-s1 fro, the MDTB data set
     Args:
         model: model name
         atlas: atlas name
+        localizer_tasks: list of localizer tasks to use (default: None, use all tasks)
     Returns:
         Uhat_data_all: list (for each run) of parcellations based on data only 
         Uhat_complete_all: list of parcellations for integrated estimate
@@ -59,6 +60,13 @@ def get_individ_group_mdtb(model,atlas='MNISymC3'):
     m1 = deepcopy(model)
     cond_vec = iinfo['cond_num_uni'].values.reshape(-1,)
     part_vec = iinfo['run'].values.reshape(-1,)
+    if localizer_tasks is not None:
+        # get data, particion vector and condition vector for localizer tasks only
+        localizer_ind = np.isin(iinfo['cond_num_uni'], localizer_tasks)
+        idata = idata[:, localizer_ind, :]
+        cond_vec = cond_vec[localizer_ind]
+        part_vec = part_vec[localizer_ind]
+        
     runs = np.unique(part_vec)
 
     # 
@@ -102,9 +110,10 @@ def get_individ_group_mdtb(model,atlas='MNISymC3'):
     return Uhat_data_all, Uhat_complete_all, Uhat_group
     
 
-def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40):
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None):
     """Do DCBC evaluation on all and collect in data frame. 
-    """ 
+    
+    """     
     tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
     T = tds.get_participants()
     ut.report_cuda_memory()
@@ -117,6 +126,12 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     ut.report_cuda_memory()
     
     dist = ut.compute_dist(atlas_obj.world.T, resolution=1)
+    if mask is not None:
+        dist = dist[mask,:]
+        dist = dist[:,mask]
+        parcel_data = [i[:, mask] for i in parcel_data]
+        parcel_complete = [i[:, mask] for i in parcel_complete]
+        parcel_group = parcel_group[mask]
     dist[dist>max_dist]=0
     dist = dist.to_sparse()
 
@@ -127,7 +142,10 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
                                   sess=['ses-s2'], type='CondHalf',subj=[s])
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
         
-        dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata, dist,max_dist=max_dist)
+        if mask is not None:
+            dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata[:,:,mask], dist,max_dist=max_dist)
+        else:
+            dcbc_group = ppev.calc_test_dcbc(parcel_group, tdata, dist,max_dist=max_dist)
         D1 = {}
         D1['type'] = ['group']
         D1['runs'] = [0]
@@ -136,8 +154,12 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
         T = pd.concat([T, pd.DataFrame(D1)])
 
         for r in range(len(parcel_data)):
-            dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata, dist,max_dist=max_dist) 
-            dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata, dist,max_dist=max_dist) 
+            if mask is not None:
+                dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata[:,:,mask], dist,max_dist=max_dist) 
+                dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata[:,:,mask], dist,max_dist=max_dist) 
+            else:
+                dcbc_data = ppev.calc_test_dcbc(parcel_data[r][s], tdata, dist,max_dist=max_dist) 
+                dcbc_complete = ppev.calc_test_dcbc(parcel_complete[r][s],tdata, dist,max_dist=max_dist) 
 
             D1 = {}
             D1['type'] = ['data']
