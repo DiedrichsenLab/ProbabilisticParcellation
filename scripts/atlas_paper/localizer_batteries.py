@@ -73,7 +73,7 @@ localizer_general = [
 
 localizer_other = [
     'Go',
-    'DigitJudgment',
+    'DigitJudgement',
     'ObjectViewing',
     'Verbal2Back',
     'ToM',
