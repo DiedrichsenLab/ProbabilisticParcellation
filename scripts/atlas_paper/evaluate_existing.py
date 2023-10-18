@@ -123,7 +123,7 @@ if __name__ == "__main__":
         plot_data = pd.concat([plot_data, Existing], axis=0)
 
 
-        plt.figure(figsize=(14, 5))
+        plt.figure(figsize=(5, 4))
         sb.barplot(data=plot_data, x='train_data_string', y='dcbc_group')
         plt.savefig(f'{ut.figure_dir}/{symmetry}_vs_ex.png')
         
@@ -151,7 +151,7 @@ if __name__ == "__main__":
             plot_data = Fusion[Fusion['symmetry'] == symmetry]
             plot_data = pd.concat([plot_data[plot_data['K'] == K], Existing], axis=0)
             
-            plt.figure(figsize=(14, 5))
+            plt.figure(figsize=(5, 4))
             sb.barplot(data=plot_data, x='train_data_string', y='dcbc_group')
             plt.savefig(f'{ut.figure_dir}/{symmetry}_vs_ex_K{K}.png')
         
