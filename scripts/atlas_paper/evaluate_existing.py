@@ -15,7 +15,141 @@ import numpy as np
 import os
 
 # == To generate the eval_all_5existing_on_taskDatasets.tsv file, run the following functions:
-# eval_existing in FusionModel/scripts/eval_existing.py
+
+def run_dcbc_existing(model_names, tdata, space, device=None, load_best=True, verbose=True):
+    """ Calculates DCBC using a test_data set. The test data splitted into
+        individual training and test set given by `train_indx` and `test_indx`.
+        First we use individual training data to derive an individual
+        parcellations (using the model) and evaluate it on test data.
+        By calling function `calc_test_dcbc`, the Means of the parcels are
+        always estimated on N-1 subjects and evaluated on the Nth left-out
+        subject.
+    Args:
+        model_names (list or str): Name of model fit (tsv/pickle file)
+        tdata (pt.Tensor or np.ndarray): test data set
+        atlas (atlas_map): The atlas map object for calculating voxel distance
+        train_indx (ndarray of index or boolean mask): index of individual
+            training data
+        test_indx (ndarray or index boolean mask): index of individual test
+            data
+        cond_vec (1d array): the condition vector in test-data info
+        part_vec (1d array): partition vector in test-data info
+        device (str): the device name to load trained model
+        load_best (str): I don't know
+    Returns:
+        data-frame with model evalution of both group and individual DCBC
+    """
+    # Calculate distance metric given by input atlas
+    atlas, ainf = am.get_atlas(space, atlas_dir=base_dir + '/Atlases')
+    dist = compute_dist(atlas.world.T, resolution=1)
+    # convert tdata to tensor
+    if type(tdata) is np.ndarray:
+        tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
+
+    if not isinstance(model_names, list):
+        model_names = [model_names]
+
+    # Load atlas description json
+    with open(atlas_dir + '/atlas_description.json', 'r') as f:
+        T = json.load(f)
+
+    space_dir = T[space]['dir']
+    space_name = T[space]['space']
+    num_subj = tdata.shape[0]
+    results = pd.DataFrame()
+    # Now loop over possible models we want to evaluate
+    cw, cb = [], []
+    for i, model_name in enumerate(model_names):
+        print(f"Doing model {model_name}\n")
+        if verbose:
+            ut.report_cuda_memory()
+        # load existing parcellation
+        par = nb.load(atlas_dir +
+                      f'/{space_dir}/atl-{model_name}_space-{space_name}_dseg.nii')
+        Pgroup = pt.tensor(atlas.read_data(par, 0),
+                           dtype=pt.get_default_dtype())
+        Pgroup = pt.where(Pgroup==0, pt.tensor(float('nan')), Pgroup)
+        this_res = pd.DataFrame()
+        # ------------------------------------------
+        # Now run the DCBC evaluation fo the group only
+        dcbc_group, corr_w, corr_b = calc_test_dcbc(Pgroup, tdata, dist,
+                                                    max_dist=110, bin_width=5,
+                                                    trim_nan=True, return_wb_corr=True)
+        cw.append(pt.stack(corr_w))
+        cb.append(pt.stack(corr_b))
+        # ------------------------------------------
+        # Collect the information from the evaluation
+        # in a data frame
+        ev_df = pd.DataFrame({'model_name': [model_name] * num_subj,
+                              'atlas': [space] * num_subj,
+                              'K': [Pgroup.unique().shape[0]-1] * num_subj,
+                              'train_data': [model_name] * num_subj,
+                              'train_loglik': [np.nan] * num_subj,
+                              'subj_num': np.arange(num_subj),
+                              'common_kappa': [np.nan] * num_subj})
+        # Add all the evaluations to the data frame
+        ev_df['dcbc_group'] = dcbc_group.cpu()
+        ev_df['dcbc_indiv'] = np.nan
+        this_res = pd.concat([this_res, ev_df], ignore_index=True)
+
+        # Concate model type
+        this_res['model_type'] = model_name.split('/')[0]
+        # Add a column it's session fit
+        if len(model_name.split('ses-')) >= 2:
+            this_res['test_sess'] = model_name.split('ses-')[1]
+        else:
+            this_res['test_sess'] = 'all'
+        results = pd.concat([results, this_res], ignore_index=True)
+
+    return results, cw, cb
+
+def eval_existing(model_name, t_datasets=['MDTB','Pontine','Nishimoto'],
+                  type=None, subj=None, out_name=None, save=True, plot_wb=True):
+    """Evaluate group and individual DCBC and coserr of IBC single
+       sessions on all other test datasets.
+    Args:
+        K: the number of parcels
+    Returns:
+        Write in evaluation file
+    """
+    if not isinstance(model_name, list):
+        model_name = [model_name]
+
+    T = pd.read_csv(ut.base_dir + '/dataset_description.tsv', sep='\t')
+    results = pd.DataFrame()
+    # Evaluate all single sessions on other datasets
+    corrW, corrB = [], []
+    for i, ds in enumerate(t_datasets):
+        print(f'Testdata: {ds}\n')
+        # Preparing atlas, cond_vec, part_vec
+        tic = time.perf_counter()
+        tdata, tinfo, tds = get_dataset(base_dir, ds, atlas='MNISymC3',
+                                        sess='all', type=type[i], subj=subj[i])
+        toc = time.perf_counter()
+        print(f'Done loading. Used {toc - tic:0.4f} seconds!')
+
+        if type[i] == 'Tseries':
+            tds.cond_ind = 'time_id'
+
+        res_dcbc, corr_w, corr_b = run_dcbc_existing(model_name, tdata, 'MNISymC3',
+                                                     device='cuda')
+
+        corrW.append(corr_w)
+        corrB.append(corr_b)
+        res_dcbc['test_data'] = ds
+        results = pd.concat([results, res_dcbc], ignore_index=True)
+
+    if save:
+        # Save file
+        wdir = model_dir + f'/Models/Evaluation'
+        if out_name is None:
+            fname = f'/eval_all_5existing_on_otherdatasets.tsv'
+        else:
+            fname = f'/eval_all_5existing_on_{out_name}.tsv'
+        results.to_csv(wdir + fname, index=False, sep='\t')
+
+    if plot_wb:
+        return corrW, corrB
 
 # == To generate the eval_dataset7_sym.tsv and eval_dataset7_asym-hem.tsv files, loop through Ks (10, 20, 34, 40, 68) and datasets run the following functions:
 #   -- Evaluate symmetric --
