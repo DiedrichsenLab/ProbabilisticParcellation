@@ -110,7 +110,7 @@ def eval_atlas(atlas_name, t_datasets=['MDTB','Pontine','Nishimoto'],
             tds.cond_ind = 'time_id'
 
         res_dcbc = run_dcbc_existing(atlas_name, tdata, 'MNISymC3',
-                                                     device='cuda', max_dist=max_dist)
+                                                    max_dist=max_dist)
 
         res_dcbc['test_data'] = dset
         results = pd.concat([results, res_dcbc], ignore_index=True)
