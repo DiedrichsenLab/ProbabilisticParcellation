@@ -127,14 +127,14 @@ if __name__ == "__main__":
     types = T.default_type.to_numpy()[test_datasets_list]
     existing_atlasses = ['Anatom', 'Buckner7', 'Buckner17', 'Ji10', 'MDTB10']
     fusion_atlasses = ['NettekovenAsym32', 'NettekovenSym32', 'NettekovenAsym68', 'NettekovenSym68']
-    results, _, _ = eval_atlas(fusion_atlasses + existing_atlasses,
+    results = eval_atlas(fusion_atlasses + existing_atlasses,
               t_datasets=T.name.to_numpy()[test_datasets_list],
               type=types)
     
 
     # Save file
     wdir = ut.model_dir + f'/Models/Evaluation'
-    fname = f'/eval_atlas_exsiting.tsv'
+    fname = f'/eval_atlas_existing.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 
