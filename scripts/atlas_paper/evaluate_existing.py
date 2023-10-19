@@ -23,14 +23,13 @@ import nibabel as nb
 
 # == To generate the eval_all_5existing_on_taskDatasets.tsv file, run the following functions:
 
-def run_dcbc_existing(atlas_names, tdata, space, device=None, verbose=True):
+def run_dcbc_existing(atlas_names, tdata, space, max_dist=40, verbose=True):
     """ Calculates group DCBC using a test_data set. 
 
     Args:
         atlas_names (list or str): Name of existing atlases (dseg.nii files) to be evaluated.
         tdata (pt.Tensor or np.ndarray): Test data set to evaluate with the atlases.
         space (atlas_map): The atlas map object for calculating voxel distance.
-        device (str): The device name to load the trained model (optional, default is None).
         verbose (bool): Whether to print verbose messages during the evaluation (optional, default is True).
 
     Returns:
@@ -69,7 +68,7 @@ def run_dcbc_existing(atlas_names, tdata, space, device=None, verbose=True):
         this_res = pd.DataFrame()
         # ------------------------------------------
         # Run the DCBC evaluation for the group
-        dcbc_group = ev.calc_test_dcbc(Pgroup, tdata, dist,max_dist=110)
+        dcbc_group = ev.calc_test_dcbc(Pgroup, tdata, dist,max_dist=max_dist)
 
         # ------------------------------------------
         # Collect the information from the evaluation
@@ -85,7 +84,7 @@ def run_dcbc_existing(atlas_names, tdata, space, device=None, verbose=True):
     return results
 
 def eval_atlas(atlas_name, t_datasets=['MDTB','Pontine','Nishimoto'],
-                  type=None, out_name=None, save=True, plot_wb=True):
+                  type=None, max_dist=40):
     """Evaluate group and individual DCBC and write in evaluation file
     Args:
         K: the number of parcels
@@ -111,7 +110,7 @@ def eval_atlas(atlas_name, t_datasets=['MDTB','Pontine','Nishimoto'],
             tds.cond_ind = 'time_id'
 
         res_dcbc = run_dcbc_existing(atlas_name, tdata, 'MNISymC3',
-                                                     device='cuda')
+                                                     device='cuda', max_dist=max_dist)
 
         res_dcbc['test_data'] = dset
         results = pd.concat([results, res_dcbc], ignore_index=True)
@@ -127,14 +126,16 @@ if __name__ == "__main__":
     types = T.default_type.to_numpy()[test_datasets_list]
     existing_atlasses = ['Anatom', 'Buckner7', 'Buckner17', 'Ji10', 'MDTB10']
     fusion_atlasses = ['NettekovenAsym32', 'NettekovenSym32', 'NettekovenAsym68', 'NettekovenSym68']
+    # max_dist = 110
+    max_dist=70
     results = eval_atlas(fusion_atlasses + existing_atlasses,
               t_datasets=T.name.to_numpy()[test_datasets_list],
-              type=types)
+              type=types, max_dist=max_dist)
     
 
     # Save file
     wdir = ut.model_dir + f'/Models/Evaluation'
-    fname = f'/eval_atlas_existing.tsv'
+    fname = f'/eval_atlas_existing_dist-{max_dist}.tsv'
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 
