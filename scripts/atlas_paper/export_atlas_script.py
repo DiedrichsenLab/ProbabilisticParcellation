@@ -27,12 +27,12 @@ def export_atlas_gifti():
     ]
     space='MNISymC2'
     for model_name in model_names:
-        atlas_name = model_name.split("Models_03/")[1] 
-        
+        atlas_name = model_name.split("Models_03/")[1]
+
         _, cmap, labels = nt.read_lut(ut.export_dir + f'{atlas_name.split("_space-")[0]}.lut')
         # add alpha value one to each rgb array
         cmap = np.hstack((cmap, np.ones((cmap.shape[0], 1))))
-        
+
         # load model
         info, model = ut.load_batch_best(model_name)
         data = model.arrange.marginal_prob().numpy()
@@ -45,7 +45,13 @@ def export_atlas_gifti():
             f'{ut.model_dir}/Atlases/{atlas_name}',
         )
 
-
+def subdivide_spatial_all():
+    # ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='SUIT',outname='NettekovenSym128')
+    # ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='SUIT',outname='NettekovenAsym128')
+    # ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNI152NLin2009cSymC',outname='NettekovenSym128')
+    # ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='MNI152NLin2009cSymC',outname='NettekovenAsym128')
+    ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNI152NLin6AsymC',outname='NettekovenSym128')
+    ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='MNI152NLin6AsymC',outname='NettekovenAsym128')
 
 if __name__=="__main__":
     #ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
@@ -60,6 +66,6 @@ if __name__=="__main__":
     # ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin6AsymC')
     # ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin6AsymC')
     # ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin6AsymC')
-
-    export_atlas_gifti()
+    subdivide_spatial_all()
+    # export_atlas_gifti()
     pass
