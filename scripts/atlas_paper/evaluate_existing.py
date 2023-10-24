@@ -139,18 +139,3 @@ if __name__ == "__main__":
     results.to_csv(wdir + fname, index=False, sep='\t')
 
 
-
-
-
-
-# == To generate the eval_dataset7_sym.tsv and eval_dataset7_asym-hem.tsv files, loop through Ks (10, 20, 34, 40, 68) and datasets run the following functions:
-#   -- Evaluate symmetric --
-# atlas_name = ['Md','Po','Ni','Ib','Wm','De','So','MdPoNiIbWmDeSo', 'MdNiIbWmDeSo', 'MdPoIbWmDeSo', 'MdPoNiWmDeSo', 'MdPoNiIbDeSo', 'MdPoNiIbWmSo', 'MdPoNiIbWmDe']
-# ks = [10, 20, 34, 40, 68]
-# for K in ks:
-#   result_5_eval(K=K, symmetric='sym', model_type=['03','04'], atlas_name=atlas_name)
-
-#  -- Evaluate asymmetric fitted from symmetric --
-# mname_suffix = '_arrange-asym_sep-hem'
-# evaluate_models(ks, model_types=['indiv', 'loo', 'all'], model_on=[
-# 'task'], test_on='task', mname_suffix=mname_suffix)
