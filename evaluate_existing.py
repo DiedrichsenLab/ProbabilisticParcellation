@@ -21,7 +21,6 @@ import json
 import nibabel as nb
 
 
-# == To generate the eval_all_5existing_on_taskDatasets.tsv file, run the following functions:
 
 def run_dcbc_existing(atlas_names, tdata, space, max_dist=40, verbose=True):
     """ Calculates group DCBC using a test_data set. 

@@ -23,18 +23,16 @@ Plotting MDS plots for different single dataset parcellations (Fig 1B & 1C & 1D)
 
 
 ### Fusion outperforms other atlases
+
 Plotting DCBC & Statistics DCBC (Fig 1E & 1F):
 ```notebooks/evaluate_dcbc.ipynb```
 
 Comparison of existing atlasses to fusion
-```scripts/atlas_paper/evaluate_existing.py```
-
-
+```notebooks/evaluate_existing.ipynb```
 
 ### Symmetric and Asymmetric atlasses
 Plotting symmetry (boundary and functional symmetry, i.e. functional lateralization) and comparing asymmetric and symmetric atlas versions:
 ```notebooks/symmetry.ipynb```
-
 
 
 ### Fine level of granularity advantageous for individual parcellation
@@ -105,7 +103,7 @@ Size comparison of left and right regions (voxel-wise) of the asymmetric atlas
 ### Individual localization
 
 To get individual parcellations (previously saved as pytorch tensor to save
-time) run the following script):
+time) run the following script:
 ```scripts.individual_variability.export_uhats(model_name)```
 
 Which Calls:
