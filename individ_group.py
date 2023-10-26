@@ -177,7 +177,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     return T 
 
 
-def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
+def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3', soft_assign=True):
     # Do cosine-error evaluation...
     # Build model for sc2 (testing session):
     #     indivtrain_em = em.MixVMF(K=m1.K,
@@ -198,7 +198,7 @@ def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
     m2.emissions = [test_em]
     m2.initialize()
 
-    coserr = ppev.calc_test_error(m2,tdata,[Uhat_group]+Uhat_data+Uhat_complete)
+    coserr = ppev.calc_test_error(m2,tdata,[Uhat_group]+Uhat_data+Uhat_complete, soft_assign=soft_assign)
 
     T = pd.DataFrame()
     for sub in range(coserr.shape[1]):

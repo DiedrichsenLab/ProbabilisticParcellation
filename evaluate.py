@@ -26,7 +26,7 @@ from copy import deepcopy
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 
 
-def calc_test_error(M, tdata, U_hats):
+def calc_test_error(M, tdata, U_hats, soft_assign=True):
     """Evaluates the predictions from a trained full model on some testdata.
     The full model consists of a trained arrangement model and is
     combined with untrained emission model for the test data.
@@ -80,7 +80,7 @@ def calc_test_error(M, tdata, U_hats):
                 raise (
                     NameError("U_hats needs to be 'group','floor',a 2-d or 3d-tensor")
                 )
-            a = ev.coserr(dat, M.emissions[0].V, U, adjusted=True, soft_assign=True)
+            a = ev.coserr(dat, M.emissions[0].V, U, adjusted=True, soft_assign=soft_assign)
             pred_err[i, s] = a
         toc = time.perf_counter()
         print(f"{toc - tic:0.4f}s")
