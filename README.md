@@ -14,14 +14,18 @@ see ```requirements.txt```
 ## Notebooks / Code to replicate different sections of the paper
 
 ### Estimation of the atlas
+Atlas was estimated using:
+```scripts/atlas_paper/fit_atlas.py```
 
+Single dataset parcellations (Fig 1a)
+```single_parcellations.ipynb```
 
+Symmetric & asymmetric atlas (Fig 2a, 2b & 2c)
+```atlas_flatmaps.ipynb```
 
 ### State dependency of functional atlases
 Plotting MDS plots for different single dataset parcellations (Fig 1B & 1C & 1D) & Statistics for between-dataset ARI (similarity; normalized to within-dataset ARI) between all datasets and the task-general (MDTB) and rest-based (HCP) data:
 ```notebooks/evaluate_mds.ipynb```
-
-
 
 ### Fusion outperforms other atlases
 
