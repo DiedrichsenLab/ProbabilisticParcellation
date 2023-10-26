@@ -182,7 +182,7 @@ def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
     # Build model for sc2 (testing session):
     #     indivtrain_em = em.MixVMF(K=m1.K,
         # Test data set:
-    tdata,tinfo,tds = ut.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+    tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s2'], type='CondHalf')
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
