@@ -170,7 +170,7 @@ def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
 
     if ignore_side:
         # average across sides
-        data = data.groupby(['reg', 'task']).mean().reset_index()
+        data = data[['reg', 'task']].reset_index().groupby(['reg', 'task']).mean().reset_index()
         data['index'] = data['reg'].str[0:2]
 
     task1 = data[data['task'] == compare[0]]
