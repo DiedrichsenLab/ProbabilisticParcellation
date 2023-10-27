@@ -126,8 +126,8 @@ Which Calls:
 Plotting the individual parcellations: (Fig XA):
 ```notebooks/individual_parcellation.ipynb```
 
-Calculating and plotting individual variability (Fig XB):
-```notebooks/individual_variability.ipynb``` TODO CARO: WHICH ONE ENDED UP IN THE PAPER? HIGHLIGHT IN NOTEBOOK
+Calculating and plotting individual variability (Fig 5B):
+```notebooks/individual_variability.ipynb``` 
 
 which calls:
 ```scripts.individual_variability.calc_variability(Data, Info, subject_wise=False):```
