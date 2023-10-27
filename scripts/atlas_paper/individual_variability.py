@@ -15,7 +15,6 @@ import ProbabilisticParcellation.hierarchical_clustering as cl
 import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.functional_profiles as fp
-import ProbabilisticParcellation.scripts.atlas_paper.describe_atlas as da
 import ProbabilisticParcellation.evaluate as ppev
 import Functional_Fusion.dataset as ds
 import HierarchBayesParcel.evaluation as ev

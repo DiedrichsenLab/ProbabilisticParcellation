@@ -52,8 +52,15 @@ Some manual adjustments had to be made on the produced figure, because the inter
 
 
 ### Characterization of regions
+Characterizing regions based on functional responses in the MDTB dataset over and above motor responses is done by estimating a linear model using ridge regression (L2 regularization) with the motor features (left hand presses, right hand presses & saccades) and task condition indicators as the design matrix. The feature model is run using:
+```scripts/atlas_paper/feature_model.py```
+which calls the ```ridgeFit``` function in:
+```scripts/atlas_paper/ridge_reg.py```
+
+The motor, action, demand and social-linguistic regions are described in individual notebooks using all datasets and the MDTB feature model:
+
 Motor regions
-```notebooks/atlas_paper/motor.ipynb```
+```notebooks/atlas_paper/motor.ipynb``` (Fig S1)
 
 Action regions
 ```notebooks/atlas_paper/action.ipynb```
@@ -64,13 +71,21 @@ Demand regions
 Sociolinguistic regions
 ```notebooks/atlas_paper/social.ipynb```
 
+Probabilistic maps:
+function ```export_all_probmaps``` in ```export_atlas.py``` (Fig S2a)
+
+Region sizes:
+```notebooks/atlas_paper/size_comparison.ipynb``` (Fig S2b & S2)
+
+Volumetric atlas view:
+```notebooks/atlas_paper/atlas_volume.ipynb``` (Fig S3)
+
 Localizing individual regions
-```notebooks/atlas_paper/social.ipynb```
+```notebooks/atlas_paper/task_differences.ipynb``` (Fig S4)
 
 ### Cortical Connectivity
 
 Cortical connectivity models are estimated and evaluated in the repository
-
 ```diedrichsenlab/cortico_cereb_connectivity``` denoted ```ccc``` for short.
 
 Models were trained evaluated ```ccc.run_model```, which is called from ```ccc.scripts.scipt_train_eval_models.py```
@@ -85,25 +100,19 @@ csw.make_weight_map('Fusion','05')
 ```
 
 To summarize further by cortical ROI:
-
-```
-T = csw.make_weight_table(dataset="Fusion",extension="06",cortical_roi="yeo17")
-```
+```T = csw.make_weight_table(dataset="Fusion",extension="05",cortical_roi="yeo17")```
 
 Summary figures (by yeo17)
-```
-cortical_connectivity.ipynb
-```
+```notebooks/atlas_paper/cortical_connectivity.ipynb```
+
 
 Full connectivity maps:
-```
-parcel_summary.ipynb
-```
+```notebooks/atlas_paper/connectivity_weights.ipynb``` (Fig S5 & Fig S6)
 
 ### Function and boundary (a)symmetry
 
-Size comparison of left and right regions (voxel-wise) of the asymmetric atlas
-```scripts/atlas_paper/symmetric_comparison.py```
+Size comparison of left and right regions (voxel-wise) of the asymmetric atlas (Fig S8)
+```notebooks/atlas_paper/size_comparison.ipynb```
 
 ### Individual localization
 
