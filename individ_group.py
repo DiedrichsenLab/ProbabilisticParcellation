@@ -177,12 +177,12 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     return T 
 
 
-def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
+def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3', soft_assign=True):
     # Do cosine-error evaluation...
     # Build model for sc2 (testing session):
     #     indivtrain_em = em.MixVMF(K=m1.K,
         # Test data set:
-    tdata,tinfo,tds = ut.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
+    tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s2'], type='CondHalf')
     tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
 
@@ -198,7 +198,7 @@ def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
     m2.emissions = [test_em]
     m2.initialize()
 
-    coserr = ppev.calc_test_error(m2,tdata,[Uhat_group]+Uhat_data+Uhat_complete)
+    coserr = ppev.calc_test_error(m2,tdata,[Uhat_group]+Uhat_data+Uhat_complete, soft_assign=soft_assign)
 
     T = pd.DataFrame()
     for sub in range(coserr.shape[1]):
@@ -225,14 +225,28 @@ def evaluate_coserr(model,Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3'):
     return T
 
 
-def figure_indiv_group(D):
-    gm = D.coserr[D.type=='group'].mean()
-    sb.lineplot(data=D[D.type!='group'],
-                y='coserr',x='runs',hue='type',markers=True, dashes=False)
-    plt.xticks(ticks=np.arange(16)+1)
+def plot_eval(fname,normalize=True,var='dcbc'):
+    plt.figure(figsize=(5,4))
+    D = pd.read_csv(ut.model_dir + '/Models/Evaluation_03/' + fname,sep='\t')
+    gm = D[var][D.type=='group'].mean()
+    ## Subtract the value of 'group' from the individual dcbc values
+    if normalize:
+        A=pd.pivot_table(D[D.type=='group'],values=var,index='subject')
+        baseline = A.loc[D.subject,var].values 
+        D[var]=D[var]-baseline+gm
+    sb.lineplot(data=D[D.type!='group'],y=var,x='runs',
+                hue='type', 
+                errorbar='se',
+                markers=True, dashes=False)
+    sb.despine()
+    runs = np.arange(16,dtype=int)+1
+    labels = [f'{i*10}' if (i==1 or i%4==0) else '' for i in runs]
+
+    plt.xticks(ticks=runs,labels=labels)
+    plt.xlabel('Functional localizer [min]')
     plt.axhline(gm,color='b',ls=':')
-    # t.ylim([0.21,0.3])
-    pass
+
+
 
 if __name__ == "__main__":
     mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
@@ -242,7 +256,3 @@ if __name__ == "__main__":
     fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_sym_MdPoNiIbWmDeSo_K68.tsv'
     D.to_csv(fname,sep='\t')
     pass
-    # D = pd.read_csv(fname,sep='\t')
-    # figure_indiv_group(D)
-    # plt.show()
-    # pass

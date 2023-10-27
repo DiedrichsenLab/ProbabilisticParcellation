@@ -116,8 +116,8 @@ def scatter_plot(compare, data, side=None):
     region1 = data[data[granularity] == compare[0]]
     region2 = data[data[granularity] == compare[1]]
     # Average within each task
-    region1 = region1.groupby(['task']).mean().reset_index()
-    region2 = region2.groupby(['task']).mean().reset_index()
+    region1 = region1[['task', 'score']].groupby(['task']).mean().reset_index()
+    region2 = region2[['task', 'score']].groupby(['task']).mean().reset_index()
     fig = plt.scatter(region1['score'], region2['score'])
     # Remove upper and right box lines
     sb.despine()
@@ -143,8 +143,8 @@ def scatter_plot_hemispheres(compare, data):
     region1 = data[data['reg'] == compare][data['side'] == 'L']
     region2 = data[data['reg'] == compare][data['side'] == 'R']
     # Average within each task
-    region1 = region1.groupby(['task']).mean().reset_index()
-    region2 = region2.groupby(['task']).mean().reset_index()
+    region1 = region1[['task', 'score']].groupby(['task']).mean().reset_index()
+    region2 = region2[['task', 'score']].groupby(['task']).mean().reset_index()
     fig = plt.scatter(region1['score'], region2['score'])
     # Remove upper and right box lines
     sb.despine()
@@ -170,14 +170,14 @@ def scatter_plot_tasks(compare, data, ignore_side=False, color='domains'):
 
     if ignore_side:
         # average across sides
-        data = data.groupby(['reg', 'task']).mean().reset_index()
+        data = data[['reg', 'task', 'score']].reset_index().groupby(['reg', 'task', 'score']).mean().reset_index()
         data['index'] = data['reg'].str[0:2]
 
     task1 = data[data['task'] == compare[0]]
     task2 = data[data['task'] == compare[1]]
     # Average within each task
-    task1 = task1.groupby(['index']).mean().reset_index()
-    task2 = task2.groupby(['index']).mean().reset_index()
+    task1 = task1[['index', 'score']].groupby(['index']).mean().reset_index()
+    task2 = task2[['index', 'score']].groupby(['index']).mean().reset_index()
 
     # Determine color
     if color == 'domains':
