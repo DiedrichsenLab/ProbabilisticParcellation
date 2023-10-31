@@ -114,6 +114,10 @@ Full connectivity maps:
 Size comparison of left and right regions (voxel-wise) of the asymmetric atlas (Fig S8)
 ```notebooks/atlas_paper/size_comparison.ipynb```
 
+XX
+
+XX add the figure names to plots in jupyter notebook
+
 ### Individual localization
 
 To get individual parcellations (previously saved as pytorch tensor to save
@@ -123,20 +127,20 @@ time) run the following script:
 Which Calls:
 ```evaluate.get_individual_parcellation(model_name)```
 
-Plotting the individual parcellations: (Fig XA):
+Plotting the individual parcellations: (Fig 5A):
 ```notebooks/individual_parcellation.ipynb```
 
-Calculating and plotting individual variability (Fig XB):
-```notebooks/individual_variability.ipynb``` TODO CARO: WHICH ONE ENDED UP IN THE PAPER? HIGHLIGHT IN NOTEBOOK
+Calculating and plotting individual variability (Fig 5B):
+```notebooks/individual_variability.ipynb``` 
 
 which calls:
 ```scripts.individual_variability.calc_variability(Data, Info, subject_wise=False):```
 
-Plotting probability maps for parcels (Fig XC):
+Plotting probability maps for parcels (Fig 5C):
 ```notebooks/individual_group.ipynb```
 ```plot.plot_parcel_prob```
 
-Comparing group and individual parcellations with varying length of data (Fig XD):
+Comparing group and individual parcellations with varying length of data (Fig 5D & 5E):
 ```notebooks/individual_group.ipynb```
 
 ### Model to atlas
