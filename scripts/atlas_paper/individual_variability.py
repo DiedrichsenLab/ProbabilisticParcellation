@@ -243,7 +243,7 @@ def export_uhats(mname="Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_reorder
 
     # -- Save individual parcellations --
     prob = ppev.get_individual_parcellation(
-        mname, subject="all", dataset=None, session=None
+        mname
     )
 
     pt.save(prob, f"{ut.model_dir}/Models/{mname}_Uhat.pt")
@@ -315,12 +315,13 @@ def plot_dataset_pmaps(plot_parcels=["M1", "M3", "D1", "D2", "D3", "D4"]):
 
 if __name__ == "__main__":
     # model_variability()
-    plot_dataset_pmaps(['M1', 'M2', 'M3', 'M4', 'A1', 'A2'])
+    # plot_dataset_pmaps(['M1', 'M2', 'M3', 'M4', 'A1', 'A2'])
     # # --- Export individual parcellations ---
-    # for sym in ["Sym", "Asym"]:
-    #     for K in [32, 68]:
-    #         mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
-    #         export_uhats(mname)
+    for sym in ["Sym", "Asym"]:
+        # for K in [32, 68]:
+        for K in [128]:
+            mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
+            export_uhats(mname)
     # variability_maps()
     # T = pd.read_csv(ut.base_dir + "/dataset_description.tsv", sep="\t")
     # Data, Info = [], []
