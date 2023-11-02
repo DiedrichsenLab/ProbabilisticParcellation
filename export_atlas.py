@@ -67,7 +67,7 @@ def resample_probs(probs, source_space, target_space):
     a, ainf = am.get_atlas(source_space, ut.atlas_dir)
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
     
-    if isinstance(probs, str) and probs.endswith(".nii") or probs.endswith(".nii.gz"):
+    if isinstance(probs, str) and (probs.endswith(".nii") or probs.endswith(".nii.gz")):
         # If probs is a nifti image, load it
         nii_atlas = nb.load(probs)
     elif isinstance(probs, np.ndarray):
