@@ -961,7 +961,7 @@ def compare_probs(prob_a, prob_b, method="corr"):
 
 def get_individual_parcellation(mname):
     """Calculate individual parcel maps for a model 
-    on all the subejcts that particular model was trained on.
+    on all the subjects that particular model was trained on.
     Args:
         model_a: Model
     Returns:

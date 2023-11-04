@@ -51,21 +51,36 @@ def renormalize_probseg(probseg, mask):
     # probseg_img.header.set_slope_inter(1/(2**16-1),0.0)
     return probseg_img, dseg_img
 
-def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
-    """ Resamples probabilistic atlas from MNISymC2 to a new atlas space in 1mm resolution
+def resample_probs(probs, source_space, target_space):
+    """ Resamples probabilistic parcellation from MNISymC2 to a new space in 1mm resolution
+        
     Args:
-        fname (str): Name of the atlas
-        atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3, fs32k)
+        probs (str/nifti/np.array): Probabilistic parcellation
+        source_space (str): Source space (SUIT, MNISymC)
         target_space (str): Target space (MNI152NLin2009cSymC, MNI152NLin2009cAsym)
+        
+    Returns:
+        nii (nifti1Image): Resampled probabilistic parcellation
+        dnii (nifti1Image): Resampled winner-take-all parcellation
+            
     """
-    a, ainf = am.get_atlas(atlas, ut.atlas_dir)
-    src_dir = ut.model_dir + "/Atlases/"
+    a, ainf = am.get_atlas(source_space, ut.atlas_dir)
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
-    # Load and set NaNs to 0
-    nii_atlas = nb.load(src_dir + f"/{fname}_space-{atlas}_probseg.nii")
+    
+    if isinstance(probs, str) and (probs.endswith(".nii") or probs.endswith(".nii.gz")):
+        # If probs is a nifti image, load it
+        nii_atlas = nb.load(probs)
+    elif isinstance(probs, np.ndarray):
+        # If probs is numpy array, then reshape probs to nifti
+        nii_atlas = a.data_to_nifti(probs)
+    elif isinstance(probs, nb.nifti1.Nifti1Image):
+        nii_atlas = probs
+
+    # Set NaNs to 0
     X = np.nan_to_num(nii_atlas.get_fdata())
     nii_atlasf = nb.Nifti1Image(X, nii_atlas.affine, nii_atlas.header)
-    # Reslice to 1mm MNI
+
+    # Reslice to 1mm target space
     print("normalizing")
     if ainf["space"] != target_space:
         print(f"deforming from {ainf['space']} to {target_space}")
@@ -83,7 +98,26 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
         nii_mask = nb.load(targ_dir + "/" + mname)
         shap = nii_mask.shape + nii_atlas.shape[3:]
         nii_res = ns.resample_from_to(nii_atlasf, (shap, nii_mask.affine), 1)
+    
     nii, dnii = renormalize_probseg(nii_res, nii_mask)
+    return nii, dnii
+
+def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
+    """ Resamples probabilistic atlas from MNISymC2 to a new atlas space in 1mm resolution
+    Args:
+        fname (str): Name of the atlas
+        atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3, fs32k)
+        target_space (str): Target space (MNI152NLin2009cSymC, MNI152NLin2009cAsym)
+    """
+    
+    src_dir = ut.model_dir + "/Atlases/"    
+    targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
+    source_img=src_dir + f"/{fname}_space-{atlas}_probseg.nii"
+
+    # Resample to 1mm MNI
+    nii, dnii = resample_probs(source_img, atlas, target_space)
+    
+    # Save the files for the new atlas
     print("saving")
     nb.save(nii, targ_dir + f"/atl-{fname}_space-{target_space}_probseg.nii")
     nb.save(dnii, targ_dir + f"/atl-{fname}_space-{target_space}_dseg.nii")
@@ -156,7 +190,7 @@ def export_map(data, atlas, cmap, label_names, base_name):
     parcel = parcel.astype(np.int8)
     dseg = suit_atlas.data_to_nifti(parcel)
 
-    Gifti = prob_to_label_gii(probseg, altas_space, cmap, label_names)
+    Gifti = prob_to_label_gii(probseg, atlas, cmap, label_names)
 
     nb.save(dseg, base_name + f"_dseg.nii")
     nb.save(probseg, base_name + f"_probseg.nii")
@@ -164,7 +198,66 @@ def export_map(data, atlas, cmap, label_names, base_name):
     # nt.save_lut(base_name + ".lut", np.arange(len(labels)), cmap[:, 0:4], labels)
     print(f"Exported {base_name}.")
 
+def divide_map(prob, anat, sp_ext, comp, labels=None, colors=None):
+    """Divides a probabilistic map into subregions
+    Args:
+        prob (ndarray): Probabilistic map
+        anat (ndarray): Anatomical map
+        sp_ext (list): List of strings for subregion names
+        comp (list): List of lists of anatomical labels
+        labels (list): List of labels for fields
+        colors (ndarray): Color map including a row for 0
+    Returns:
+        prob_new (ndarray): New probabilistic map
+        indx_new (ndarray): New index
+        colors_new (ndarray): New color map
+        labels_new (list): New list of labels
+    """
 
+    nx,ny,nz,K = prob.shape
+    prob_new = np.zeros((nx,ny,nz,K*4))
+    indx_new = np.arange(K*4+1)
+    colors_new = np.zeros((K*4+1,3))
+    labels_new = ['0']
+
+    # Loop over all regions and subdivide them
+    for k in range(K):
+        for i,(s,compartment) in enumerate(zip(sp_ext,comp)):
+            inew = k*4+i
+            prob_new[:,:,:,inew] = prob[:,:,:,k]*(np.isin(anat,compartment))
+            if labels is not None:
+                labels_new.append(labels[k+1] + s)
+            if colors is not None:
+                colors_new[inew+1,:] = colors[k+1,:]
+
+    parcel = np.argmax(prob_new,axis=3)+1
+    sumOfProb = np.nansum(prob_new,axis=3)
+    parcel[sumOfProb==0]=0
+            
+    
+    return prob_new,parcel,indx_new,colors_new,labels_new
+
+def get_spatial_compartments():
+    """ Returns the spatial compartments for the 32 region atlas
+        
+        Spatial subdivisions are:
+            Superior (lobule I - Crus I inclusive)
+            Dorsal inferior (Crus II - VIIIb)
+            Ventral inferior (lobule IX - lobule X)
+            Vermal inferior sections (vermis VII - vermis X)
+        
+        Returns:
+            sp_ext (list): List of strings for subregion names
+            comp (list): List of lists of anatomical labels
+    """
+    sp_ext = ['s','i','t','v']
+    comp = [[1,2,3,4,5,6,7,8,10],
+            [11,13,14,16,17,19,20,22],
+            [23,25,26,28],
+            [9,12,15,18,21,24,27]]
+    
+    return sp_ext,comp
+    
 def subdivde_atlas_spatial(fname,atlas,outname):
     """ Subdivides the 32 region atlas into s,i,t,v
     It performs this on the already resampled atlases in the FunctionFusion/atlas directory.
@@ -176,43 +269,29 @@ def subdivde_atlas_spatial(fname,atlas,outname):
         fname (str): Name of map (e.g. Nettekoven32)
         atlas (str): Atlas name (e.g. MNI152NLin2009cSymC)
     """
-    sp_ext = ['s','i','t','v']
-    comp = [[1,2,3,4,5,6,7,8,10],
-            [11,13,14,16,17,19,20,22],
-            [23,25,26,28],
-            [9,12,15,18,21,24,27]]
+    # Get spatial compartments
+    sp_ext,comp = get_spatial_compartments()
 
-    # Load and set NaNs to 0
-    base_name = f"atl-{fname}_space-{atlas}"
+    # Get anatomical image
     tpl_dir = ut.atlas_dir + f"/tpl-{atlas}/"
-    prob_atlas = tpl_dir + base_name + '_probseg.nii'
     anat_atlas = tpl_dir + f"atl-Anatom_space-{atlas}_dseg.nii"
+    anat_img = nb.load(anat_atlas)
+    anat = anat_img.get_fdata()
+
+    # Get atlas and set NaNs to 0
+    base_name = f"atl-{fname}_space-{atlas}"
+    prob_atlas = tpl_dir + base_name + '_probseg.nii'
     lutfile = tpl_dir + f"atl-{fname}.lut"
     prob_img = nb.load(prob_atlas)
-    anat_img = nb.load(anat_atlas)
     prob = prob_img.get_fdata()
-    anat = anat_img.get_fdata()
-    nx,ny,nz,K = prob.shape
-    prob_new = np.zeros((nx,ny,nz,K*4))
-
+    
     # Load Lut file and make new version of it
     indx,colors,labels = nt.read_lut(lutfile)
-    indx_new = np.arange(K*4+1)
-    colors_new = np.zeros((K*4+1,3))
-    labels_new = ['0']
 
-    # Loop over all regions and subdivide them
-    for k in range(K):
-        for i,(s,compartment) in enumerate(zip(sp_ext,comp)):
-            inew = k*4+i
-            prob_new[:,:,:,inew] = prob[:,:,:,k]*(np.isin(anat,compartment))
-            labels_new.append(labels[k+1] + s)
-            colors_new[inew+1,:] = colors[k+1,:]
+    # Divide the map
+    prob_new,parcel,indx_new,colors_new,labels_new = divide_map(prob,anat,sp_ext,comp,labels,colors)
 
     # Save new atlas
-    parcel = np.argmax(prob_new,axis=3)+1
-    sumOfProb = np.nansum(prob_new,axis=3)
-    parcel[sumOfProb==0]=0
     pseg_img = nb.Nifti1Image(prob_new, prob_img.affine)
     dseg_img = nb.Nifti1Image(parcel.astype(np.uint8),prob_img.affine)
     gifti = prob_to_label_gii(pseg_img, atlas, colors_new, labels_new)
