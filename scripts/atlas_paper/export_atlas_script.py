@@ -67,5 +67,5 @@ if __name__=="__main__":
     ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin6AsymC')
     ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin6AsymC')
     subdivide_spatial_all()
-    # export_atlas_gifti()
+    export_atlas_gifti()
     pass
