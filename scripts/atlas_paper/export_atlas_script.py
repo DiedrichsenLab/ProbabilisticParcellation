@@ -175,7 +175,7 @@ def reorder_lut(reorder='action4_to_social5'):
     domain_labels = [labels[1:][i] for i in new_order]
     if replace:
         for k,v in replace.items():
-            domain_labels[domain_labels.index(k[:1])] = v
+            domain_labels[domain_labels.index(k[:2])] = v[:2]
     domain_labels = ["0"] + domain_labels
 
     domain_colors = colors[1:][new_order]
