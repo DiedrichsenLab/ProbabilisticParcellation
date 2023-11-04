@@ -190,7 +190,7 @@ def export_map(data, atlas, cmap, label_names, base_name):
     parcel = parcel.astype(np.int8)
     dseg = suit_atlas.data_to_nifti(parcel)
 
-    Gifti = prob_to_label_gii(probseg, altas_space, cmap, label_names)
+    Gifti = prob_to_label_gii(probseg, atlas, cmap, label_names)
 
     nb.save(dseg, base_name + f"_dseg.nii")
     nb.save(probseg, base_name + f"_probseg.nii")
@@ -270,7 +270,7 @@ def subdivde_atlas_spatial(fname,atlas,outname):
         atlas (str): Atlas name (e.g. MNI152NLin2009cSymC)
     """
     # Get spatial compartments
-    sp_ext, comp, anat = get_spatial_compartments()
+    sp_ext,comp = get_spatial_compartments()
 
     # Get anatomical image
     tpl_dir = ut.atlas_dir + f"/tpl-{atlas}/"

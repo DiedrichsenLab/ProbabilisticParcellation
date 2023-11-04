@@ -30,7 +30,7 @@ pt.set_default_tensor_type(pt.FloatTensor)
 def reorder_action_network(mnames):
     """Script to reorder the parcels of the action network such that introspection parcels I1 & I2 become action parcels A3 & A4"""
 
-    f_assignment = "mixed_assignment_68_16_4.csv"
+    f_assignment = "mixed_assignment_68_32_4.csv"
     for mname in mnames:
         symmetry = re.findall("[A-Z][^A-Z]*", mname.split("/")[1].split("_")[0])[1][:3]
         # Split on capital letters
@@ -56,7 +56,7 @@ def reorder_action_network(mnames):
 
 def reexport_atlas(mname):
     """Script to reexport atlas by using the reordered model, importing the exported lut files, reordering the colour map and exporting the atlas that way"""
-    f_assignment = "mixed_assignment_68_16_4.csv"
+    f_assignment = "mixed_assignment_68_32_4.csv"
 
     symmetry = re.findall("[A-Z][^A-Z]*", mname.split("/")[1].split("_")[0])[1][:3]
     # Split on capital letters

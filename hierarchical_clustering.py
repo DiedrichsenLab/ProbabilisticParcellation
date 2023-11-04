@@ -237,7 +237,7 @@ def mixed_clustering(mname_fine,
                      df_assignment,
                      fine_labels=None):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
-    specified in mixed_assignment.csv.
+    specified in mixed_assignment_68_16_4.csv.
 
     Args:
         mname_fine: Based parcellation map
@@ -604,7 +604,7 @@ def merge_model(model, mapping):
     return new_model
 
 
-def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_16', refit_model=False, save_model=False):
+def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None, f_assignment='mixed_assignment_68_16_4', refit_model=False, save_model=False):
     """Merges parcels of a fine probabilistic parcellation model into a reduced number of parcels using either guided or mixed clustering.
 
     Parameters:
@@ -613,7 +613,7 @@ def cluster_parcel(mname_fine, mname_coarse=None, method='mixed', mname_new=None
                                     If not provided, mixed clustering will be performed. Defaults to None.
     method(str, optional): The method to use for clustering. Can be either 'mixed' or 'model_guided'. Defaults to 'mixed'.
     mname_new(str, optional): The file name for the merged probabilistic parcellation model. If not provided, the name will be constructed based on `mname_fine` and `method`. Defaults to None.
-    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_16'.
+    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_16_4'.
     refit_model(bool, optional): Whether to refit the reduced model. Defaults to False.
     save_model(bool, optional): Whether to save the reduced model. Defaults to False.
 
