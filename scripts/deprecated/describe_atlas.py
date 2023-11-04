@@ -110,7 +110,6 @@ def reorder_selected():
             mname_new = mname_new
         )
 
-    pass
 
 
 
