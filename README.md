@@ -167,7 +167,7 @@ which calls
 export_atlas.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
 ```
 
-The files are then copied for inclusion into the `cerebellar_atlases` repository.
+The files are then copied for inclusion into the `cerebellar_atlases` repository by hand. 
 
 ### Spatial subdivision of the atlas
 The spatial subdivision of the atlas is then produced in each atlas space seperately - in the final 1mm space.
