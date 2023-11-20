@@ -491,7 +491,7 @@ def colour_parcel(
 
 
 if __name__ == "__main__":
-    # export_conn_summary()
-    # export_all_probmaps()
-    subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='SUIT',outname='NettekovenAsym128')
+    export_conn_summary()
+    export_all_probmaps()
+    # subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='SUIT',outname='NettekovenAsym128')
     pass
