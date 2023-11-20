@@ -182,9 +182,6 @@ def reorder_lut(reorder='action4_to_social5'):
     domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
 
 
-        
-
-
 
 def export_atlas_gifti():
     model_names = [
@@ -213,6 +210,21 @@ def export_atlas_gifti():
             f'{ut.model_dir}/Atlases/{atlas_name}',
         )
 
+def resample_atlas_all():
+    ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin2009cSymC')
+    ea.resample_atlas('NettekovenSym32','MNISymC2','SUIT')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','SUIT')
+    ea.resample_atlas('NettekovenSym68','MNISymC2','SUIT')
+    ea.resample_atlas('NettekovenAsym68','MNISymC2','SUIT')
+    ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin6AsymC')
+    ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin6AsymC')
+    ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin6AsymC')
+    ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin6AsymC')
+
+
 def subdivide_spatial_all():
     ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='SUIT',outname='NettekovenSym128')
     ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='SUIT',outname='NettekovenAsym128')
@@ -223,19 +235,8 @@ def subdivide_spatial_all():
 
 if __name__=="__main__":
     # reorder_atlas()
-    reorder_lut()
-    # ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
-    # ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin2009cSymC')
-    # ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin2009cSymC')
-    # ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin2009cSymC')
-    # ea.resample_atlas('NettekovenSym32','MNISymC2','SUIT')
-    # ea.resample_atlas('NettekovenAsym32','MNISymC2','SUIT')
-    # ea.resample_atlas('NettekovenSym68','MNISymC2','SUIT')
-    # ea.resample_atlas('NettekovenAsym68','MNISymC2','SUIT')
-    # ea.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin6AsymC')
-    # ea.resample_atlas('NettekovenAsym32','MNISymC2','MNI152NLin6AsymC')
-    # ea.resample_atlas('NettekovenSym68','MNISymC2','MNI152NLin6AsymC')
-    # ea.resample_atlas('NettekovenAsym68','MNISymC2','MNI152NLin6AsymC')
-    # subdivide_spatial_all()
+    # reorder_lut()
+    # resample_atlas_all()
+    subdivide_spatial_all()
     # export_atlas_gifti()
     pass

@@ -198,6 +198,28 @@ def export_map(data, atlas, cmap, label_names, base_name):
     # nt.save_lut(base_name + ".lut", np.arange(len(labels)), cmap[:, 0:4], labels)
     print(f"Exported {base_name}.")
 
+
+def get_spatial_compartments():
+    """ Returns the spatial compartments for the 32 region atlas
+        
+        Spatial subdivisions are:
+            Superior (lobule I - Crus I inclusive)
+            Dorsal inferior (Crus II - VIIIb)
+            Ventral inferior (lobule IX - lobule X)
+            Vermal inferior sections (vermis VII - vermis X)
+        
+        Returns:
+            sp_ext (list): List of strings for subregion names
+            comp (list): List of lists of anatomical labels
+    """
+    sp_ext = ['s','i','t','v']
+    comp = [[1,2,3,4,5,6,7,8,10],
+            [11,13,14,16,17,19,20,22],
+            [23,25,26,28],
+            [9,12,15,18,21,24,27]]
+    
+    return sp_ext,comp
+
 def divide_map(prob, anat, sp_ext, comp, labels=None, colors=None):
     """Divides a probabilistic map into subregions
     Args:
@@ -233,31 +255,8 @@ def divide_map(prob, anat, sp_ext, comp, labels=None, colors=None):
     parcel = np.argmax(prob_new,axis=3)+1
     sumOfProb = np.nansum(prob_new,axis=3)
     parcel[sumOfProb==0]=0
-            
-    
     return prob_new,parcel,indx_new,colors_new,labels_new
 
-def get_spatial_compartments():
-    """ Returns the spatial compartments for the 32 region atlas
-        
-        Spatial subdivisions are:
-            Superior (lobule I - Crus I inclusive)
-            Dorsal inferior (Crus II - VIIIb)
-            Ventral inferior (lobule IX - lobule X)
-            Vermal inferior sections (vermis VII - vermis X)
-        
-        Returns:
-            sp_ext (list): List of strings for subregion names
-            comp (list): List of lists of anatomical labels
-    """
-    sp_ext = ['s','i','t','v']
-    comp = [[1,2,3,4,5,6,7,8,10],
-            [11,13,14,16,17,19,20,22],
-            [23,25,26,28],
-            [9,12,15,18,21,24,27]]
-    
-    return sp_ext,comp
-    
 def subdivde_atlas_spatial(fname,atlas,outname):
     """ Subdivides the 32 region atlas into s,i,t,v
     It performs this on the already resampled atlases in the FunctionFusion/atlas directory.

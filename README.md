@@ -105,13 +105,13 @@ To summarize the connectivity pattern by cerebellar regions:
 
 ```
 import cortico_cereb_connectivity.scripts.script_summarize_weights as csw
-csw.make_weight_map('Fusion','06')
+csw.make_weight_map('Fusion','06',method='L2Regression')
 ```
 
 To summarize further by cortical ROI:
-```T = csw.make_weight_table(dataset="Fusion",extension="06",cortical_roi="yeo17")```
+```T = csw.make_weight_table(dataset="Fusion",extension="06",cortical_roi="")```
 
-Summary figures (by yeo17)
+Summary figures (by MSHBM_Prior_15_fsLR32)
 ```notebooks/atlas_paper/cortical_connectivity.ipynb```
 
 
@@ -167,7 +167,7 @@ which calls
 export_atlas.resample_atlas('NettekovenSym32','MNISymC2','MNI152NLin2009cSymC')
 ```
 
-The files are then copied for inclusion into the `cerebellar_atlases` repository.
+The files are then copied for inclusion into the `cerebellar_atlases` repository by hand. 
 
 ### Spatial subdivision of the atlas
 The spatial subdivision of the atlas is then produced in each atlas space seperately - in the final 1mm space.
