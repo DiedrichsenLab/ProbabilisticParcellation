@@ -468,6 +468,25 @@ def cognitive_features(mname):
     return feature_profile
 
 
+def divide_tongue():
+    """Divides the tongue region (M2) into vermal and lateral parts, to enable separate examination of the functional profiles"""
+    # Divide M2 (tongue region) into vermal and lateral parts
+    get_profiles_vermal_lateral(region='M2')
+    get_profiles_vermal_lateral(region='M2', source='group')
+
+    source = 'group'
+    Prof = pd.read_csv(
+        f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_vermal_lateral.tsv', sep='\t')
+    Prof = Prof.drop(columns=['dataset', 'session',
+                     'condition', 'participant_id', 'participant_num'])
+    file = f'NettekovenSym32_profile_{source}'
+    D = pd.read_csv(ut.export_dir + 'Profiles/' +
+                    file + '.tsv', delimiter='\t')
+    df = pd.concat([D, Prof], axis=1)
+    df.to_csv(f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_A1split.tsv',
+              sep='\t', index=False)
+
+
 if __name__ == "__main__":
     short_name = "NettekovenSym32"
     mname = "Models_03/NettekovenSym32_space-MNISymC2"
@@ -496,17 +515,3 @@ if __name__ == "__main__":
 
     # export_profile(mname, info, model, labels, source="individ")
 
-    get_profiles_vermal_lateral(region='M2')
-    get_profiles_vermal_lateral(region='M2', source='group')
-
-    source = 'group'
-    Prof = pd.read_csv(
-        f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_vermal_lateral.tsv', sep='\t')
-    Prof = Prof.drop(columns=['dataset', 'session',
-                     'condition', 'participant_id', 'participant_num'])
-    file = f'NettekovenSym32_profile_{source}'
-    D = pd.read_csv(ut.export_dir + 'Profiles/' +
-                    file + '.tsv', delimiter='\t')
-    df = pd.concat([D, Prof], axis=1)
-    df.to_csv(f'{ut.model_dir}/Atlases/Profiles/NettekovenSym32_profile_{source}_A1split.tsv',
-              sep='\t', index=False)
