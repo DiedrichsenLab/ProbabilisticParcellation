@@ -81,7 +81,7 @@ def get_order(mname, reorder):
     return original_idx, mname_new, replace
             
 
-def reorder_models(reorder='action4_to_social5'):
+def reorder_model(reorder='action4_to_social5'):
     """Reorders the atlas based on the functional similarity of the parcels
     Args:
         reorder (str, optional): [description]. Defaults to 'first_clustering'.
@@ -93,25 +93,16 @@ def reorder_models(reorder='action4_to_social5'):
 
         """
 
-    # mnames = [
-    #     "Models_03/NettekovenSym68_space-MNISymC2",
-    #     "Models_03/NettekovenAsym68_space-MNISymC2",
-    #     "Models_03/NettekovenSym32_space-MNISymC2",
-    #     "Models_03/NettekovenAsym32_space-MNISymC2",
-    # ]
-
-    base_models = [
-        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
-        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
+    mnames = [
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
+        "Models_03/NettekovenSym32_space-MNISymC2",
+        "Models_03/NettekovenAsym32_space-MNISymC2",
+    ]
     f_assignment = 'mixed_assignment_68_32_4.csv'
 
-    for mname in base_models:
-        # First generate the reordered 68 model
-        #   Reorder the base map
+    for mname in mnames:
 
-        # Second generate the reordered 32 model
-        #   Merge the appropriate parcels
-        #   Then reorder them
         original_idx, mname_new, replace = get_order(mname, reorder)
         
         symmetry = mname.split("/")[1].split("_")[0]
@@ -243,7 +234,7 @@ def subdivide_spatial_all():
     ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='MNI152NLin6AsymC',outname='NettekovenAsym128')
 
 if __name__=="__main__":
-    reorder_models()
+    # reorder_model()
     # reorder_lut()
     # resample_atlas_all()
     # subdivide_spatial_all()
