@@ -550,11 +550,11 @@ def cluster_labels(mapping, descriptor='alpha', sym=True):
 
 
 def merge_model(model, mapping):
-    """Reduces model to effective K.
+    """Merges and reorders parcels from the an orginal fitted model. 
 
     Args:
         model:      Model to be clustered
-        mapping:    Cluster assignment for each model parcel
+        mapping ():    Cluster assignment for each model parcel
 
     Returns:
         new_model:  Clustered model
