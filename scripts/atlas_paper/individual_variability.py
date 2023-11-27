@@ -318,7 +318,7 @@ if __name__ == "__main__":
     # plot_dataset_pmaps(['M1', 'M2', 'M3', 'M4', 'A1', 'A2'])
     # # --- Export individual parcellations ---
     for sym in ["Sym", "Asym"]:
-        for K in [32, 68, 128]:
+        for K in [32, 68]:
             mname = f"Models_03/Nettekoven{sym}{K}_space-MNISymC2"
             export_uhats(mname)
     # variability_maps()

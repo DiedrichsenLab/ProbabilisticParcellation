@@ -42,6 +42,18 @@ atlas_dir = (
 )
 
 
+def query_similarity(mname, label):
+    labels, w_cos_sim, spatial_sim, ind = cl.similarity_matrices(mname)
+    ind = np.nonzero(labels == label)[0]
+    D = pd.DataFrame(
+        {
+            "labels": labels,
+            "w_cos_sim": w_cos_sim[ind[0], :],
+            "spatial_sim": spatial_sim[ind[0], :],
+        }
+    )
+    return D
+
 def reorder_selected():
     mnames = [
         # 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68',

@@ -30,7 +30,6 @@ import SUITPy as suit
 from PcmPy import matrix
 
 
-# from ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy import analyze_parcel
 import logging
 import nitools as nt
 import os
