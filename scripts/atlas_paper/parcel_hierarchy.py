@@ -26,179 +26,200 @@ import nitools as nt
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-
-def merge_clusters(ks, space="MNISymC3"):
-    # save_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/Models/'
-    # --- Merge parcels at K=20, 34 & 40 ---
-    merged_models = []
-
-    for k in ks:
-        mname_fine = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-68"
-        mname_coarse = f"Models_03/sym_MdPoNiIbWmDeSo_space-{space}_K-{k}"
-
-        # merge model
-        _, mname_merged, labels = cl.cluster_parcel(
-            mname_fine, mname_coarse, refit_model=True, save_model=True
-        )
-        merged_models.append(mname_merged)
-    return merged_models
-
-
-
-
-def plot_model_taskmaps(
-    mname,
-    n_highest=3,
-    n_lowest=2,
-    datasets=["Somatotopic", "Demand"],
-    save_task_maps=False,
-):
-    """Plots taskmaps of highest and lowest scoring tasks for each parcel
+def get_order(mname, reorder):
+    """Returns the ordering index for the atlas regions
     Args:
-        n_tasks: Number of tasks to save
-
-    Returns:
-        fig: task map plot
-
+        reorder (str, optional): [description]. Defaults to 'first_clustering'.
+        Options: 
+            - first_clustering: First clustering of the parcels according to functional similarity
+            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
+            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
+            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
     """
-    profile = pd.read_csv(
-        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
-    )
-    atlas = mname.split("space-")[1].split("_")[0]
-    Prob, parcel, _, labels, cmap = ea.analyze_parcel(mname, sym=True)
-    labels_sorted = sorted(labels)
+    
+    replace=None
+    if reorder=="first_clustering":
+        # For swapping M2 and A1
+        if "32" in mname :
+            original_idx = "parcel_orig_idx"
+            mname_new = mname + "_firstClustering"
+        elif "68" in mname :
+            # For swapping M2 and A1 in K68
+            original_idx = "XX"
+            mname_new = mname + "_firstClustering"
+    elif reorder=="introspection_to_action":
+        # For swapping M2 and A1
+        if "32" in mname :
+            original_idx = "parcel_orig_idx_5Domains"
+            mname_new = mname + "_4Domains"
+        elif "68" in mname :
+            # For swapping M2 and A1 in K68
+            original_idx = "parcel_med_idx_5Domains"
+            mname_new = mname + "_4Domains"
+    
+    elif reorder=="tongue":
+        # For swapping M2 and A1
+        if "32" in mname :
+            original_idx = "parcel_med_before_tongue_swap_idx"
+            mname_new = mname + "_tongueSwap"
+        elif "68" in mname :
+            # For swapping M2 and A1 in K68
+            original_idx = "parcel_orig_idx_before_tongue_swap_idx"
+            mname_new = mname + "_tongueSwap"
+    elif reorder=="action4_to_social5":
+        if "32" in mname :
+            original_idx = "parcel_med_before_a4_swap_idx"
+            mname_new = mname + "_a4Swap"
+            replace = {
+            "A4L": "S5L",
+            "A4R": "S5R"
+            }
+        elif "68" in mname :
+            # For swapping M2 and A1 in K68
+            original_idx = "parcel_orig_idx_before_a4_swap_idx"
+            mname_new = mname + "_a4Swap"
+            replace = {
+                "A4La": "S5La",
+                "A4Ra": "S5Ra"
+            }
+    return original_idx, mname_new, replace
+            
+def reorder_models(reorder='action4_to_social5'):
+    """Reorders the atlas based on the functional similarity of the parcels
+    Args:
+        reorder (str, optional): [description]. Defaults to 'first_clustering'.
+        Options: 
+            - first_clustering: First clustering of the parcels according to functional similarity
+            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
+            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
+            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
+        """
+    # mnames = [
+    #     "Models_03/NettekovenSym68_space-MNISymC2",
+    #     "Models_03/NettekovenAsym68_space-MNISymC2",
+    #     "Models_03/NettekovenSym32_space-MNISymC2",
+    #     "Models_03/NettekovenAsym32_space-MNISymC2",
+    # ]
+    base_models = [
+        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
+    f_assignment = 'mixed_assignment_68_32_4.csv'
+    for mname in base_models:
+        # First generate the reordered 68 model
+        #   Reorder the base map
+        # Second generate the reordered 32 model
+        #   Merge the appropriate parcels
+        #   Then reorder them
+        original_idx, mname_new, replace = get_order(mname, reorder)
+        
+        symmetry = mname.split("/")[1].split("_")[0]
+        if symmetry == "sym":
+            sym = True
+        else:
+            sym = False
+        model_reordered = ea.reorder_model(
+            mname,
+            sym=sym,
+            assignment=f_assignment,
+            original_idx=original_idx,
+            save_model=True,
+            mname_new = mname_new
+        )
+def reorder_lut(reorder='action4_to_social5'):
+    """Reorders the atlas based on the functional similarity of the parcels
+    Args:
+        reorder (str, optional): [description]. Defaults to 'first_clustering'.
+        Options: 
+            - first_clustering: First clustering of the parcels according to functional similarity
+            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
+            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
+            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
+        """
+    mnames = [
+        "Models_03/NettekovenSym68_space-MNISymC2",
+        "Models_03/NettekovenAsym68_space-MNISymC2",
+        "Models_03/NettekovenSym32_space-MNISymC2",
+        "Models_03/NettekovenAsym32_space-MNISymC2",
+    ]
+    f_assignment = 'mixed_assignment_68_32_4.csv'
+    for mname in mnames:
+        original_idx, mname_new, replace = get_order(mname, reorder)
+        # Make new lut file
+        index, colors, labels = nt.read_lut(ut.export_dir + f'archive/atl-{mname.split("Models_03/")[1].split("_space-")[0]}.lut')
+        assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{f_assignment}")
+        order_index = assignment[original_idx].values
+        new_order = np.unique(order_index, return_index=True)[1]
+        new_order=np.array([order_index[index] for index in sorted(new_order)])
+        new_order = np.concatenate([new_order, new_order + len(new_order)])
+        # Make new labels
+        new_labels = [labels[1:][i] for i in new_order]
+        if replace:
+            for k,v in replace.items():
+                new_labels[new_labels.index(k)] = v
+        new_labels = ["0"] + new_labels
+        
+        # Make new colours
+        new_colors = colors[1:][new_order]
+        new_colors = np.vstack((np.ones((new_colors.shape[1])), new_colors))
+        # Make new index
+        new_index = np.arange(len(new_labels))
+        # Save new lut file
+        nt.save_lut(ut.export_dir + f'{mname.split("Models_03/")[1].split("_space-")[0]}.lut',new_index,new_colors,new_labels)
+    # Reorder domain lut file
+    index, colors, labels = nt.read_lut(ut.export_dir + f'archive/NettekovenSym32_domain.lut')
+    domain_labels = [labels[1:][i] for i in new_order]
+    if replace:
+        for k,v in replace.items():
+            domain_labels[domain_labels.index(k[:2])] = v[:2]
+    domain_labels = ["0"] + domain_labels
+    domain_colors = colors[1:][new_order]
+    domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
 
-    for dataset in datasets:
-        # Select dataset
-        dataset = datasets[0]
-        profile_dataset = profile[profile.dataset == dataset]
 
-        # Get highest scoring task of this dataset
-        conditions = profile_dataset.condition
-        tasks = {}
-        for region in labels_sorted[1:]:
-            weights = profile_dataset[region]
-            conditions_weighted = [
-                (con, w) for con, w in sorted(zip(weights, conditions), reverse=True)
-            ]
-            high = conditions_weighted[:n_highest]
-            low = conditions_weighted[-n_lowest:]
-            tasks[region] = high + low
-            print(
-                f"\n\n\n{region}\nHighest: \t{[el[1] for el in high]}\n\t\t{[el[0] for el in high]}\n\nLowest: \t{[el[1] for el in low]}\n\t\t{[el[0] for el in low]}"
-            )
+def create_models_from_base(version="v0"):
+    """Creates a model version from the model selected to be the base map.
+        The parcels are reordered according to the specified model version.
+        Every model with 32 regions is created by first merging parcels of the 68 parcel model v0 into 32 parcels and refitting the emission models before reordering to obtain the desired model version.
 
-        if save_task_maps:
-            # Get task maps
-            data, info, _ = ds.get_dataset(ut.base_dir, dataset, atlas=atlas)
-            grid = (int(np.ceil((n_highest + n_lowest) / 2)), 2)
-            for region in tasks.keys():
-                task = tasks[region]
-                activity = np.full((len(task), data.shape[2]), np.nan)
-                for i, t in enumerate(task):
-                    task_name = t[1]
-                    activity[i, :] = np.nanmean(
-                        data[:, info.cond_name.tolist().index(task_name), :], axis=0
-                    )
+        The following model versions can be created:
+            - v0: First clustering of the parcels according to functional similarity
+            - v1: Merges standalone introspection regions I1 & I2 into action domain, creating a 4 domain model
+            - v2: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region and vice versa
+            - v3: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
+        
+        To create each model, all previous reordering steps are applied. That means, to create v3, v0, v1 and v2 reordering steps are applied in this order.
+    
+    """
 
-                titles = [f"{name} V: {np.round(weight,2)}" for weight, name in task]
+    base_models = [
+        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
 
-                cscale = [
-                    np.percentile(activity[np.where(~np.isnan(activity))], 5),
-                    np.percentile(activity[np.where(~np.isnan(activity))], 95),
-                ]
-                plot_multi_flat(
-                    activity,
-                    atlas,
-                    grid,
-                    cmap="hot",
-                    dtype="func",
-                    cscale=cscale,
-                    titles=titles,
-                    colorbar=False,
-                    save_fig=True,
-                    save_under=f"task_maps/{dataset}_{region}.png",
-                )
+    for mname in base_models:
+    
+        
+        
+        info, model = ut.load_batch_best(mname)
+        
+        sym=~("asym" in mname)
+        # reorder model
+        
+        new_model = cl.reorder_model(mname, model, info, sym, idx=f'idx_{version}', mname_new=f'test_sym-{sym}', save_model=True)
 
+
+        # merge model to create medium granularity 
+        model, info, mname, labels = cl.cluster_parcel(
+            mname, refit_model=True, save_model=False
+        )
+    
     pass
 
 
-def save_taskmaps(mname):
-    """Saves taskmaps of highest and lowest scoring tasks for each parcel
-    Args:
-        n_tasks: Number of tasks to save
-        datasets:
-    """
-    mname = "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68"
-
-    plt.figure(figsize=(7, 10))
-    plot_model_taskmaps(mname, n_highest=3, n_lowest=3)
-    plt.savefig(f"tmaps_01.png", format="png")
 
 
 if __name__ == "__main__":
-    # make_NettekovenSym68c32()
-    # profile_NettekovenSym68c32()
-    # ea.resample_atlas('NettekovenSym68c32',
-    #                   atlas='MNISymC2',
-    #                   target_space='MNI152NLin6AsymC')
-    # Save 3 highest and 2 lowest task maps
-    # mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    # D = query_similarity(mname, 'I1L')
-    # save_taskmaps(mname)
 
-    # Merge functionally and spatially clustered scree parcels
-    # index, cmap, labels = nt.read_lut(ut.model_dir + '/Atlases/' +
-    #                                   fileparts[-1] + '.lut')
-    # get data
+    
 
-    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68'
-    # f_assignment = 'mixed_assignment_68_16.csv'
-    # df_assignment = pd.read_csv(
-    #     ut.model_dir + '/Atlases/' + '/' + f_assignment)
-
-    mname = "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68"
-    f_assignment = "mixed_assignment_68_16.csv"
-    df_assignment = pd.read_csv(ut.model_dir + "/Atlases/" + "/archive/" + f_assignment)
-
-    # mapping, labels = mixed_clustering(mname, df_assignment)
-
-    merge_clusters(ks=[32], space="MNISymC3")
-    # export_merged()
-    # export_orig_68()
-
-    # --- Export merged models ---
-
-    model_names = [
-        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_meth-mixed"
-    ]
-    # model_names = [
-    #     "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed"
-    # ]
-    # wrong models
-    # model_names = [
-    #     "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-32_arrange-asym_sep-hem_reordered_meth-mixed"
-    # ]
-    # wrong models
-    # model_names = ["Models_03/NettekovenAsym32_space-MNISymC2"]
-    info, model = ut.load_batch_best(model_names[0])
-
-    # for model_name in model_names:
-    # --- Export merged model ---
-    # export_model_merged(model_name)
-
-    # --- Reorder action network ---
-    model_names = [
-        "Models_03/NettekovenSym68_space-MNISymC2_D5",
-        "Models_03/NettekovenAsym68_space-MNISymC2_D5",
-        "Models_03/NettekovenSym32_space-MNISymC2_D5",
-        "Models_03/NettekovenAsym32_space-MNISymC2_D5",
-    ]
-    # reorder_action_network(model_names)
-
-    # Export the reordered models (by reordering colour map and labels)
-    model_names = [mname.strip("_D5") for mname in model_names]
-    for mname in model_names:
-        reexport_atlas(mname)
-
-    pass
+    create_models_from_base()
+    

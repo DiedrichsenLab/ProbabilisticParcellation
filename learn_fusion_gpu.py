@@ -511,10 +511,10 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
 
     """
 
-    if sym_new is None and (type(model.arrange) is ar.ArrangeIndependentSymmetric or type(model.arrange) is gar.ArrangeIndependentSeparateHem):
+    if sym_new is None and (type(model.arrange) is gar.ArrangeIndependentSymmetric or type(model.arrange) is gar.ArrangeIndependentSeparateHem):
         M = fm.FullMultiModel(model.arrange, model.emissions)
 
-    elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
+    elif sym_new == 'asym' and type(model.arrange) is gar.ArrangeIndependentSymmetric:
         atlas, _ = am.get_atlas(new_info.atlas, ut.atlas_dir)
         indx_hem = np.sign(atlas.world[0, :])
         # Make indx_hem two-dimensional with the same entries
@@ -522,7 +522,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         indx_hem = indx_hem[np.newaxis, :]
 
         # Make arrangement model asymmetric but with hemispheres fitted separately
-        new_arrange = ar.ArrangeIndependentSeparateHem(model.K,
+        new_arrange = gar.ArrangeIndependentSeparateHem(model.K,
                                                        indx_hem=indx_hem,
                                                        spatial_specific=model.arrange.spatial_specific,
                                                        remove_redundancy=model.arrange.rem_red,
@@ -556,29 +556,39 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
     sessions = new_info.sess
     types = new_info.type
 
-    data, cond_vec, part_vec, subj_ind,_ = build_data_list(datasets,
-                                                         atlas=new_info.atlas,
-                                                         sess=sessions,
-                                                         type=types,
-                                                         join_sess=join_sess,
-                                                         join_sess_part=join_sess_part)
+    # data, _, _, subj_ind,_ = build_data_list(datasets,
+    #                                                      atlas=new_info.atlas,
+    #                                                      sess=sessions,
+    #                                                      type=types,
+    #                                                      join_sess=join_sess,
+    #                                                      join_sess_part=join_sess_part)
     # Attach the data
-    M.initialize(data, subj_ind=subj_ind)
+    # M.initialize(data, subj_ind=subj_ind)
 
     if fit == 'emission':
 
         # Refit emission models
         print(f'Freezing arrangement model and fitting emission models...\n')
 
-        M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
-                               fit_emission=True,
-                               fit_arrangement=False,
-                               first_evidence=True)
+        # M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
+        #                        fit_emission=True,
+        #                        fit_arrangement=False,
+        #                        first_evidence=True)
 
         # make info from a Series back to a dataframe
         if type(new_info) is not pd.DataFrame:
-            new_info = pd.DataFrame(new_info.to_dict(), index=[0])
-        new_info['loglik'] = ll[-1].item()
+            try:
+                new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+            except ValueError:
+                # Convert all list entries into strings if command throws error
+                string_info = deepcopy(new_info)
+                for key, value in string_info.items():
+                    if type(value) is list:
+                        string_info[key] = f'[{", ".join(value)}]'
+                new_info = pd.DataFrame(string_info.to_dict(), index=[0])
+        # new_info['loglik'] = ll[-1].item()
+        new_info['loglik'] = 99
+
 
     elif fit == 'arrangement':
         # Refit arrangement model
