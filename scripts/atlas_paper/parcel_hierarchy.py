@@ -28,9 +28,10 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 
-def reorder_lut(version=3, mname_new=["NettekovenSym68"]):
+def reorder_lut(version=3, mnames_new=["NettekovenSym68"]):
     """Reorders the lut file based on the new order of the parcels.
     Colour map was only created for version 1 onwards, therefore version 0 is not supported.
+    Creates a lut file for the finest granularity (68 parcels), the medium granularity (32 parcels) and the coarsest granularity (4 domains).
 
     Args:
         version (str, optional): Defaults to 1.
@@ -39,49 +40,53 @@ def reorder_lut(version=3, mname_new=["NettekovenSym68"]):
             - v2: 4 domain model with correct Tongue region
             - v3: 4 domain model with correct Tongue region and S5
 
-        mname_new (list, optional): Names of the new models.
+        mnames_new (list, optional): Names of the new models.
         """
 
+    # Get assignment and v0 lut 
+    assignment = pd.read_csv(f"{ut.model_dir}/Atlases/assignment.csv")
+    original_lut = f'{ut.export_dir}archive/Nettekoven68_v0.lut'
+    index, colors, labels = nt.read_lut(original_lut)
+    
+    for mname in mnames_new:
+        if version == 0:
+            raise ValueError("Version 0 lut file is already created as Nettekoven68_v0.lut")
+        else:
+            # --- K68 ---
+            # Reorder colors for K68
+            order_arrange = np.arange(assignment.shape[0])
+            for i in np.arange(1, version+1):
+                order_arrange = np.take(order_arrange, np.array(assignment[f"idx_v{i}"]))
+            new_colors = np.vstack((np.zeros((colors.shape[1])), colors[1:][order_arrange], colors[1:][order_arrange]))
+            # Get new labels for K68
+            new_labels = np.array(assignment[f'labels_v{version}']).tolist()
+            new_labels = ["0"] + [label[:2] + 'L' + label[2] for label in new_labels] + [label[:2] + 'R' + label[2] for label in new_labels]
+            # Save
+            nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}.lut', index, new_colors, new_labels) 
 
-    mnames = [
-        "Models_03/NettekovenSym68_space-MNISymC2",
-        "Models_03/NettekovenAsym68_space-MNISymC2",
-        "Models_03/NettekovenSym32_space-MNISymC2",
-        "Models_03/NettekovenAsym32_space-MNISymC2",
-    ]
-    f_assignment = 'mixed_assignment_68_32_4.csv'
-    for mname in mnames:
-        original_idx, mname_new, replace = get_order(mname, reorder)
-        # Make new lut file
-        index, colors, labels = nt.read_lut(ut.export_dir + f'archive/atl-{mname.split("Models_03/")[1].split("_space-")[0]}.lut')
-        assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{f_assignment}")
-        order_index = assignment[original_idx].values
-        new_order = np.unique(order_index, return_index=True)[1]
-        new_order=np.array([order_index[index] for index in sorted(new_order)])
-        new_order = np.concatenate([new_order, new_order + len(new_order)])
-        # Make new labels
-        new_labels = [labels[1:][i] for i in new_order]
-        if replace:
-            for k,v in replace.items():
-                new_labels[new_labels.index(k)] = v
-        new_labels = ["0"] + new_labels
-        
-        # Make new colours
-        new_colors = colors[1:][new_order]
-        new_colors = np.vstack((np.ones((new_colors.shape[1])), new_colors))
-        # Make new index
-        new_index = np.arange(len(new_labels))
-        # Save new lut file
-        nt.save_lut(ut.export_dir + f'{mname.split("Models_03/")[1].split("_space-")[0]}.lut',new_index,new_colors,new_labels)
-    # Reorder domain lut file
-    index, colors, labels = nt.read_lut(ut.export_dir + f'archive/NettekovenSym32_domain.lut')
-    domain_labels = [labels[1:][i] for i in new_order]
-    if replace:
-        for k,v in replace.items():
-            domain_labels[domain_labels.index(k[:2])] = v[:2]
-    domain_labels = ["0"] + domain_labels
-    domain_colors = colors[1:][new_order]
-    domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
+            # --- K32 ---
+            # New labels for K32
+            new_labels = np.array([label[:2] for label in new_labels])
+            new_labels = new_labels[np.sort(np.unique(new_labels, return_index=True)[1])]
+            new_labels = ['0'] + [label + 'L' for label in new_labels[1:]] + [label + 'R' for label in new_labels[1:]]
+            # New colors for K32
+            new_colors = new_colors[np.sort(np.unique(new_labels, return_index=True)[1])]
+            new_colors = np.vstack((np.zeros((colors.shape[1])), new_colors[1:]))
+            # New index for K32
+            new_index = np.arange(len(new_labels))
+            # Save
+            nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0][:-2]}32.lut', new_index, new_colors, new_labels)
+
+            # --- K4 ---
+            # Make lut file with domain colours
+            domain_colours = {'M': [0.4, 0.71, 0.98], 'A': [0.3239, 0.3067, 0.881], 'D': [0.8, 0.3261, 0.7], 'S': [0.98, 0.76, 0.13], 'I': [0.3724, 1.0, 1.0]}
+            # Note that introspection colour is not used past version 0 because introspection regions are integrated into other domains
+            domain_colours = np.vstack((np.zeros((colors.shape[1])), np.array([domain_colours[label[0]] for label in new_labels[1:]])))
+
+            nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}_domain.lut', new_index, domain_colours, new_labels)
+
+
+
 
 
 def reorder_models(version=3, mnames=["Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68", "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]):
@@ -107,31 +112,30 @@ def reorder_models(version=3, mnames=["Models_03/sym_MdPoNiIbWmDeSo_space-MNISym
     for mname in mnames:
         
         # reorder model to create fine granularity
-        info, model = ut.load_batch_best(mname)
-        sym=~("asym" in mname)
+        # info, model = ut.load_batch_best(mname)
+        # sym=~("asym" in mname)
         fileparts = mname.split("/")
         symmetry = fileparts[1].split("_")[0]
         symmetry = symmetry[0].upper() + symmetry[1:]
         space = mname.split("_space-")[1].split("_")[0]
-        K = info['K']
+        # K = info['K']
         # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
-        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
-        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)        
+        mname_new = f"Models_03/test_Nettekoven{symmetry}{mname.split('K-')[1].split('_')[0]}_space-{space}"
+        # new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)        
         mnames_new.append(mname_new)
 
         # merge model to create medium granularity 
-        info = new_info.iloc[0]
-        K = info['K']
+        # info = new_info.iloc[0]
+        # K = info['K']
         # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
-        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
-        model, info, mname_new, labels = cl.cluster_parcel(
-            mname, new_model, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
-        )
-        mnames_new.append(mname_new)
+        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}32_space-{space}"
+        # model, info, mname_new, labels = cl.cluster_parcel(
+        #     mname, new_model, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
+        # )
 
 
 
-    reorder_lut(version=version, mname_new=mnames_new)
+    reorder_lut(version=version, mnames_new=mnames_new)
 
         
     
