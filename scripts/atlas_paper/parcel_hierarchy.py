@@ -28,15 +28,18 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 
-def reorder_lut(version=3):
+def reorder_lut(version=3, mname_new=["NettekovenSym68"]):
     """Reorders the lut file based on the new order of the parcels.
+    Colour map was only created for version 1 onwards, therefore version 0 is not supported.
+
     Args:
-        reorder (str, optional): [description]. Defaults to 'first_clustering'.
+        version (str, optional): Defaults to 1.
         Options: 
-            - first_clustering: First clustering of the parcels according to functional similarity
-            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
-            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
-            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
+            - v1: 4 domain model
+            - v2: 4 domain model with correct Tongue region
+            - v3: 4 domain model with correct Tongue region and S5
+
+        mname_new (list, optional): Names of the new models.
         """
 
 
@@ -81,7 +84,7 @@ def reorder_lut(version=3):
     domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
 
 
-def reorder_models(version=3):
+def reorder_models(version=3, mnames=["Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68", "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]):
     """Creates a model version from the model selected to be the base map.
         The parcels are reordered according to the specified model version.
         Every model with 32 regions is created by first merging parcels of the 68 parcel model v0 into 32 parcels and refitting the emission models before reordering to obtain the desired model version.
@@ -93,15 +96,17 @@ def reorder_models(version=3):
             - v3: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
         
         To create each model, all previous reordering steps are applied. That means, to create v3, v0, v1 and v2 reordering steps are applied in this order.
+
+        Args:
+            version (int, optional): Defaults to 3.
+            models (list, optional): List of model names that serve as the base model for creating all model versions.
     
     """
 
-    base_models = [
-        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
-        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
-    
-    for mname in base_models:
+    mnames_new = []
+    for mname in mnames:
         
+        # reorder model to create fine granularity
         info, model = ut.load_batch_best(mname)
         sym=~("asym" in mname)
         fileparts = mname.split("/")
@@ -111,20 +116,22 @@ def reorder_models(version=3):
         K = info['K']
         # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
         mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
-        
-        # reorder model to create fine granularity
-        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)
-        # reorder_lut(version=version)
-        
+        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)        
+        mnames_new.append(mname_new)
 
         # merge model to create medium granularity 
         info = new_info.iloc[0]
         K = info['K']
         # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
         mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
-        model, info, mname, labels = cl.cluster_parcel(
+        model, info, mname_new, labels = cl.cluster_parcel(
             mname, new_model, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
         )
+        mnames_new.append(mname_new)
+
+
+
+    reorder_lut(version=version, mname_new=mnames_new)
 
         
     
@@ -134,6 +141,10 @@ def reorder_models(version=3):
 
 
 if __name__ == "__main__":
-    reorder_models()
-    # reorder_lut(version='action4_to_social5')
+    base_models = [
+        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
+        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
+    version = 3
+    reorder_models(version=version, mnames=base_models)
+    
     
