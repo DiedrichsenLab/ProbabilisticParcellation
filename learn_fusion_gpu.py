@@ -511,10 +511,10 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
 
     """
 
-    if sym_new is None and (type(model.arrange) is ar.ArrangeIndependentSymmetric or type(model.arrange) is gar.ArrangeIndependentSeparateHem):
+    if sym_new is None and (type(model.arrange) is gar.ArrangeIndependentSymmetric or type(model.arrange) is gar.ArrangeIndependentSeparateHem):
         M = fm.FullMultiModel(model.arrange, model.emissions)
 
-    elif sym_new == 'asym' and type(model.arrange) is ar.ArrangeIndependentSymmetric:
+    elif sym_new == 'asym' and type(model.arrange) is gar.ArrangeIndependentSymmetric:
         atlas, _ = am.get_atlas(new_info.atlas, ut.atlas_dir)
         indx_hem = np.sign(atlas.world[0, :])
         # Make indx_hem two-dimensional with the same entries
@@ -522,7 +522,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         indx_hem = indx_hem[np.newaxis, :]
 
         # Make arrangement model asymmetric but with hemispheres fitted separately
-        new_arrange = ar.ArrangeIndependentSeparateHem(model.K,
+        new_arrange = gar.ArrangeIndependentSeparateHem(model.K,
                                                        indx_hem=indx_hem,
                                                        spatial_specific=model.arrange.spatial_specific,
                                                        remove_redundancy=model.arrange.rem_red,
@@ -556,7 +556,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
     sessions = new_info.sess
     types = new_info.type
 
-    data, cond_vec, part_vec, subj_ind,_ = build_data_list(datasets,
+    data, _, _, subj_ind,_ = build_data_list(datasets,
                                                          atlas=new_info.atlas,
                                                          sess=sessions,
                                                          type=types,
@@ -577,8 +577,17 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
 
         # make info from a Series back to a dataframe
         if type(new_info) is not pd.DataFrame:
-            new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+            try:
+                new_info = pd.DataFrame(new_info.to_dict(), index=[0])
+            except ValueError:
+                # Convert all list entries into strings if command throws error
+                string_info = deepcopy(new_info)
+                for key, value in string_info.items():
+                    if type(value) is list:
+                        string_info[key] = f'[{", ".join(value)}]'
+                new_info = pd.DataFrame(string_info.to_dict(), index=[0])
         new_info['loglik'] = ll[-1].item()
+
 
     elif fit == 'arrangement':
         # Refit arrangement model
@@ -592,13 +601,6 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         # make info from a Series back to a dataframe
         new_info = new_info.to_frame().T
         new_info['loglik'] = ll[-1].item()
-
-    # Plot ll
-    #
-    # pt.Tensor.ndim = property(lambda self: len(self.shape))
-    # x = pt.linspace(0,ll.shape[0], ll.shape[0])
-    # plt.figure()
-    # plt.plot(x[0:], ll[0:])
 
     return M, new_info
 

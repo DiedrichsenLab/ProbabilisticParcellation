@@ -233,6 +233,99 @@ def subdivide_spatial_all():
     ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNI152NLin6AsymC',outname='NettekovenSym128')
     ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='MNI152NLin6AsymC',outname='NettekovenAsym128')
 
+
+def save_taskmaps(mname):
+    """Saves taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
+        datasets:
+    """
+    mname = "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68"
+
+    plt.figure(figsize=(7, 10))
+    plot_model_taskmaps(mname, n_highest=3, n_lowest=3)
+    plt.savefig(f"tmaps_01.png", format="png")
+
+
+
+
+def plot_model_taskmaps(
+    mname,
+    n_highest=3,
+    n_lowest=2,
+    datasets=["Somatotopic", "Demand"],
+    save_task_maps=False,
+):
+    """Plots taskmaps of highest and lowest scoring tasks for each parcel
+    Args:
+        n_tasks: Number of tasks to save
+
+    Returns:
+        fig: task map plot
+
+    """
+    profile = pd.read_csv(
+        f'{ut.model_dir}/Atlases/{mname.split("/")[-1]}_task_profile_data.tsv', sep="\t"
+    )
+    atlas = mname.split("space-")[1].split("_")[0]
+    Prob, parcel, _, labels, cmap = ea.analyze_parcel(mname, sym=True)
+    labels_sorted = sorted(labels)
+
+    for dataset in datasets:
+        # Select dataset
+        dataset = datasets[0]
+        profile_dataset = profile[profile.dataset == dataset]
+
+        # Get highest scoring task of this dataset
+        conditions = profile_dataset.condition
+        tasks = {}
+        for region in labels_sorted[1:]:
+            weights = profile_dataset[region]
+            conditions_weighted = [
+                (con, w) for con, w in sorted(zip(weights, conditions), reverse=True)
+            ]
+            high = conditions_weighted[:n_highest]
+            low = conditions_weighted[-n_lowest:]
+            tasks[region] = high + low
+            print(
+                f"\n\n\n{region}\nHighest: \t{[el[1] for el in high]}\n\t\t{[el[0] for el in high]}\n\nLowest: \t{[el[1] for el in low]}\n\t\t{[el[0] for el in low]}"
+            )
+
+        if save_task_maps:
+            # Get task maps
+            data, info, _ = ds.get_dataset(ut.base_dir, dataset, atlas=atlas)
+            grid = (int(np.ceil((n_highest + n_lowest) / 2)), 2)
+            for region in tasks.keys():
+                task = tasks[region]
+                activity = np.full((len(task), data.shape[2]), np.nan)
+                for i, t in enumerate(task):
+                    task_name = t[1]
+                    activity[i, :] = np.nanmean(
+                        data[:, info.cond_name.tolist().index(task_name), :], axis=0
+                    )
+
+                titles = [f"{name} V: {np.round(weight,2)}" for weight, name in task]
+
+                cscale = [
+                    np.percentile(activity[np.where(~np.isnan(activity))], 5),
+                    np.percentile(activity[np.where(~np.isnan(activity))], 95),
+                ]
+                plot_multi_flat(
+                    activity,
+                    atlas,
+                    grid,
+                    cmap="hot",
+                    dtype="func",
+                    cscale=cscale,
+                    titles=titles,
+                    colorbar=False,
+                    save_fig=True,
+                    save_under=f"task_maps/{dataset}_{region}.png",
+                )
+
+    pass
+
+
 if __name__=="__main__":
     # reorder_model()
     # reorder_lut()
