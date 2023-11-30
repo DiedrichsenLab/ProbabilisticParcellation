@@ -26,66 +26,10 @@ import nitools as nt
 
 pt.set_default_tensor_type(pt.FloatTensor)
 
-def get_order(mname, reorder):
-    """Returns the ordering index for the atlas regions
-    Args:
-        reorder (str, optional): [description]. Defaults to 'first_clustering'.
-        Options: 
-            - first_clustering: First clustering of the parcels according to functional similarity
-            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
-            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
-            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
-    """
-    
-    replace=None
-    if reorder=="first_clustering":
-        # For swapping M2 and A1
-        if "32" in mname :
-            original_idx = "parcel_orig_idx"
-            mname_new = mname + "_firstClustering"
-        elif "68" in mname :
-            # For swapping M2 and A1 in K68
-            original_idx = "XX"
-            mname_new = mname + "_firstClustering"
-    elif reorder=="introspection_to_action":
-        # For swapping M2 and A1
-        if "32" in mname :
-            original_idx = "parcel_orig_idx_5Domains"
-            mname_new = mname + "_4Domains"
-        elif "68" in mname :
-            # For swapping M2 and A1 in K68
-            original_idx = "parcel_med_idx_5Domains"
-            mname_new = mname + "_4Domains"
-    
-    elif reorder=="tongue":
-        # For swapping M2 and A1
-        if "32" in mname :
-            original_idx = "parcel_med_before_tongue_swap_idx"
-            mname_new = mname + "_tongueSwap"
-        elif "68" in mname :
-            # For swapping M2 and A1 in K68
-            original_idx = "parcel_orig_idx_before_tongue_swap_idx"
-            mname_new = mname + "_tongueSwap"
-    elif reorder=="action4_to_social5":
-        if "32" in mname :
-            original_idx = "parcel_med_before_a4_swap_idx"
-            mname_new = mname + "_a4Swap"
-            replace = {
-            "A4L": "S5L",
-            "A4R": "S5R"
-            }
-        elif "68" in mname :
-            # For swapping M2 and A1 in K68
-            original_idx = "parcel_orig_idx_before_a4_swap_idx"
-            mname_new = mname + "_a4Swap"
-            replace = {
-                "A4La": "S5La",
-                "A4Ra": "S5Ra"
-            }
-    return original_idx, mname_new, replace
-            
-def reorder_models(reorder='action4_to_social5'):
-    """Reorders the atlas based on the functional similarity of the parcels
+
+
+def reorder_lut(version=3):
+    """Reorders the lut file based on the new order of the parcels.
     Args:
         reorder (str, optional): [description]. Defaults to 'first_clustering'.
         Options: 
@@ -94,47 +38,8 @@ def reorder_models(reorder='action4_to_social5'):
             - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
             - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
         """
-    # mnames = [
-    #     "Models_03/NettekovenSym68_space-MNISymC2",
-    #     "Models_03/NettekovenAsym68_space-MNISymC2",
-    #     "Models_03/NettekovenSym32_space-MNISymC2",
-    #     "Models_03/NettekovenAsym32_space-MNISymC2",
-    # ]
-    base_models = [
-        "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
-        "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
-    f_assignment = 'mixed_assignment_68_32_4.csv'
-    for mname in base_models:
-        # First generate the reordered 68 model
-        #   Reorder the base map
-        # Second generate the reordered 32 model
-        #   Merge the appropriate parcels
-        #   Then reorder them
-        original_idx, mname_new, replace = get_order(mname, reorder)
-        
-        symmetry = mname.split("/")[1].split("_")[0]
-        if symmetry == "sym":
-            sym = True
-        else:
-            sym = False
-        model_reordered = ea.reorder_model(
-            mname,
-            sym=sym,
-            assignment=f_assignment,
-            original_idx=original_idx,
-            save_model=True,
-            mname_new = mname_new
-        )
-def reorder_lut(reorder='action4_to_social5'):
-    """Reorders the atlas based on the functional similarity of the parcels
-    Args:
-        reorder (str, optional): [description]. Defaults to 'first_clustering'.
-        Options: 
-            - first_clustering: First clustering of the parcels according to functional similarity
-            - introspection_to_action: Merges standalone introspection region (lobule IX region) into action 
-            - tongue: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region
-            - action4_to_social5: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
-        """
+
+
     mnames = [
         "Models_03/NettekovenSym68_space-MNISymC2",
         "Models_03/NettekovenAsym68_space-MNISymC2",
@@ -176,15 +81,15 @@ def reorder_lut(reorder='action4_to_social5'):
     domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
 
 
-def create_models_from_base(version=3):
+def reorder_models(version=3):
     """Creates a model version from the model selected to be the base map.
         The parcels are reordered according to the specified model version.
         Every model with 32 regions is created by first merging parcels of the 68 parcel model v0 into 32 parcels and refitting the emission models before reordering to obtain the desired model version.
 
         The following model versions can be created:
-            - v0: First reordering of the parcels according to functional similarity
-            - v1: Merges standalone introspection regions I1 & I2 into action domain, creating a 4 domain model
-            - v2: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region and vice versa
+            - v0: First reordering of the parcels according to functional similarity (fine level) and clusters into five domains (medium level)
+            - v1: Moves standalone introspection regions I1 & I2 up into action domain (fine level), creating a 4 domain model (medium level)
+            - v2: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region and vice versa.
             - v3: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
         
         To create each model, all previous reordering steps are applied. That means, to create v3, v0, v1 and v2 reordering steps are applied in this order.
@@ -195,8 +100,6 @@ def create_models_from_base(version=3):
         "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
         "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
     
-    
-
     for mname in base_models:
         
         info, model = ut.load_batch_best(mname)
@@ -210,7 +113,8 @@ def create_models_from_base(version=3):
         mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
         
         # reorder model to create fine granularity
-        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=f'Nettekoven', save_model=True)
+        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)
+        # reorder_lut(version=version)
         
 
         # merge model to create medium granularity 
@@ -221,6 +125,8 @@ def create_models_from_base(version=3):
         model, info, mname, labels = cl.cluster_parcel(
             mname, new_model, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
         )
+
+        
     
     pass
 
@@ -228,8 +134,6 @@ def create_models_from_base(version=3):
 
 
 if __name__ == "__main__":
-
-    
-
-    create_models_from_base()
+    reorder_models()
+    # reorder_lut(version='action4_to_social5')
     
