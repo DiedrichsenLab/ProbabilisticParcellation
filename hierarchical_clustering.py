@@ -233,52 +233,27 @@ def agglomative_clustering(similarity,
     return labels_map, clusters, leaves
 
 
-def mixed_clustering(mname_fine,
-                     df_assignment,
-                     fine_labels=None):
+def mixed_clustering(df_assignment, version=3):
     """ Maps parcels of a parcellation using a hand-coded merging of parcels
-    specified in mixed_assignment_68_16_4.csv.
+    specified in assignment.csv.
 
     Args:
-        mname_fine: Based parcellation map
+        df_assignment: Assignment of fine parcels to coarse parcels for all parcels.
 
     Returns:
-        fine_coarse_mapping: Winner-take-all assignment of fine parcels to coarse parcels
+        fine_coarse_mapping: Assignment index  of fine parcels to coarse parcels
+        fine_coarse_mapping_full: Assignment of fine parcels to coarse parcels for all parcels (same as fine_coarse_mapping for asym model)
     """
-    # Import fine model
-    fileparts = mname_fine.split('/')
-    split_mn = fileparts[-1].split('_')
-    _, fine_model = ut.load_batch_best(mname_fine)
-
-   # Get winner take all assignment for fine model
-    fine_probabilities = pt.softmax(fine_model.arrange.logpi, dim=0)
-
-
-    labels = df_assignment[f'labels_v0']
+    # Get assignment of fine to medium parcels according to labels
+    labels = df_assignment[f'labels_v{version}']
+    labels = [label[:2] for label in labels]
+    fine_coarse_mapping = [labels.index(label) for label in labels]
     
-    
-    labels_fine = [label[:2] for label in df_assignment[f'labels_v0']]
-    label_mapping = {label: index + 1 for index, label in enumerate(set(labels_fine))}
-    assignment_coarse = [label_mapping[label] for label in labels_fine]
-    
-
-    assignment = dict(zip(df_assignment[f'idx_v0'],
-                          assignment_coarse))
-    
-
-    # Get mapping between the base map and the coarse map
-    fine_coarse_mapping = np.zeros(fine_probabilities.shape[0], dtype=int)
-    for parcel_idx in assignment:
-        fine_coarse_mapping[parcel_idx] = assignment[parcel_idx]
-
-    # Make mapping for both sides
-    # fine_coarse_mapping_right = [mapping + max(fine_coarse_mapping) for mapping in fine_coarse_mapping]
-    # fine_coarse_mapping = np.array([*fine_coarse_mapping, *fine_coarse_mapping_right])
-
     # Create new labels for coarse map
-    labels_coarse = [label[:2]+ 'L' for label in labels]
-    labels = [0] + labels_coarse + [label.replace('L', 'R') for label in labels_coarse]
-    return fine_coarse_mapping, labels
+    labels_new = [label + 'L' for label in labels]
+    labels_new = list(dict.fromkeys(labels_new))
+    labels_new = ['0'] + labels_new + [label.replace('L', 'R') for label in labels_new]
+    return fine_coarse_mapping, labels_new
 
 
 def draw_cmap(ax, cmap, leaves, sym, height=0.05):
@@ -605,14 +580,14 @@ def merge_model(model, mapping):
     return new_model
 
 
-def cluster_parcel(mname_fine, mname_new=None, f_assignment='assignment', refit_model=False, save_model=False):
+def cluster_parcel(mname_fine, fine_model=None, finfo=None, mname_new=None, f_assignment='assignment', version=3, refit_model=False, save_model=False):
     """Merges parcels of a fine probabilistic parcellation model into a reduced number of parcels using either guided or mixed clustering.
 
     Parameters:
     mname_fine(str): The file name of the fine probabilistic parcellation model.
-    method(str, optional): The method to use for clustering. Can be either 'mixed' or 'model_guided'. Defaults to 'mixed'.
     mname_new(str, optional): The file name for the merged probabilistic parcellation model. If not provided, the name will be constructed based on `mname_fine` and `method`. Defaults to None.
-    f_assignment(str, optional): The file name of the mixed clustering assignment file to use if `method` is 'mixed'. Defaults to 'mixed_assignment_68_16_4'.
+    f_assignment(str, optional): The file name of the mixed clustering assignment file to use. Defaults to 'assignment'.
+    version(int, optional): The version of the mixed clustering assignment file to use. Defaults to 3.
     refit_model(bool, optional): Whether to refit the reduced model. Defaults to False.
     save_model(bool, optional): Whether to save the reduced model. Defaults to False.
 
@@ -622,9 +597,11 @@ def cluster_parcel(mname_fine, mname_new=None, f_assignment='assignment', refit_
     """
     # -- Import models --
     # Import fine model
+
     fileparts = mname_fine.split('/')
     split_mn = fileparts[-1].split('_')
-    finfo, fine_model = ut.load_batch_best(mname_fine)
+    if fine_model is None:
+        finfo, fine_model = ut.load_batch_best(mname_fine)
     finfo = ut.recover_info(finfo, fine_model, mname_fine)
     if split_mn[0] == 'sym':
         sym = True
@@ -636,7 +613,7 @@ def cluster_parcel(mname_fine, mname_new=None, f_assignment='assignment', refit_
     df_assignment = pd.read_csv(
         ut.model_dir + '/Atlases/' + '/' + f_assignment + '.csv')
     mapping, labels = mixed_clustering(
-        mname_fine, df_assignment)
+        df_assignment, version=version)
 
     # -- Merge model --
     merged_model = merge_model(fine_model, mapping)
@@ -685,7 +662,7 @@ def reorder_model(
     sym=True,
     mname_new=None,
     assignment="assignment.csv",
-    idx="idx_v3",
+    version=3,
     save_model=False,
 ):
     """
@@ -698,7 +675,7 @@ def reorder_model(
         sym (bool): If True, reorders the model assuming symmetrical model.
         mname_new (str): The name of the reordered model. If None, the name will be the same as the original model with '_reordered' appended.
         assignment (str): The name of the CSV file containing the order assignment.
-        idx (str): The name of the column in the assignment CSV file containing the original parcel indices.
+        version (int): Version of the model to create. Specifies the column name beginning with "idx_" in the assignment CSV file that contains the last ordering step to be concatenated with all previous reorderings to arrive at specified model version.
         save_model (bool): If True, saves the reordered model.
 
     Returns:
@@ -715,23 +692,8 @@ def reorder_model(
 
     # Import indices up to idx
     order_arrange = np.array(assignment[f"idx_v0"])
-    for i in np.arange(1, int(idx[-1])+1):
-        i
+    for i in np.arange(1, version+1):
         order_arrange = np.take(order_arrange, np.array(assignment[f"idx_v{i}"]))
-
-    # Test example
-    # First = ['A', 'B', 'C']
-    # Second = ['B', 'A', 'C']
-    # mapping1 = [1, 0, 2]
-    # Third = ['B', 'C', 'A']
-    # mapping2 = [0, 2, 1]
-    
-    # # goal_mapping = [1, 2, 0]
-    # np.take(First, mapping1)
-    # np.take(Second, mapping2)
-    # goal_mapping = np.take(mapping1, mapping2)
-    # np.take(np.take(mapping1, mapping2), mapping2, axis=0)
-    # np.take(np.take(mapping1, mapping2), mapping2, axis=0)
 
     # Reorder the model
     new_model = deepcopy(model)
@@ -761,7 +723,7 @@ def reorder_model(
 
     # Info
     new_info = deepcopy(info)
-    new_info["ordered_by"] = idx
+    new_info["ordered_by"] = version
     new_info = new_info.to_frame().T
 
     # Save the model
@@ -779,4 +741,4 @@ def reorder_model(
             f"Done. Saved reordered model as: \n\t{mname_new} \nOutput folder: \n\t{ut.model_dir}/Models/ \n\n"
         )
 
-    return new_model
+    return new_model, new_info

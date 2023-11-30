@@ -176,13 +176,13 @@ def reorder_lut(reorder='action4_to_social5'):
     domain_colors = np.vstack((np.ones((domain_colors.shape[1])), domain_colors))
 
 
-def create_models_from_base(version="v0"):
+def create_models_from_base(version=3):
     """Creates a model version from the model selected to be the base map.
         The parcels are reordered according to the specified model version.
         Every model with 32 regions is created by first merging parcels of the 68 parcel model v0 into 32 parcels and refitting the emission models before reordering to obtain the desired model version.
 
         The following model versions can be created:
-            - v0: First clustering of the parcels according to functional similarity
+            - v0: First reordering of the parcels according to functional similarity
             - v1: Merges standalone introspection regions I1 & I2 into action domain, creating a 4 domain model
             - v2: Swaps A1 and M2, because A1 was mislabelled as action region, when it actually was tongue region and vice versa
             - v3: Moves A4 into social cluster and renames it to S5, since it is involved in scene reconstruction / imagination
@@ -194,22 +194,32 @@ def create_models_from_base(version="v0"):
     base_models = [
         "Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC2_K-68",
         "Models_03/asym_MdPoNiIbWmDeSo_space-MNISymC2_K-68_arrange-asym_sep-hem"]
+    
+    
 
     for mname in base_models:
-    
-        
         
         info, model = ut.load_batch_best(mname)
-        
         sym=~("asym" in mname)
-        # reorder model
+        fileparts = mname.split("/")
+        symmetry = fileparts[1].split("_")[0]
+        symmetry = symmetry[0].upper() + symmetry[1:]
+        space = mname.split("_space-")[1].split("_")[0]
+        K = info['K']
+        # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
+        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
         
-        new_model = cl.reorder_model(mname, model, info, sym, idx=f'idx_{version}', mname_new=f'test_sym-{sym}', save_model=True)
-
+        # reorder model to create fine granularity
+        new_model, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=f'Nettekoven', save_model=True)
+        
 
         # merge model to create medium granularity 
+        info = new_info.iloc[0]
+        K = info['K']
+        # mname_new = f"{fileparts[0]}/Nettekoven{symmetry}{K}_space-{space}"
+        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}{K}_space-{space}"
         model, info, mname, labels = cl.cluster_parcel(
-            mname, refit_model=True, save_model=False
+            mname, new_model, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
         )
     
     pass

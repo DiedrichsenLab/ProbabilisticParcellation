@@ -556,24 +556,24 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
     sessions = new_info.sess
     types = new_info.type
 
-    # data, _, _, subj_ind,_ = build_data_list(datasets,
-    #                                                      atlas=new_info.atlas,
-    #                                                      sess=sessions,
-    #                                                      type=types,
-    #                                                      join_sess=join_sess,
-    #                                                      join_sess_part=join_sess_part)
+    data, _, _, subj_ind,_ = build_data_list(datasets,
+                                                         atlas=new_info.atlas,
+                                                         sess=sessions,
+                                                         type=types,
+                                                         join_sess=join_sess,
+                                                         join_sess_part=join_sess_part)
     # Attach the data
-    # M.initialize(data, subj_ind=subj_ind)
+    M.initialize(data, subj_ind=subj_ind)
 
     if fit == 'emission':
 
         # Refit emission models
         print(f'Freezing arrangement model and fitting emission models...\n')
 
-        # M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
-        #                        fit_emission=True,
-        #                        fit_arrangement=False,
-        #                        first_evidence=True)
+        M, ll, _, _ = M.fit_em(iter=500, tol=0.01,
+                               fit_emission=True,
+                               fit_arrangement=False,
+                               first_evidence=True)
 
         # make info from a Series back to a dataframe
         if type(new_info) is not pd.DataFrame:
@@ -586,8 +586,7 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
                     if type(value) is list:
                         string_info[key] = f'[{", ".join(value)}]'
                 new_info = pd.DataFrame(string_info.to_dict(), index=[0])
-        # new_info['loglik'] = ll[-1].item()
-        new_info['loglik'] = 99
+        new_info['loglik'] = ll[-1].item()
 
 
     elif fit == 'arrangement':
@@ -602,13 +601,6 @@ def refit_model(model, new_info, fit='emission', sym_new=None):
         # make info from a Series back to a dataframe
         new_info = new_info.to_frame().T
         new_info['loglik'] = ll[-1].item()
-
-    # Plot ll
-    #
-    # pt.Tensor.ndim = property(lambda self: len(self.shape))
-    # x = pt.linspace(0,ll.shape[0], ll.shape[0])
-    # plt.figure()
-    # plt.plot(x[0:], ll[0:])
 
     return M, new_info
 
