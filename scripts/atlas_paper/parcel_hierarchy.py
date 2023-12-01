@@ -28,7 +28,7 @@ pt.set_default_tensor_type(pt.FloatTensor)
 
 
 
-def reorder_lut(version=3, mnames_new=["NettekovenSym"]):
+def reorder_lut(version=3, mname="NettekovenSym"):
     """Reorders the lut file based on the new order of the parcels.
     Colour map was only created for version 1 onwards, therefore version 0 is not supported.
     Creates a lut file for the finest granularity (68 parcels), the medium granularity (32 parcels) and the coarsest granularity (4 domains).
@@ -49,38 +49,38 @@ def reorder_lut(version=3, mnames_new=["NettekovenSym"]):
     original_lut = f'{ut.export_dir}/original.lut'
     index, colors, labels = nt.read_lut(original_lut)
     
-    for mname in mnames_new:
-        # --- K68 ---
-        # Reorder colors for K68
-        order_arrange = assignment[f"idx_v{version}"]
-        new_colors = np.vstack((np.zeros((colors.shape[1])), colors[1:][order_arrange], colors[1:][order_arrange]))
 
-        # Get new labels for K68
-        new_labels = np.array(assignment[f'labels_v{version}']).tolist()
-        new_labels = ["0"] + [label[:2] + 'L' + label[2] for label in new_labels] + [label[:2] + 'R' + label[2] for label in new_labels]
-        # Save
-        nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}.lut', index, new_colors, new_labels)
+    # --- K68 ---
+    # Reorder colors for K68
+    order_arrange = assignment[f"idx_v{version}"]
+    new_colors = np.vstack((np.zeros((colors.shape[1])), colors[1:][order_arrange], colors[1:][order_arrange]))
 
-        # --- K32 ---
-        # New labels for K32
-        new_labels = np.array([label[:2] for label in new_labels])
-        new_labels = new_labels[np.sort(np.unique(new_labels, return_index=True)[1])]
-        new_labels = ['0'] + [label + 'L' for label in new_labels[1:]] + [label + 'R' for label in new_labels[1:]]
-        # New colors for K32
-        new_colors = new_colors[np.sort(np.unique(new_labels, return_index=True)[1])]
-        new_colors = np.vstack((np.zeros((colors.shape[1])), new_colors[1:]))
-        # New index for K32
-        new_index = np.arange(len(new_labels))
-        # Save
-        nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0][:-2]}32.lut', new_index, new_colors, new_labels)
+    # Get new labels for K68
+    new_labels = np.array(assignment[f'labels_v{version}']).tolist()
+    new_labels = ["0"] + [label[:2] + 'L' + label[2] for label in new_labels] + [label[:2] + 'R' + label[2] for label in new_labels]
+    # Save
+    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}.lut', index, new_colors, new_labels)
 
-        # --- K4 ---
-        # Make lut file with domain colours
-        domain_colours = {'M': [0.4, 0.71, 0.98], 'A': [0.3239, 0.3067, 0.881], 'D': [0.8, 0.3261, 0.7], 'S': [0.98, 0.76, 0.13], 'I': [0.3724, 1.0, 1.0]}
-        # Note that introspection colour is not used past version 0 because introspection regions are integrated into other domains
-        domain_colours = np.vstack((np.zeros((colors.shape[1])), np.array([domain_colours[label[0]] for label in new_labels[1:]])))
+    # --- K32 ---
+    # New labels for K32
+    new_labels = np.array([label[:2] for label in new_labels])
+    new_labels = new_labels[np.sort(np.unique(new_labels, return_index=True)[1])]
+    new_labels = ['0'] + [label + 'L' for label in new_labels[1:]] + [label + 'R' for label in new_labels[1:]]
+    # New colors for K32
+    new_colors = new_colors[np.sort(np.unique(new_labels, return_index=True)[1])]
+    new_colors = np.vstack((np.zeros((colors.shape[1])), new_colors[1:]))
+    # New index for K32
+    new_index = np.arange(len(new_labels))
+    # Save
+    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0][:-2]}32.lut', new_index, new_colors, new_labels)
 
-        nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}_domain.lut', new_index, domain_colours, new_labels)
+    # --- K4 ---
+    # Make lut file with domain colours
+    domain_colours = {'M': [0.4, 0.71, 0.98], 'A': [0.3239, 0.3067, 0.881], 'D': [0.8, 0.3261, 0.7], 'S': [0.98, 0.76, 0.13], 'I': [0.3724, 1.0, 1.0]}
+    # Note that introspection colour is not used past version 0 because introspection regions are integrated into other domains
+    domain_colours = np.vstack((np.zeros((colors.shape[1])), np.array([domain_colours[label[0]] for label in new_labels[1:]])))
+
+    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}_domain.lut', new_index, domain_colours, new_labels)
 
 
 
