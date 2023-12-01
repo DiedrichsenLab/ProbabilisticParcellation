@@ -47,8 +47,7 @@ def reorder_lut(version=3, mname="NettekovenSym"):
     # Get assignment and v0 lut 
     assignment = pd.read_csv(f"{ut.model_dir}/Atlases/assignment.csv")
     original_lut = f'{ut.export_dir}/original.lut'
-    index, colors, labels = nt.read_lut(original_lut)
-    
+    index, colors, labels = nt.read_lut(original_lut)    
 
     # --- K68 ---
     # Reorder colors for K68
@@ -62,13 +61,13 @@ def reorder_lut(version=3, mname="NettekovenSym"):
     nt.save_lut(f'{ut.export_dir}/{mname}68.lut', index, new_colors, new_labels)
 
     # --- K32 ---
-    # New labels for K32
+    # New colors for K32
     new_labels = np.array([label[:2] for label in new_labels])
+    new_colors = new_colors[np.sort(np.unique(new_labels, return_index=True)[1])]
+    new_colors = np.vstack((new_colors, new_colors[1:]))
+    # New labels for K32
     new_labels = new_labels[np.sort(np.unique(new_labels, return_index=True)[1])]
     new_labels = ['0'] + [label + 'L' for label in new_labels[1:]] + [label + 'R' for label in new_labels[1:]]
-    # New colors for K32
-    new_colors = new_colors[np.sort(np.unique(new_labels, return_index=True)[1])]
-    new_colors = np.vstack((np.zeros((colors.shape[1])), new_colors[1:]))
     # New index for K32
     new_index = np.arange(len(new_labels))
     # Save
@@ -114,25 +113,23 @@ def reorder_models(version=3, mnames=["Models_03/sym_MdPoNiIbWmDeSo_space-MNISym
     for mname in mnames:
         
         
-        info, model = ut.load_batch_best(mname)
+        # info, model = ut.load_batch_best(mname)
         sym=~("asym" in mname)
         fileparts = mname.split("/")
         symmetry = fileparts[1].split("_")[0]
         symmetry = symmetry[0].upper() + symmetry[1:]
-        space = mname.split("_space-")[1].split("_")[0]
+        # space = mname.split("_space-")[1].split("_")[0]
 
-        # reorder model to create fine granularity
-        mname_new = f"Models_03/test_Nettekoven{symmetry}68_space-{space}"
-        model_reordered, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)        
+        # # reorder model to create fine granularity
+        # mname_new = f"Models_03/test_Nettekoven{symmetry}68_space-{space}"
+        # model_reordered, new_info = cl.reorder_model(mname, model, info, sym, version=version, mname_new=mname_new, save_model=True)        
 
-        # merge model to create medium granularity 
-        info = new_info.iloc[0]
-        mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}32_space-{space}"
-        model, info, mname_new, labels = cl.cluster_parcel(
-            mname, model_reordered, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
-        )
-
-
+        # # merge model to create medium granularity 
+        # info = new_info.iloc[0]
+        # mname_new = f"{fileparts[0]}/test_Nettekoven{symmetry}32_space-{space}"
+        # model, info, mname_new, labels = cl.cluster_parcel(
+        #     mname, model_reordered, new_info.iloc[0], mname_new=mname_new, version=version, refit_model=True, save_model=True
+        # )
 
         reorder_lut(version=version, mname=f'test_Nettekoven{symmetry}')
 
