@@ -690,10 +690,8 @@ def reorder_model(
     # Get assignment
     assignment = pd.read_csv(f"{ut.model_dir}/Atlases/{assignment}")
 
-    # Import indices up to idx
-    order_arrange = np.array(assignment[f"idx_v0"])
-    for i in np.arange(1, version+1):
-        order_arrange = np.take(order_arrange, np.array(assignment[f"idx_v{i}"]))
+    # Import reordering index
+    order_arrange = np.array(assignment[f"idx_v{version}"])
 
     # Reorder the model
     new_model = deepcopy(model)
