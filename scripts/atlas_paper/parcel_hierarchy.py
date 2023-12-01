@@ -59,7 +59,7 @@ def reorder_lut(version=3, mname="NettekovenSym"):
     new_labels = np.array(assignment[f'labels_v{version}']).tolist()
     new_labels = ["0"] + [label[:2] + 'L' + label[2] for label in new_labels] + [label[:2] + 'R' + label[2] for label in new_labels]
     # Save
-    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}.lut', index, new_colors, new_labels)
+    nt.save_lut(f'{ut.export_dir}/{mname}68.lut', index, new_colors, new_labels)
 
     # --- K32 ---
     # New labels for K32
@@ -72,7 +72,7 @@ def reorder_lut(version=3, mname="NettekovenSym"):
     # New index for K32
     new_index = np.arange(len(new_labels))
     # Save
-    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0][:-2]}32.lut', new_index, new_colors, new_labels)
+    nt.save_lut(f'{ut.export_dir}/{mname}32.lut', new_index, new_colors, new_labels)
 
     # --- K4 ---
     # Make lut file with domain colours
@@ -80,7 +80,7 @@ def reorder_lut(version=3, mname="NettekovenSym"):
     # Note that introspection colour is not used past version 0 because introspection regions are integrated into other domains
     domain_colours = np.vstack((np.zeros((colors.shape[1])), np.array([domain_colours[label[0]] for label in new_labels[1:]])))
 
-    nt.save_lut(f'{ut.export_dir}/{mname.split("Models_03/")[1].split("_space-")[0]}_domain.lut', new_index, domain_colours, new_labels)
+    nt.save_lut(f'{ut.export_dir}/{mname}32_domain.lut', new_index, domain_colours, new_labels)
 
 
 
@@ -134,7 +134,7 @@ def reorder_models(version=3, mnames=["Models_03/sym_MdPoNiIbWmDeSo_space-MNISym
 
 
 
-        reorder_lut(version=version, mname_new=f'Nettekoven{symmetry}')
+        reorder_lut(version=version, mname=f'test_Nettekoven{symmetry}')
 
         
     
