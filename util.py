@@ -1,17 +1,12 @@
 import numpy as np
-import nibabel as nb
 import SUITPy as suit
 import pickle
 import Functional_Fusion.atlas_map as am
 import pandas as pd
 import torch as pt
-import json
 import matplotlib.pyplot as plt
 import HierarchBayesParcel.evaluation as ev
-import HierarchBayesParcel.full_model as fm
 from pathlib import Path
-import ProbabilisticParcellation.similarity_colormap as sc
-import ProbabilisticParcellation.hierarchical_clustering as cl
 import re
 
 # Set directories for the entire project - just set here and import everywhere
