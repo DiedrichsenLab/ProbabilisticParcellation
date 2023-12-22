@@ -145,7 +145,7 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     dist = dist.to_sparse()
 
     T = pd.DataFrame()
-    for s in range(24):    
+    for s in range(Uhat_data[0].shape[0]):    
         print(f'subj {s}')
         tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
                                   sess=['ses-s2'], type='CondHalf',subj=[s])
