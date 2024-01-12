@@ -71,7 +71,7 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='
     part_vec = iinfo['run'].values.reshape(-1,)
     if localizer_tasks is not None:
         # get data, particion vector and condition vector for localizer tasks only
-        localizer_ind = np.isin(iinfo['cond_num_uni'], localizer_tasks)
+        localizer_ind = np.isin(iinfo[cond_col], localizer_tasks)
         idata = idata[:, localizer_ind, :]
         cond_vec = cond_vec[localizer_ind]
         part_vec = part_vec[localizer_ind]

@@ -24,8 +24,7 @@ import matplotlib.pyplot as plt
 import pickle
 from copy import deepcopy
 import time
-# TEMPORARY FIX BEFORE MODELS ARE UPDATED TO HBP - REMOVE!!! TODO XX
-import generativeMRF.arrangements as gar
+
 
 
 def build_data_list(datasets,
