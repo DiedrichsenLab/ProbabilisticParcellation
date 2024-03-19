@@ -119,12 +119,17 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='
     return Uhat_data_all, Uhat_complete_all, Uhat_group
     
 
-def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None):
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None, rest=False):
     """Do DCBC evaluation on all and collect in data frame. 
     
     """     
     tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
-    T = tds.get_participants()
+    T_info = tds.get_participants()
+    if T_info.shape[0] != len(Uhat_data[0]):
+        if rest:
+            T_info = T_info[T_info['ses-rest']==1]
+        else:
+            raise ValueError(f'Number of subjects in data set does not match number of subjects in Uhat_data: {T_info.shape[0]} vs {len(Uhat_data[0])}')
     ut.report_cuda_memory()
     atlas_obj, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
     parcel_group = pt.argmax(Uhat_group, dim=0) + 1
@@ -145,10 +150,10 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     dist = dist.to_sparse()
 
     T = pd.DataFrame()
-    for s in range(Uhat_data[0].shape[0]):    
-        print(f'subj {s}')
+    for s, subj in enumerate(T_info.index):    
+        print(f'subj {subj}')
         tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
-                                  sess=['ses-s2'], type='CondHalf',subj=[s])
+                                  sess=['ses-s2'], type='CondHalf',subj=[subj])
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
         
         if mask is not None:
@@ -174,13 +179,13 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
             D1['type'] = ['data']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_data.item()]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [subj + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             D1 = {}
             D1['type'] = ['data and group']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_complete.item()]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [subj + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
         # Group
     return T 
@@ -268,9 +273,9 @@ if __name__ == "__main__":
 
     # Evaluate rest
     mname = 'Models_03/NettekovenSym32_space-MNISymC2'
-    fname = ut.model_dir+ f'/Models/Evaluation_03/indivgroup_{mname.split("/")[1].split("_space")[0]}_rest.tsv'
+    fname = ut.model_dir+ f'/Models/Evaluation_03/indivgroup_{mname.split("/")[1].split("_space")[0]}_rest-rerun.tsv'
     info,model = ut.load_batch_best(mname,device='cpu')
     Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2', sess='ses-rest', type='Net69Run')
-    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2',max_dist=70)
+    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2',max_dist=70, rest=True)
     D.to_csv(fname,sep='\t')
     pass
