@@ -295,7 +295,7 @@ def get_profiles_group(model, info, dseg=False):
 
 
 def export_profile(
-    mname, info=None, model=None, labels=None, source="model", dseg=False
+    mname, info=None, model=None, labels=None, source="model", dseg=False, fname=None
 ):
     """Exports the functional profile for each parcel from model V vectors or data (individ/group)
     Args:
@@ -335,10 +335,11 @@ def export_profile(
     mname = mname.split("/")[-1]
     mname = mname.split("_")[0]
 
-    if dseg == True:
-        fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_dseg.tsv"
-    else:
-        fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
+    if fname is not None:
+        if dseg == True:
+            fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_dseg.tsv"
+        else:
+            fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}.tsv"
     Prof.to_csv(fname, sep="\t", index=False)
     return Prof
 
