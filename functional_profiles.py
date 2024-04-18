@@ -204,7 +204,7 @@ def get_profiles_individ(model, info, dseg=False):
     parcel_profiles = []
     profile_data = []
     data, cond_vec, part_vec, subj_ind, info_ds = lf.build_data_list(
-        info.datasets, atlas=info.atlas, type=info.type, join_sess=False
+        info.datasets, sess=info.sess, atlas=info.atlas, type=info.type, join_sess=False
     )
     # Attach the data
     model.initialize(data, subj_ind=subj_ind)
@@ -335,7 +335,7 @@ def export_profile(
     mname = mname.split("/")[-1]
     mname = mname.split("_")[0]
 
-    if fname is not None:
+    if fname is None:
         if dseg == True:
             fname = f"{ut.model_dir}/Atlases/Profiles/{mname}_profile_{source}_dseg.tsv"
         else:
