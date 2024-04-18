@@ -17,6 +17,7 @@ import ProbabilisticParcellation.similarity_colormap as sc
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 import nitools as nt
+import subprocess
 
 
 def export_atlas_gifti():
@@ -69,8 +70,14 @@ def subdivide_spatial_all():
     ea.subdivde_atlas_spatial(fname='NettekovenSym32',atlas='MNI152NLin6AsymC',outname='NettekovenSym128')
     ea.subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='MNI152NLin6AsymC',outname='NettekovenAsym128')
 
+    """After running this function, copy the atlas files into the cerebellar_atlases repo, gzip the probseg files (for easier storage) and push to cerbellar_atlases github repo"""
+   
+
+    pass
+
+
 if __name__=="__main__":
     # resample_atlas_all()
     # subdivide_spatial_all()
-    # export_atlas_gifti()
+    export_atlas_gifti()
     pass

@@ -59,7 +59,7 @@ Characterizing regions based on functional responses in the MDTB dataset over an
 which calls the ```ridgeFit``` function in:
 ```scripts/atlas_paper/ridge_reg.py```
 
-The motor, action, demand and social-linguistic regions are described in individual notebooks using all datasets and the MDTB feature model:
+The motor, action, demand and social-linguistic-spatial regions are described in individual notebooks using all datasets and the MDTB feature model:
 
 Motor regions
 ```notebooks/atlas_paper/motor.ipynb``` (Fig S1)

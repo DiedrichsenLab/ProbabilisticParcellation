@@ -25,7 +25,7 @@ pt.set_default_tensor_type(pt.cuda.FloatTensor
                            pt.FloatTensor)
 
 
-def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
+def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='ses-s1', type='Cond'):
     """ Gets individual (data only), group, and integrated Uhats for 1-16 runs of first ses-s1 fro, the MDTB data set
     Args:
         model: model name
@@ -36,8 +36,17 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
         Uhat_complete_all: list of parcellations for integrated estimate
         Uhat_group: group map 
     """
+    subj = None
+    cond_col = 'cond_num_uni'
+
+    if sess == 'ses-rest':
+        dset = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
+        participants = dset.get_participants()
+        subj = participants[participants['ses-rest']==1].index.tolist()
+        cond_col = 'net_id'
+        
     idata,iinfo,ids = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
-                                  sess=['ses-s1'], type='CondRun')
+                                  sess=[sess], type=type, subj=subj)
 
     # convert tdata to tensor
     idata = pt.tensor(idata, dtype=pt.get_default_dtype())
@@ -58,11 +67,11 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
 
     # Build the individual training model on session 1:
     m1 = deepcopy(model)
-    cond_vec = iinfo['cond_num_uni'].values.reshape(-1,)
+    cond_vec = iinfo[cond_col].values.reshape(-1,)
     part_vec = iinfo['run'].values.reshape(-1,)
     if localizer_tasks is not None:
         # get data, particion vector and condition vector for localizer tasks only
-        localizer_ind = np.isin(iinfo['cond_num_uni'], localizer_tasks)
+        localizer_ind = np.isin(iinfo[cond_col], localizer_tasks)
         idata = idata[:, localizer_ind, :]
         cond_vec = cond_vec[localizer_ind]
         part_vec = part_vec[localizer_ind]
@@ -110,12 +119,17 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None):
     return Uhat_data_all, Uhat_complete_all, Uhat_group
     
 
-def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None):
+def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=40, mask=None, rest=False):
     """Do DCBC evaluation on all and collect in data frame. 
     
     """     
     tds = ds.get_dataset_class(ut.base_dir,dataset='mdtb')
-    T = tds.get_participants()
+    T_info = tds.get_participants()
+    if T_info.shape[0] != len(Uhat_data[0]):
+        if rest:
+            T_info = T_info[T_info['ses-rest']==1]
+        else:
+            raise ValueError(f'Number of subjects in data set does not match number of subjects in Uhat_data: {T_info.shape[0]} vs {len(Uhat_data[0])}')
     ut.report_cuda_memory()
     atlas_obj, _ = am.get_atlas(atlas, atlas_dir=ut.base_dir + '/Atlases')
     parcel_group = pt.argmax(Uhat_group, dim=0) + 1
@@ -136,10 +150,10 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
     dist = dist.to_sparse()
 
     T = pd.DataFrame()
-    for s in range(24):    
-        print(f'subj {s}')
+    for s, subj in enumerate(T_info.index):    
+        print(f'subj {subj}')
         tdata,tinfo,tds = ds.get_dataset(ut.base_dir,'Mdtb', atlas=atlas,
-                                  sess=['ses-s2'], type='CondHalf',subj=[s])
+                                  sess=['ses-s2'], type='CondHalf',subj=[subj])
         tdata = pt.tensor(tdata, dtype=pt.get_default_dtype())
         
         if mask is not None:
@@ -165,13 +179,13 @@ def evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=4
             D1['type'] = ['data']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_data.item()]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [subj + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
             D1 = {}
             D1['type'] = ['data and group']
             D1['runs'] = [r + 1]
             D1['dcbc'] = [dcbc_complete.item()]
-            D1['subject'] = [s + 1]
+            D1['subject'] = [subj + 1]
             T = pd.concat([T, pd.DataFrame(D1)])
         # Group
     return T 
@@ -249,10 +263,19 @@ def plot_eval(fname,normalize=True,var='dcbc'):
 
 
 if __name__ == "__main__":
-    mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    # mname = 'Models_03/sym_MdPoNiIbWmDeSo_space-MNISymC3_K-68'
+    # info,model = ut.load_batch_best(mname,device='cpu')
+    # Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC3'
+    # D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=70)
+    # fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_sym_MdPoNiIbWmDeSo_K68.tsv'
+    # D.to_csv(fname,sep='\t')
+
+
+    # Evaluate rest
+    mname = 'Models_03/NettekovenSym32_space-MNISymC2'
+    fname = ut.model_dir+ f'/Models/Evaluation_03/indivgroup_{mname.split("/")[1].split("_space")[0]}_rest-rerun.tsv'
     info,model = ut.load_batch_best(mname,device='cpu')
-    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC3')
-    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC3',max_dist=70)
-    fname = ut.model_dir+ '/Models/Evaluation_03/indivgroup_sym_MdPoNiIbWmDeSo_K68.tsv'
+    Uhat_data,Uhat_complete,Uhat_group = get_individ_group_mdtb(model,atlas='MNISymC2', sess='ses-rest', type='Net69Run')
+    D = evaluate_dcbc(Uhat_data,Uhat_complete,Uhat_group,atlas='MNISymC2',max_dist=70, rest=True)
     D.to_csv(fname,sep='\t')
     pass
