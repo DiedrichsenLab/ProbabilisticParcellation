@@ -36,9 +36,9 @@ if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
 atlas_dir = base_dir + f'/Atlases'
 
-figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/figure_parts/"
+figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/Figure_parts/"
 if not Path(figure_dir).exists():
-    figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/figure_parts/"
+    figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/Figure_parts/"
 
 export_dir = f'{base_dir}/../Cerebellum/ProbabilisticParcellationModel/Atlases/'
 if not Path(export_dir).exists():
