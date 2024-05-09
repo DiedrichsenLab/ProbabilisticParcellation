@@ -123,10 +123,6 @@ Full connectivity maps:
 Size comparison of left and right regions (voxel-wise) of the asymmetric atlas (Fig S8)
 ```notebooks/atlas_paper/size_comparison.ipynb```
 
-XX
-
-XX add the figure names to plots in jupyter notebook
-
 ### Individual localization
 
 To get individual parcellations (previously saved as pytorch tensor to save
@@ -173,3 +169,11 @@ The files are then copied for inclusion into the `cerebellar_atlases` repository
 The spatial subdivision of the atlas is then produced in each atlas space seperately - in the final 1mm space.
 
 ```subdivde_atlas_spatial(fname='NettekovenSym32',atlas='SUIT',outname='NettekovenSym128')```
+
+### Comparison with existing MDTB parcellation
+The comparison with the existing MDTB parcellation can be found in (Figure 1 in response to comment 1 from reviewer 1):
+```notebooks/mdtb_comparison.ipynb``` 
+
+### Entropy
+The entropy calculation for each dataset can be found in (Figure 2 in response to comment 2 from reviewer 1):
+```notebooks/mdtb_comparison.ipynb``` 
