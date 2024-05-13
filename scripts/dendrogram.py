@@ -4,9 +4,9 @@ sys.path.append("..")
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
-import ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy as ph
+import ProbabilisticParcellation.scripts.parcel_hierarchy as ph
 import ProbabilisticParcellation.hierarchical_clustering as cl
-import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
+import ProbabilisticParcellation.scripts.evaluate_atlas as eva
 import ProbabilisticParcellation.similarity_colormap as cm
 from Functional_Fusion.dataset import *
 import matplotlib

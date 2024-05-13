@@ -7,7 +7,7 @@ import Functional_Fusion.dataset as ds
 import matplotlib.pyplot as plt
 import ProbabilisticParcellation.functional_profiles as fp
 import ProbabilisticParcellation.util as ut
-from ProbabilisticParcellation.scripts.atlas_paper.ridge_reg import ridgeFit
+from ProbabilisticParcellation.scripts.ridge_reg import ridgeFit
 import nitools as nt
 import pandas as pd
 import seaborn as sb
