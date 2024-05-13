@@ -5,8 +5,8 @@ import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
 import ProbabilisticParcellation.hierarchical_clustering as cl
-import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
-import ProbabilisticParcellation.scripts.atlas_paper.individual_variability as var
+import ProbabilisticParcellation.scripts.evaluate_atlas as eva
+import ProbabilisticParcellation.scripts.individual_variability as var
 import ProbabilisticParcellation.learn_fusion_gpu as lf
 from Functional_Fusion.dataset import *
 import matplotlib

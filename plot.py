@@ -2,8 +2,8 @@ import sys
 import ProbabilisticParcellation.evaluate as ev
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.export_atlas as ea
-import ProbabilisticParcellation.scripts.atlas_paper.parcel_hierarchy as ph
-import ProbabilisticParcellation.scripts.atlas_paper.evaluate_atlas as eva
+import ProbabilisticParcellation.scripts.parcel_hierarchy as ph
+import ProbabilisticParcellation.scripts.evaluate_atlas as eva
 from Functional_Fusion.dataset import *
 import matplotlib
 import matplotlib.pyplot as plt
