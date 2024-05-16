@@ -101,6 +101,9 @@ Models are then fused (i.e. simply averaged) using ```ccc.scripts.script_fuse_mo
 
 The final model evaluation results reported in the paper can be found in ```ccc.notebooks.Evaluate_model_int.ipynb```.
 
+The final model weights that show the connectivity weights for each region of the 32 cerebellar regions, i.e. the connectivity weights reported in the paper, can be found in the ```data``` folder as a pscalar file. The cortical connectivity weights are given in Icosahedron1002 parcels. The model is the average model from all datasets excluding HCP.
+`data/Nettekoven_2024_Fusion_L2.pscalar.nii`: 
+
 To summarize the connectivity pattern by cerebellar regions:
 
 ```
