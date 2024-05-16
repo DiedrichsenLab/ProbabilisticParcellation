@@ -1,5 +1,5 @@
 # ProbabilisticParcellation
-Cerebellar Probabilistic Parcellation project using HierarchBayesParcel and FunctionalFusion
+The Cerebellar Probabilistic Parcellation project implements the analyses underlying the paper "A Hierarchical Atlas of the human cerebellum for functional precision mapping", by Nettekoven et al. 2024. 
 
 ## Dependencies:
 Diedrichsenlab/HierarchicalBayesParcel
