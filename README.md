@@ -27,10 +27,20 @@ Symmetric & asymmetric atlas (Fig 2a, 2b & 2c)
 Plotting MDS plots for different single dataset parcellations (Fig 1B & 1C & 1D) & Statistics for between-dataset ARI (similarity; normalized to within-dataset ARI) between all datasets and the task-general (MDTB) and rest-based (HCP) data:
 ```notebooks/evaluate_mds.ipynb```
 
+The data underlying Figure 3c comparing the dataset reliabilities can be found in:
+```data/reliability.tsv```
+
 ### Fusion outperforms other atlases
 
 Plotting DCBC & Statistics DCBC (Fig 1E & 1F):
 ```notebooks/evaluate_dcbc.ipynb```
+
+The data underlying Figure 3d comparing the dataset similarities to the MDTB and HCP dataset can be found in:
+```data/similarity.tsv```
+
+The data underlying Figure 3e comparing the performance of single dataset parcellations to the fused parcellations can be found in:
+```data/evaluation_dcbc_single.tsv```
+```data/evaluation_dcbc_fusion.tsv```
 
 Comparison of existing atlasses to fusion
 ```notebooks/evaluate_existing.ipynb```
@@ -117,6 +127,8 @@ To summarize further by cortical ROI:
 Summary figures (by MSHBM_Prior_15_fsLR32)
 ```notebooks/cortical_connectivity.ipynb```
 
+The data underlying Figure 3b can be found in:
+```diedrichsenlab/cortico_cereb_connectivity/data/Nettekoven2024_model_evaluations.tsv```
 
 Full connectivity maps:
 ```notebooks/connectivity_weights.ipynb``` (Fig S5 & Fig S6)
