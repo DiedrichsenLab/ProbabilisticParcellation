@@ -12,6 +12,7 @@ import re
 # Set directories for the entire project - just set here and import everywhere
 # else
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
+home = str(Path.home())
 if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
@@ -20,6 +21,8 @@ if not Path(model_dir).exists():
     model_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(model_dir).exists():
     model_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(model_dir).exists():
+    model_dir = str(Path(home, 'diedrichsen_data/data/Cerebellum/ProbabilisticParcellationModel'))
 if not Path(model_dir).exists():
     raise (NameError('Could not find model_dir'))
 
@@ -32,6 +35,8 @@ if not Path(base_dir).exists():
     base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
 if not Path(base_dir).exists():
     base_dir = '/Users/jdiedrichsen/Data/FunctionalFusion/'
+if not Path(base_dir).exists():
+    base_dir = str(Path(home, 'diedrichsen_data/data/FunctionalFusion'))
 if not Path(base_dir).exists():
     raise (NameError('Could not find base_dir'))
 atlas_dir = base_dir + f'/Atlases'
