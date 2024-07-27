@@ -415,6 +415,4 @@ if __name__ == "__main__":
 
     info,M = ut.load_batch_best('Models_03/asym_Md_space-MNISymC3_K-17')
     Data = M.arrange.marginal_prob()
-
-
     pass
