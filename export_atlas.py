@@ -53,20 +53,20 @@ def renormalize_probseg(probseg, mask):
 
 def resample_probs(probs, source_space, target_space):
     """ Resamples probabilistic parcellation from MNISymC2 to a new space in 1mm resolution
-        
+
     Args:
         probs (str/nifti/np.array): Probabilistic parcellation
         source_space (str): Source space (SUIT, MNISymC)
         target_space (str): Target space (MNI152NLin2009cSymC, MNI152NLin2009cAsym)
-        
+
     Returns:
         nii (nifti1Image): Resampled probabilistic parcellation
         dnii (nifti1Image): Resampled winner-take-all parcellation
-            
+
     """
     a, ainf = am.get_atlas(source_space, ut.atlas_dir)
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
-    
+
     if isinstance(probs, str) and (probs.endswith(".nii") or probs.endswith(".nii.gz")):
         # If probs is a nifti image, load it
         nii_atlas = nb.load(probs)
@@ -98,7 +98,7 @@ def resample_probs(probs, source_space, target_space):
         nii_mask = nb.load(targ_dir + "/" + mname)
         shap = nii_mask.shape + nii_atlas.shape[3:]
         nii_res = ns.resample_from_to(nii_atlasf, (shap, nii_mask.affine), 1)
-    
+
     nii, dnii = renormalize_probseg(nii_res, nii_mask)
     return nii, dnii
 
@@ -109,14 +109,14 @@ def resample_atlas(fname, atlas="MNISymC2", target_space="MNI152NLin2009cSymC"):
         atlas (str/atlas): FunctionalFusion atlas (SUIT2,MNISym3, fs32k)
         target_space (str): Target space (MNI152NLin2009cSymC, MNI152NLin2009cAsym)
     """
-    
-    src_dir = ut.model_dir + "/Atlases/"    
+
+    src_dir = ut.model_dir + "/Atlases/"
     targ_dir = ut.base_dir + f"/Atlases/tpl-{target_space}"
     source_img=src_dir + f"/{fname}_space-{atlas}_probseg.nii"
 
     # Resample to 1mm MNI
     nii, dnii = resample_probs(source_img, atlas, target_space)
-    
+
     # Save the files for the new atlas
     print("saving")
     nb.save(nii, targ_dir + f"/atl-{fname}_space-{target_space}_probseg.nii")
@@ -201,13 +201,13 @@ def export_map(data, atlas, cmap, label_names, base_name):
 
 def get_spatial_compartments():
     """ Returns the spatial compartments for the 32 region atlas
-        
+
         Spatial subdivisions are:
             Superior (lobule I - Crus I inclusive)
             Dorsal inferior (Crus II - VIIIb)
             Ventral inferior (lobule IX - lobule X)
             Vermal inferior sections (vermis VII - vermis X)
-        
+
         Returns:
             sp_ext (list): List of strings for subregion names
             comp (list): List of lists of anatomical labels
@@ -217,7 +217,7 @@ def get_spatial_compartments():
             [11,13,14,16,17,19,20,22],
             [23,25,26,28],
             [9,12,15,18,21,24,27]]
-    
+
     return sp_ext,comp
 
 def divide_map(prob, anat, sp_ext, comp, labels=None, colors=None):
@@ -283,7 +283,7 @@ def subdivde_atlas_spatial(fname,atlas,outname):
     lutfile = tpl_dir + f"atl-{fname}.lut"
     prob_img = nb.load(prob_atlas)
     prob = prob_img.get_fdata()
-    
+
     # Load Lut file and make new version of it
     indx,colors,labels = nt.read_lut(lutfile)
 
@@ -309,8 +309,7 @@ def export_conn_summary():
     # load labels
     index, cmap, labels = nt.read_lut(
             ut.export_dir
-            + "NettekovenSym32.lut"
-        )
+            + "NettekovenSym32.lut")
 
     for parcel in labels[1:len(labels)-1//2]:
         parcel=parcel[:2]
@@ -349,9 +348,7 @@ def save_cortex_cifti(fname):
 
 
 
-def colour_parcel(
-    mname, sym=False, plot=True, labels=None, clusters=None, weighting=None, gamma=0
-):
+def colour_parcel(mname, sym=False, plot=True, labels=None, clusters=None, weighting=None, gamma=0):
     """
     Colours the parcellation of a model.
 
@@ -406,9 +403,18 @@ def colour_parcel(
 
     return Prob, parcel, atlas, labels, cmap
 
+def export_model_map():
+    info,M = ut.load_batch_best('Models_03/asym_Md_space-MNISymC3_K-17')
+    Data = M.arrange.marginal_prob().cpu().numpy()
+    suit_atlas, _ = am.get_atlas('MNISymC3', base_dir + "/Atlases")
+    probseg = suit_atlas.data_to_nifti(Data)
+    nb.save(probseg, "asym_Md_space-MNISymC3_K-17_probseg.nii")
+
 
 if __name__ == "__main__":
-    export_conn_summary()
-    export_all_probmaps()
-    # subdivde_atlas_spatial(fname='NettekovenAsym32',atlas='SUIT',outname='NettekovenAsym128')
+
+    info,M = ut.load_batch_best('Models_03/asym_Md_space-MNISymC3_K-17')
+    Data = M.arrange.marginal_prob()
+
+
     pass
