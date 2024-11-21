@@ -45,14 +45,11 @@ if not Path(export_dir).exists():
     export_dir = f'{base_dir}/Atlases/'
 
 # pytorch cuda global flag
+pt.set_default_dtype(pt.float32)
 if pt.cuda.is_available():
     default_device = pt.device('cuda')
-    pt.set_default_tensor_type(pt.cuda.FloatTensor)
 else:
     default_device = pt.device('cpu')
-    pt.set_default_tensor_type(pt.FloatTensor)
-
-# Keep track of cuda memory
 
 
 def report_cuda_memory():
