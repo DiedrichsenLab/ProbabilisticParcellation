@@ -23,7 +23,7 @@ import seaborn as sb
 import sys
 import pickle
 # TEMPORARY FIX BEFORE MODELS ARE UPDATED TO HBP - REMOVE!!! TODO XX
-import generativeMRF.arrangements as gar
+# import generativeMRF.arrangements as gar
 
 import ProbabilisticParcellation.util as ut
 import ProbabilisticParcellation.learn_fusion_gpu as lf

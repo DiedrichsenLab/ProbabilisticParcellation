@@ -42,6 +42,8 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 
 figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/Figure_parts/"
+figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/Talks/2024/12_UTSW"
+
 if not Path(figure_dir).exists():
     figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/Figure_parts/"
 
