@@ -42,8 +42,12 @@ def renormalize_probseg(probseg, mask):
     maskX = mask.get_fdata()
     X[maskX == 0] = np.nan
     probseg_img = nb.Nifti1Image(X, probseg.affine)
-    parcel = np.argmax(X, axis=3) + 1
-    parcel[maskX == 0] = 0
+
+    # explicitly detect voxels where the sum of probabilities is 0 (i.e., all NaN or zero)
+    sum_prob = np.nansum(X, axis=3)
+    parcel = np.argmax(np.nan_to_num(X), axis=3) + 1
+    parcel[sum_prob == 0] = 0
+
     dseg_img = nb.Nifti1Image(parcel.astype(np.uint8), probseg.affine)
     dseg_img.set_data_dtype("uint8")
     dseg_img.header.set_intent(1002,(),"")
@@ -252,7 +256,7 @@ def divide_map(prob, anat, sp_ext, comp, labels=None, colors=None):
             if colors is not None:
                 colors_new[inew+1,:] = colors[k+1,:]
 
-    parcel = np.argmax(prob_new,axis=3)+1
+    parcel = np.argmax(np.nan_to_num(prob_new), axis=3)
     sumOfProb = np.nansum(prob_new,axis=3)
     parcel[sumOfProb==0]=0
     return prob_new,parcel,indx_new,colors_new,labels_new
