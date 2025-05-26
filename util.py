@@ -42,6 +42,8 @@ if not Path(base_dir).exists():
 atlas_dir = base_dir + f'/Atlases'
 
 figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/papers/AtlasPaper/Figure_parts/"
+figure_dir = "/Users/jdiedrichsen/Dropbox (Diedrichsenlab)/Talks/2024/12_UTSW"
+
 if not Path(figure_dir).exists():
     figure_dir = "/Users/callithrix/Dropbox/AtlasPaper/Figure_parts/"
 
@@ -50,9 +52,9 @@ if not Path(export_dir).exists():
     export_dir = f'{base_dir}/Atlases/'
 
 # pytorch cuda global flag
+pt.set_default_dtype(pt.float32)
 if pt.cuda.is_available():
     default_device = pt.device('cuda')
-    pt.set_default_tensor_type(pt.cuda.FloatTensor)
 else:
     default_device = pt.device('cpu')
     pt.set_default_tensor_type(pt.FloatTensor)
@@ -502,7 +504,7 @@ def compute_dist(coord, resolution=2):
 def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
                  func=None, dist=None, weighting=True):
     """
-    The main DCBC calculation for volume space - same as in the DCBC package, but GPU accelerated 
+    The main DCBC calculation for volume space - same as in the DCBC package, but GPU accelerated
     :param hems:        Hemisphere to test. 'L' - left hemisphere; 'R' - right hemisphere; 'all' - both hemispheres
     :param maxDist:     The maximum distance for vertices pairs
     :param binWidth:    The spatial binning width in mm, default 1 mm
@@ -574,3 +576,9 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
     }
 
     return D
+
+if __name__ == "__main__":
+
+
+
+    pass
