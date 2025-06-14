@@ -32,6 +32,8 @@ base_dir = '/Volumes/diedrichsen_data$/data/FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/srv/diedrichsen/data/FunctionalFusion'
 if not Path(base_dir).exists():
+    base_dir = '/cifs/diedrichsen/data/FunctionalFusion'
+if not Path(base_dir).exists():
     base_dir = 'Y:\data\FunctionalFusion'
 if not Path(base_dir).exists():
     base_dir = '/Users/callithrix/Documents/Projects/Functional_Fusion/'
