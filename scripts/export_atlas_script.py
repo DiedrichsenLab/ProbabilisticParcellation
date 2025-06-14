@@ -67,7 +67,7 @@ def subdivide_spatial_all():
 
 
 if __name__=="__main__":
-    resample_atlas_all()
-    subdivide_spatial_all()
+    # resample_atlas_all()
+    # subdivide_spatial_all()
     export_atlas_gifti()
     pass
