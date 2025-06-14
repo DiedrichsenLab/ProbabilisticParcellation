@@ -14,6 +14,8 @@ import re
 model_dir = 'Y:\data\Cerebellum\ProbabilisticParcellationModel'
 home = str(Path.home())
 if not Path(model_dir).exists():
+    model_dir = '/cifs/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
+if not Path(model_dir).exists():
     model_dir = '/srv/diedrichsen/data/Cerebellum/ProbabilisticParcellationModel'
 if not Path(model_dir).exists():
     model_dir = '/Volumes/diedrichsen_data$/data/Cerebellum/ProbabilisticParcellationModel'
