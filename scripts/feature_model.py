@@ -1,8 +1,3 @@
-import sys
-from pathlib import Path
-import ProbabilisticParcellation.functional_profiles as fp
-import ProbabilisticParcellation.hierarchical_clustering as cl
-import ProbabilisticParcellation.similarity_colormap as cm
 import Functional_Fusion.dataset as ds
 import matplotlib.pyplot as plt
 import ProbabilisticParcellation.functional_profiles as fp
