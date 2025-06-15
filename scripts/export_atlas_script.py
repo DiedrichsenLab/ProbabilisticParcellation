@@ -12,8 +12,8 @@ import nitools as nt
 
 def export_atlas_gifti():
     model_names = [
-        "Models_03/NettekovenSym68_space-MNISymC2",
-        "Models_03/NettekovenAsym68_space-MNISymC2",
+        # "Models_03/NettekovenSym68_space-MNISymC2",
+        # "Models_03/NettekovenAsym68_space-MNISymC2",
         "Models_03/NettekovenSym32_space-MNISymC2",
         "Models_03/NettekovenAsym32_space-MNISymC2",
     ]
