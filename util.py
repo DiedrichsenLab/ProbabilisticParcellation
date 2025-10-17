@@ -509,14 +509,13 @@ def compute_DCBC(maxDist=35, binWidth=1, parcellation=np.empty([]),
                  func=None, dist=None, weighting=True):
     """
     The main DCBC calculation for volume space - same as in the DCBC package, but GPU accelerated
-    :param hems:        Hemisphere to test. 'L' - left hemisphere; 'R' - right hemisphere; 'all' - both hemispheres
-    :param maxDist:     The maximum distance for vertices pairs
-    :param binWidth:    The spatial binning width in mm, default 1 mm
-    :param parcellation:
-    :param dist_file:   The path of distance metric of vertices pairs, for example Dijkstra's distance, GOD distance
-                        Euclidean distance. Dijkstra's distance as default
-    :param weighting:   Boolean value. True - add weighting scheme to DCBC (default)
-                                       False - no weighting scheme to DCBC
+    Args:
+        maxDist (int, optional): Maximum distance to consider. Defaults to 35.
+        binWidth (int, optional): Bin width. Defaults to 1.
+        parcellation (np.array, optional): Parcellation vector (0 parcel is ignored). 
+        func (pt.tensor, optional): Functional data matrix (N vertices x K conditions). Defaults to None.
+        dist (pt.tensor, optional): Distance matrix (N voxels x N voxels). 
+
     """
 
     numBins = int(np.floor(maxDist / binWidth))

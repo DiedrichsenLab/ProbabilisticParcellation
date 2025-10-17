@@ -69,8 +69,8 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='
     m1 = deepcopy(model)
     cond_vec = iinfo[cond_col].values.reshape(-1,)
     part_vec = iinfo['run'].values.reshape(-1,)
+    # restrict training data to specific  localizer tasks only (optional)
     if localizer_tasks is not None:
-        # get data, particion vector and condition vector for localizer tasks only
         localizer_ind = np.isin(iinfo[cond_col], localizer_tasks)
         idata = idata[:, localizer_ind, :]
         cond_vec = cond_vec[localizer_ind]
@@ -78,14 +78,14 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='
         
     runs = np.unique(part_vec)
 
-    # 
+    # Build emission models on entire data set 
     indivtrain_em = em.MixVMF(K=m1.emissions[0].K,
                                P=m1.emissions[0].P,
                                X=matrix.indicator(cond_vec),
                                part_vec=part_vec,
                                uniform_kappa=True)
     indivtrain_em.initialize(idata)
-    m1.emissions = [indivtrain_em]
+    m1.emissions = [indivtrain_em] # Put the emission model togetehr with the arrrangement model
     m1.initialize()
     # Refit the model - while the V vectors should be stable 
     # But kappa needs to be adjusted to single Run data
@@ -95,10 +95,11 @@ def get_individ_group_mdtb(model, atlas='MNISymC3', localizer_tasks=None, sess='
                      fit_arrangement=False,
                     first_evidence=False)
 
-    Uhat_data_all = []  # Parcellation based only on data 
-    Uhat_complete_all = [] # Parcellation based on data and model
+    # Make all the parcellations using 1-16 runs of data
+    Uhat_data_all = []  # Parcellation based only on individual data 
+    Uhat_complete_all = [] # Parcellation based on individual data and group model
     for i in runs:
-        ind = part_vec<=i
+        ind = part_vec<=i # select all the runs up to i
         m1.emissions[0].X = pt.tensor(matrix.indicator(cond_vec[ind]), dtype=pt.get_default_dtype())
         m1.emissions[0].part_vec = pt.tensor(part_vec[ind], dtype=pt.int)
         m1.emissions[0].initialize(idata[:,ind,:])
