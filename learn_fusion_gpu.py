@@ -99,7 +99,7 @@ def build_data_list(datasets,
                 part_vec.append(info[part_ind[i]].values.reshape(-1, ))
             subj_ind.append(np.arange(sub, sub + n_subj))
             info_ds.append({'dname':datasets[i],
-                            'sess':'all', 
+                            'sess':'all',
                             'dataset':ds})
         else:
             if sess[i] == 'all':
@@ -114,7 +114,7 @@ def build_data_list(datasets,
                 part_vec.append(info[part_ind[i]].values[indx].reshape(-1, ))
                 subj_ind.append(np.arange(sub, sub + n_subj))
                 info_ds.append({'dname':datasets[i],
-                                'sess':s, 
+                                'sess':s,
                                 'dataset':ds})
         sub += n_subj
     return data, cond_vec, part_vec, subj_ind, info_ds
